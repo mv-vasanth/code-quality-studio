@@ -1,0 +1,17 @@
+:root {
+  --pqs-primary: #4f46e5;
+  --pqs-primary-muted: #eef2ff;
+  --pqs-canvas: #f1f5f9;
+  --pqs-surface: #ffffff;
+  --pqs-border: #e2e8f0;
+  --pqs-text: #0f172a;
+  --pqs-text-muted: #64748b;
+  --pqs-critical: #dc2626;
+  --pqs-warning: #d97706;
+  --pqs-info: #2563eb;
+  --pqs-success: #059669;
+  --pqs-header: #0f172a;
+}
+* { box-sizing: border-box; }
+body { margin: 0; -webkit-font-smoothing: antialiased; }
+@keyframes spin { to { transform: rotate(360deg); } }
