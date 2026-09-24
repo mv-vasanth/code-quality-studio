@@ -2,7 +2,7 @@
   "mcpServers": {
     "cqs": {
       "command": "node",
-      "args": ["/Users/v.m.varadharajan/Documents/MCP/Audit_agent/playwright-quality-studio/cli/dist/cqs-mcp.js"]
+      "args": ["/Users/v.m.varadharajan/Documents/MCP/Audit_agent/code-quality-studio/cli/dist/cqs-mcp.js"]
     }
   }
 }

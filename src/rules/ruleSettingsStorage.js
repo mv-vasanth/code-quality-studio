@@ -42,7 +42,7 @@ export function exportRuleSettingsJson(stackId, catalog) {
   return {
     stackId,
     exportedAt: new Date().toISOString(),
-    source: "playwright-quality-studio-rules-tab",
+    source: "code-quality-studio-rules-tab",
     rules: catalog.map((r) => ({
       ruleId: r.ruleId,
       enabled: isRuleEnabled(stackId, r.ruleId, s),

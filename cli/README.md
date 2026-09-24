@@ -7,19 +7,27 @@ Playwright, Cypress, Selenium, Appium, TOSCA, REST Assured, Postman, and more.
 
 ## Install
 
-### One-time setup (from the repo)
+Most people should just install from npm:
 
 ```bash
-cd playwright-quality-studio/cli
+npm install -g cqs-audit
+cqs --help
+```
+
+### Building from source
+
+```bash
+git clone https://github.com/mv-vasanth/code-quality-studio.git
+cd code-quality-studio/cli
 npm install          # installs esbuild
-npm run build        # bundles everything → dist/cqs.js
+npm run build:all    # bundles the CLI and the MCP server into dist/
 npm install -g .     # registers the `cqs` command globally
 ```
 
 ### Upgrade
 
 ```bash
-cd playwright-quality-studio/cli
+cd code-quality-studio/cli
 npm run build
 npm install -g .
 ```
