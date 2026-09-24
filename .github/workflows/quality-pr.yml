@@ -1,0 +1,54 @@
+# .github/workflows/quality-pr.yml
+# Runs qcBot on every pull request and posts an inline code review.
+name: Playwright Quality Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write   # needed to post the review
+
+jobs:
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Run analysis + post GitHub review in one command
+      - name: Run qcBot PR review
+        run: |
+          npx @cqs/qcbot pr-review \
+            --stack playwright \
+            --threshold 80
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITHUB_REPOSITORY and GITHUB_REF are set automatically by GitHub Actions
+
+      # Always upload the HTML report as an artifact (even if quality gate fails)
+      - name: Analyse all test files & upload report
+        if: always()
+        run: |
+          npx @cqs/qcbot check ./functional-tests \
+            --stack playwright \
+            --threshold 80 \
+            --report \
+            --summary
+        continue-on-error: true
+
+      - name: Upload quality report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-report
+          path: qcbot-report/report.html
+          retention-days: 30

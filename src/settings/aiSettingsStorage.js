@@ -1,7 +1,7 @@
 import { DEFAULT_AI_SETTINGS, migrateAiSettings } from "./aiSettingsDefaults.js";
 import { googleSettingsForStorage } from "./googleAuth.js";
 
-const STORAGE_KEY = "pqs-ai-settings-v1";
+const STORAGE_KEY = "cqs-ai-settings-v1";
 
 function cloneDefaults() {
   return {

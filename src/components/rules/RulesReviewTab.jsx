@@ -9,6 +9,7 @@ import {
   exportRuleSettingsJson,
 } from "../../rules/ruleSettingsStorage.js";
 import CustomRulesSection from "./CustomRulesSection.jsx";
+import { suggestRules } from "../../services/ai/suggestRules.js";
 
 export default function RulesReviewTab({
   stackId,
@@ -17,11 +18,20 @@ export default function RulesReviewTab({
   onRerunRules,
   rerunBusy = false,
   hasFiles = false,
+  aiSettings = null,
+  loadedFiles = [],
+  allFindings = [],       // all findings across all loaded files
+  skippedRuleIds = new Set(), // ruleIds whose prerequisite was not met on any file
+  onAiFix = null,         // (ruleId) => void — trigger AI fix for findings of this rule
 }) {
   const catalog = useMemo(() => getRuleCatalog(stackId), [stackId]);
   const [settings, setSettings] = useState(() => loadRuleSettings(stackId));
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestions, setSuggestions] = useState(null); // array of suggested rules
+  const [suggestError, setSuggestError] = useState(null);
+  const [addedIds, setAddedIds] = useState(new Set());
 
   useEffect(() => {
     setSettings(loadRuleSettings(stackId));
@@ -50,6 +60,25 @@ export default function RulesReviewTab({
 
   const enabledCount = catalog.filter((r) => isRuleEnabled(stackId, r.ruleId, settings)).length;
 
+  // Per-rule finding counts, computed from all loaded files' findings
+  const findingCountByRuleId = useMemo(() => {
+    const map = {};
+    for (const f of allFindings) {
+      if (f.ruleId) map[f.ruleId] = (map[f.ruleId] || 0) + 1;
+    }
+    return map;
+  }, [allFindings]);
+
+  /** Return status badge config for a rule */
+  function ruleStatus(ruleId, enabled) {
+    if (!enabled) return null; // disabled — shown by the toggle itself
+    if (!hasFiles) return null; // no files yet — no status
+    const count = findingCountByRuleId[ruleId] || 0;
+    if (count > 0) return { label: `${count} issue${count > 1 ? "s" : ""}`, bg: "#fef2f2", color: "#dc2626", border: "#fca5a5" };
+    if (skippedRuleIds.has(ruleId)) return { label: "⏭ Skipped", bg: "#f1f5f9", color: "#64748b", border: "#cbd5e1" };
+    return { label: "✅ Passed", bg: "#f0fdf4", color: "#16a34a", border: "#86efac" };
+  }
+
   const filtered = catalog.filter((r) => {
     if (filter !== "all" && r.severity !== filter) return false;
     if (!query.trim()) return true;
@@ -71,13 +100,29 @@ export default function RulesReviewTab({
     return byCat;
   }, [filtered]);
 
+  const handleSuggestRules = async () => {
+    if (suggesting || !aiSettings) return;
+    setSuggesting(true);
+    setSuggestions(null);
+    setSuggestError(null);
+    setAddedIds(new Set());
+    try {
+      const result = await suggestRules({ settings: aiSettings, files: loadedFiles, stackId });
+      setSuggestions(result);
+    } catch (err) {
+      setSuggestError(err.message || "Suggestion failed");
+    } finally {
+      setSuggesting(false);
+    }
+  };
+
   const downloadExport = () => {
     const json = exportRuleSettingsJson(stackId, catalog);
     const blob = new Blob([JSON.stringify(json, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `pqs-rules-${stackId}.json`;
+    a.download = `cqs-rules-${stackId}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -106,6 +151,116 @@ export default function RulesReviewTab({
       </div>
 
       <CustomRulesSection key={stackId} stackId={stackId} categories={categories} onChange={onSettingsChange} />
+
+      {/* ── AI Rule Suggestion ── */}
+      {aiSettings && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: suggestions || suggestError ? 12 : 0 }}>
+            <button
+              type="button"
+              onClick={handleSuggestRules}
+              disabled={suggesting || !loadedFiles.length}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                fontSize: 12, fontWeight: 700, padding: "7px 14px",
+                borderRadius: 8, border: "1px solid #a78bfa",
+                background: suggesting ? "#f5f3ff" : "#ede9fe",
+                color: "#7c3aed", cursor: (suggesting || !loadedFiles.length) ? "not-allowed" : "pointer",
+              }}
+            >
+              {suggesting ? (
+                <><span style={{ width: 11, height: 11, border: "2px solid #a78bfa", borderTopColor: "#7c3aed", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} />Analysing files…</>
+              ) : "✨ Suggest rules from codebase"}
+            </button>
+            <span style={{ fontSize: 11, color: "#94a3b8" }}>
+              {loadedFiles.length > 0 ? `AI analyses ${Math.min(loadedFiles.length, 8)} of ${loadedFiles.length} loaded files` : "Load a test folder first"}
+            </span>
+          </div>
+
+          {suggestError && (
+            <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, fontSize: 12, color: "#dc2626" }}>
+              {suggestError}
+            </div>
+          )}
+
+          {suggestions && suggestions.length > 0 && (
+            <div style={{ border: "1px solid #a78bfa", borderRadius: 10, overflow: "hidden", background: "#faf5ff" }}>
+              <div style={{ padding: "10px 14px", background: "#ede9fe", borderBottom: "1px solid #a78bfa", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: "#5b21b6" }}>
+                  ✨ {suggestions.length} rule{suggestions.length !== 1 ? "s" : ""} suggested from your codebase
+                </span>
+                <button type="button" onClick={() => setSuggestions(null)} style={{ fontSize: 11, color: "#7c3aed", background: "none", border: "none", cursor: "pointer" }}>Dismiss</button>
+              </div>
+              {suggestions.map((s, i) => {
+                const isAdded = addedIds.has(i);
+                const sevColors = { critical: "#dc2626", warning: "#d97706", info: "#0891b2" };
+                return (
+                  <div key={i} style={{ padding: "12px 14px", borderBottom: i < suggestions.length - 1 ? "1px solid #e9d5ff" : "none" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+                          <span style={{ fontSize: 12.5, fontWeight: 700, color: "#1e1b4b" }}>{s.title}</span>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: "#fff", color: sevColors[s.severity] || "#64748b", border: `1px solid ${sevColors[s.severity] || "#64748b"}` }}>
+                            {(s.severity || "info").toUpperCase()}
+                          </span>
+                          <span style={{ fontSize: 10, color: "#7c3aed", fontFamily: "monospace" }}>{s.category}</span>
+                        </div>
+                        <p style={{ margin: "0 0 4px", fontSize: 12, color: "#374151", lineHeight: 1.5 }}>{s.description}</p>
+                        {s.rationale && <p style={{ margin: "0 0 4px", fontSize: 11, color: "#64748b", fontStyle: "italic", lineHeight: 1.4 }}>{s.rationale}</p>}
+                        {s.pattern && (
+                          <div style={{ fontSize: 10.5, fontFamily: "monospace", background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 5, padding: "3px 8px", color: "#334155", marginTop: 4, wordBreak: "break-all" }}>
+                            pattern: /{s.pattern}/
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isAdded}
+                        onClick={() => {
+                          // Fire a custom event that CustomRulesSection can pick up,
+                          // or call the onChange + add via dispatchEvent.
+                          // For now we store in localStorage via the custom rules storage key.
+                          try {
+                            const storageKey = `cqs-custom-rules-${stackId}`;
+                            const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
+                            const newRule = {
+                              id: `AI-${Date.now()}-${i}`,
+                              title: s.title || "AI suggested rule",
+                              pattern: s.pattern || "",
+                              severity: s.severity || "info",
+                              category: s.category || "coding_standards",
+                              description: s.description || "",
+                              fix: s.fix || "",
+                              enabled: true,
+                              source: "ai-suggest",
+                            };
+                            existing.push(newRule);
+                            localStorage.setItem(storageKey, JSON.stringify(existing));
+                            setAddedIds((prev) => new Set([...prev, i]));
+                            onSettingsChange?.();
+                          } catch (e) {
+                            console.error("Failed to add rule", e);
+                          }
+                        }}
+                        style={{
+                          fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 8,
+                          border: isAdded ? "1px solid #86efac" : "1px solid #a78bfa",
+                          background: isAdded ? "#f0fdf4" : "#fff",
+                          color: isAdded ? "#15803d" : "#7c3aed",
+                          cursor: isAdded ? "default" : "pointer",
+                          whiteSpace: "nowrap", flexShrink: 0,
+                        }}
+                      >
+                        {isAdded ? "✓ Added" : "+ Add rule"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ fontWeight: 700, fontSize: 13, color: "#374151", marginBottom: 10 }}>Built-in rules</div>
 
@@ -207,6 +362,23 @@ export default function RulesReviewTab({
                         </span>
                         <code style={{ fontSize: 10, color: "#64748b" }}>{r.ruleId}</code>
                         <span style={{ fontWeight: 600, fontSize: 13, color: "#0f172a" }}>{r.title}</span>
+                        {/* Per-rule status badge — only when enabled */}
+                        {(() => { const st = ruleStatus(r.ruleId, enabled); return st ? (
+                          <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 99, background: st.bg, color: st.color, border: `1px solid ${st.border}`, marginLeft: "auto" }}>
+                            {st.label}
+                          </span>
+                        ) : null; })()}
+                        {/* AI fix button — only when rule has findings and AI available */}
+                        {onAiFix && enabled && (findingCountByRuleId[r.ruleId] || 0) > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => onAiFix(r.ruleId)}
+                            style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 6, border: "1px solid #7c3aed", background: "#faf5ff", color: "#7c3aed", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}
+                            title={`Generate AI fix for ${r.ruleId} findings`}
+                          >
+                            🤖 Fix
+                          </button>
+                        )}
                       </div>
                       <p style={{ margin: "0 0 4px", fontSize: 12, color: "#475569", lineHeight: 1.5 }}>{r.description}</p>
                       {RULE_WHY_HELP[r.ruleId] && (

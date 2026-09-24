@@ -42,9 +42,24 @@ const PLAYWRIGHT_RULES = [
   { ruleId: "PW-STD-005", category: "coding_standards", severity: "info", title: "Arbitrary sleep in test", description: "setTimeout / custom sleep().", impact: "Flaky and slow.", detection: "setTimeout( | sleep(" },
   { ruleId: "PW-SEC-004", category: "security", severity: "warning", title: "Browser security disabled", description: "--disable-web-security launch flag.", impact: "Unrealistic config.", detection: "disable-web-security" },
   { ruleId: "PW-A11Y-002", category: "accessibility", severity: "info", title: "No automated accessibility scan", description: "Tests present without @axe-core.", impact: "WCAG regressions missed.", detection: "tests present, no axe/AxeBuilder" },
+  { ruleId: "PW-SEL-006", category: "selectors", severity: "warning", title: "Repeated XPath within file", description: "The same XPath string is used 2+ times in the same file.", impact: "A DOM change requires updates in every occurrence.", detection: "XPath string frequency count ≥ 2 within one file" },
   { ruleId: "PW-PER-003", category: "performance", severity: "info", title: "test.slow() used", description: "Triples timeout instead of fixing.", impact: "Masks slow flows.", detection: "test.slow(" },
   { ruleId: "PW-AST-005", category: "assertions", severity: "info", title: "Brittle snapshot assertion", description: "toMatchSnapshot on text/DOM.", impact: "Noisy failures.", detection: "toMatchSnapshot(" },
   { ruleId: "PW-STD-006", category: "coding_standards", severity: "warning", title: "Possible unfinished / AI-boilerplate code", description: "Placeholder comments, TODO/FIXME stubs, generic YOUR_VALUE_HERE, or stray assistant text.", impact: "Half-finished code ships with stubs and fake values.", detection: "// TODO | // ... your code | YOUR_..._HERE | 'as an AI' chatter" },
+  { ruleId: "PW-NMC-001", category: "coding_standards", severity: "warning",  title: "Variable name should be camelCase",                     description: "Variables declared with PascalCase instead of camelCase.",                              impact: "PascalCase is reserved for classes — misleads readers.",             detection: "const|let|var PascalName =" },
+  { ruleId: "PW-NMC-002", category: "coding_standards", severity: "critical", title: "Class name should be PascalCase",                        description: "Class declared with a camelCase name.",                                                  impact: "Readers cannot distinguish classes from functions.",                 detection: "class camelName {" },
+  { ruleId: "PW-NMC-003", category: "coding_standards", severity: "info",     title: "Helper function should be camelCase in spec file",        description: "Standalone function named PascalCase in a .spec or .test file.",                         impact: "PascalCase functions look like constructors.",                       detection: "function PascalName( in spec file" },
+  { ruleId: "PW-NMC-004", category: "coding_standards", severity: "info",     title: "Non-descriptive test name",                              description: "test() name is too short or a generic keyword.",                                         impact: "Vague names make failure reports unreadable.",                       detection: "test('ok'|'check'|name < 5 chars)" },
+  { ruleId: "PW-NMC-005", category: "coding_standards", severity: "warning",  title: "Interface name should be PascalCase",                    description: "TypeScript interface declared with a camelCase name.",                                   impact: "Non-PascalCase interfaces are indistinguishable from variables.",    detection: "interface camelName {" },
+  { ruleId: "PW-NMC-006", category: "coding_standards", severity: "warning",  title: "Type alias should be PascalCase",                        description: "TypeScript type alias declared with a camelCase name.",                                  impact: "Inconsistent casing between types and interfaces.",                  detection: "type camelName =" },
+  { ruleId: "PW-NMC-007", category: "coding_standards", severity: "warning",  title: "Enum name should be PascalCase",                         description: "TypeScript enum declared with a camelCase name.",                                        impact: "Lowercase enum names break the type/value visual contract.",         detection: "enum camelName {" },
+  { ruleId: "PW-NMC-008", category: "coding_standards", severity: "info",     title: "Boolean variable missing is/has/can prefix",             description: "Boolean literal assigned to a variable without a boolean-prefix name.",                   impact: "Without is/has prefix, intent is not obvious at a glance.",         detection: "const someVar = true|false (no is/has/can prefix)" },
+  { ruleId: "PW-NMC-009", category: "coding_standards", severity: "info",     title: "Describe block name starts with lowercase",              description: "test.describe or describe name does not start with an uppercase letter.",                  impact: "Inconsistent capitalisation in reports.",                            detection: "describe('lowerCase...')" },
+  { ruleId: "PW-NMC-010", category: "coding_standards", severity: "info",     title: "Underscore-prefixed variable (outdated private notation)", description: "Variable uses _name convention instead of TypeScript private or JS #field.",             impact: "Underscore prefix does not enforce encapsulation.",                  detection: "const _varName = …" },
+  { ruleId: "PW-CPX-001", category: "coding_standards", severity: "warning",  title: "High cyclomatic complexity",                             description: "File has more than 12 branch points (if/else-if/case/&&/||).",                           impact: "High complexity correlates with defects and fragility.",             detection: "if/else-if/case/&&/|| count > 12" },
+  { ruleId: "PW-CPX-002", category: "coding_standards", severity: "info",     title: "Deeply nested code (4+ levels)",                         description: "Lines indented 4 or more levels deep appear more than twice.",                            impact: "Deep nesting hides complexity and reduces readability.",              detection: "4+ tab/16+ space indent on > 2 lines" },
+  { ruleId: "PW-CPX-003", category: "coding_standards", severity: "info",     title: "Spec file too long — consider splitting",                description: "File exceeds 200 lines with an average of > 80 lines per test.",                         impact: "Long spec files are hard to review and run selectively.",            detection: "lineCount > 200 and avgLines/test > 80" },
+  { ruleId: "PW-CPX-004", category: "coding_standards", severity: "info",     title: "Function has too many parameters (5+)",                  description: "A function signature contains 5 or more parameters.",                                    impact: "Long param lists are hard to read; callers must remember order.",    detection: "function(a, b, c, d, e…) — 5+ params" },
 ];
 
 const JAVA_API_RULES = [
@@ -116,11 +131,223 @@ const PLAYWRIGHT_JAVA_RULES = [
   { ruleId: "PWJ-CI-001", category: "ci_config", severity: "warning", title: "Hardcoded absolute URL", description: "navigate(\"https://…\").", impact: "Breaks across environments.", detection: "navigate(\"http…\")" },
 ];
 
+const PLAYWRIGHT_PYTHON_RULES = [
+  { ruleId: "PWPY-SEL-001", category: "selectors", severity: "warning", title: "XPath locator", description: "locator(\"//…\") / xpath=.", impact: "Brittle on DOM change.", detection: "locator(\"//\" | xpath=" },
+  { ruleId: "PWPY-SEL-002", category: "selectors", severity: "info", title: "CSS id locator", description: "locator(\"#…\").", impact: "Couples to ids.", detection: "locator(\"#\"" },
+  { ruleId: "PWPY-SEL-003", category: "selectors", severity: "info", title: "No user-facing locators", description: "No get_by_role/text/label.", impact: "Likely brittle.", detection: "test present, no get_by_*" },
+  { ruleId: "PWPY-REL-001", category: "reliability", severity: "critical", title: "Hard wait (wait_for_timeout)", description: "Fixed delay.", impact: "Flaky/slow.", detection: "wait_for_timeout(" },
+  { ruleId: "PWPY-REL-002", category: "reliability", severity: "critical", title: "time.sleep() in test", description: "Blocking hard wait.", impact: "Flaky and slow.", detection: "time.sleep(" },
+  { ruleId: "PWPY-REL-003", category: "reliability", severity: "warning", title: "wait_for_selector used", description: "Explicit wait vs auto-wait.", impact: "Hides assumptions.", detection: "wait_for_selector(" },
+  { ruleId: "PWPY-REL-004", category: "reliability", severity: "warning", title: "Conditional on element state", description: "if …is_visible():", impact: "Racy branching.", detection: "if …is_visible()/is_enabled()" },
+  { ruleId: "PWPY-AST-001", category: "assertions", severity: "warning", title: "No web-first assertions", description: "No expect(...) in a test file.", impact: "May not verify UI.", detection: "test present, no expect(" },
+  { ruleId: "PWPY-AST-002", category: "assertions", severity: "warning", title: "Bare assert on locator state", description: "assert locator.is_visible().", impact: "No retry.", detection: "assert …is_visible()/inner_text()" },
+  { ruleId: "PWPY-STR-001", category: "structure", severity: "info", title: "No pytest fixtures", description: "No @pytest.fixture / conftest.", impact: "Duplicated setup.", detection: "test present, no @pytest.fixture" },
+  { ruleId: "PWPY-SEC-001", category: "security", severity: "critical", title: "Hardcoded secret", description: "Literal password/token/api_key.", impact: "Leak via git/logs.", detection: "password/api_key = \"…\"" },
+  { ruleId: "PWPY-STD-001", category: "coding_standards", severity: "warning", title: "page.pause() left in code", description: "Inspector pause committed.", impact: "Hangs CI.", detection: ".pause()" },
+  { ruleId: "PWPY-STD-002", category: "coding_standards", severity: "info", title: "print() in tests", description: "Console prints.", impact: "Noisy output.", detection: "print(" },
+  { ruleId: "PWPY-STD-003", category: "coding_standards", severity: "info", title: "Unresolved TODO/FIXME", description: "Leftover markers.", impact: "Unfinished work ships.", detection: "# TODO | # FIXME" },
+  { ruleId: "PWPY-CI-001", category: "ci_config", severity: "warning", title: "Hardcoded absolute URL", description: "goto(\"https://…\").", impact: "Breaks across environments.", detection: "goto(\"http…\")" },
+  { ruleId: "PWPY-PER-001", category: "performance", severity: "info", title: "Inline screenshot", description: "Manual .screenshot().", impact: "Slower runs.", detection: ".screenshot(" },
+];
+
+const TS_FRONTEND_RULES = [
+  { ruleId: "TSF-SEC-001", category: "security", severity: "warning", title: "Unsanitised HTML injection", description: "dangerouslySetInnerHTML / innerHTML=.", impact: "XSS.", detection: "dangerouslySetInnerHTML | innerHTML=" },
+  { ruleId: "TSF-SEC-002", category: "security", severity: "warning", title: "target=_blank without rel", description: "Missing rel=noopener.", impact: "Reverse tabnabbing.", detection: "target=\"_blank\" no rel" },
+  { ruleId: "TSF-HOOK-001", category: "hooks", severity: "warning", title: "useEffect without dependency array", description: "Effect runs every render.", impact: "Loops / duplicate requests.", detection: "useEffect(() => …) no deps" },
+  { ruleId: "TSF-HOOK-002", category: "hooks", severity: "info", title: "Array index as React key", description: "key={index}.", impact: "State reuse bugs on reorder.", detection: "key={i|idx|index}" },
+  { ruleId: "TSF-A11Y-001", category: "accessibility", severity: "warning", title: "<img> without alt", description: "Missing alt attribute.", impact: "Inaccessible to screen readers.", detection: "<img> no alt=" },
+  { ruleId: "TSF-A11Y-002", category: "accessibility", severity: "info", title: "onClick on non-interactive element", description: "onClick on div/span.", impact: "Not keyboard accessible.", detection: "<div/span onClick> no role" },
+  { ruleId: "TSF-TYP-001", category: "type_safety", severity: "warning", title: "Use of any", description: ": any / as any.", impact: "Runtime bugs.", detection: ": any | as any" },
+  { ruleId: "TSF-PER-001", category: "performance", severity: "info", title: "Direct DOM access in component", description: "document.querySelector/getElementById.", impact: "Fights the virtual DOM.", detection: "document.querySelector/getElementById" },
+  { ruleId: "TSF-STD-001", category: "standards", severity: "info", title: "console logging", description: "console.log/debug.", impact: "Noise; possible leak.", detection: "console.log/debug(" },
+  { ruleId: "TSF-STD-002", category: "standards", severity: "info", title: "Unresolved TODO/FIXME", description: "Leftover markers.", impact: "Unfinished work ships.", detection: "// TODO | // FIXME" },
+];
+
+const PYTHON_API_RULES = [
+  { ruleId: "PY-SEC-001", category: "security", severity: "critical", title: "SQL injection risk", description: "String-built SQL in execute().", impact: "Data breach.", detection: "execute(f\"… | % | +" },
+  { ruleId: "PY-SEC-002", category: "security", severity: "critical", title: "Hardcoded secret", description: "Literal password/token/api_key.", impact: "Leak via git/logs.", detection: "password/api_key = \"…\"" },
+  { ruleId: "PY-SEC-003", category: "security", severity: "warning", title: "subprocess shell=True", description: "Shell command execution.", impact: "Command injection.", detection: "subprocess … shell=True" },
+  { ruleId: "PY-SEC-004", category: "security", severity: "warning", title: "eval / exec", description: "Dynamic code execution.", impact: "Code injection.", detection: "eval( | exec(" },
+  { ruleId: "PY-ERR-001", category: "error_handling", severity: "warning", title: "Bare / swallowed except", description: "except: or except Exception: pass.", impact: "Errors disappear.", detection: "except: | except Exception: pass" },
+  { ruleId: "PY-VAL-001", category: "validation", severity: "warning", title: "Request body without validation", description: "request.json without pydantic/schema.", impact: "Invalid data in logic.", detection: "request.json, no pydantic/schema" },
+  { ruleId: "PY-STD-001", category: "standards", severity: "info", title: "print() instead of logging", description: "Multiple print() calls.", impact: "No levels/aggregation.", detection: "print( (>1)" },
+  { ruleId: "PY-STD-002", category: "standards", severity: "warning", title: "Mutable default argument", description: "def f(x=[]) / ={}.", impact: "State leaks across calls.", detection: "def f(x=[] | ={})" },
+  { ruleId: "PY-PER-001", category: "performance", severity: "info", title: "HTTP request without timeout", description: "requests.* with no timeout.", impact: "Can hang forever.", detection: "requests.get/post no timeout=" },
+  { ruleId: "PY-DAT-001", category: "data_access", severity: "info", title: "SELECT * query", description: "Selecting all columns.", impact: "Extra I/O; fragile.", detection: "SELECT *" },
+  { ruleId: "PY-ASY-001", category: "async_io", severity: "warning", title: "Blocking sleep in async code", description: "time.sleep in async file.", impact: "Stalls the event loop.", detection: "time.sleep( in async def" },
+  { ruleId: "PY-STD-003", category: "standards", severity: "info", title: "Unresolved TODO/FIXME", description: "Leftover markers.", impact: "Unfinished work ships.", detection: "# TODO | # FIXME" },
+];
+
+const PYTHON_FRONTEND_RULES = [
+  { ruleId: "PYF-SEC-001", category: "security", severity: "warning", title: "Unescaped template output", description: "|safe / mark_safe / autoescape off.", impact: "XSS.", detection: "|safe | mark_safe( | autoescape off" },
+  { ruleId: "PYF-SEC-002", category: "security", severity: "warning", title: "POST form without CSRF token", description: "method=post form, no csrf_token.", impact: "CSRF.", detection: "<form method=post> no csrf_token" },
+  { ruleId: "PYF-A11Y-001", category: "accessibility", severity: "warning", title: "<img> without alt", description: "Missing alt attribute.", impact: "Inaccessible.", detection: "<img> no alt=" },
+  { ruleId: "PYF-STD-001", category: "standards", severity: "info", title: "Inline event handler", description: "on* handlers in markup.", impact: "Weaker CSP.", detection: "onclick/onload=\"…\"" },
+  { ruleId: "PYF-STD-002", category: "standards", severity: "info", title: "Unresolved TODO/FIXME", description: "Leftover markers.", impact: "Unfinished markup ships.", detection: "{# TODO #} | <!-- TODO -->" },
+];
+
+const JAVA_CORE_RULES = [
+  { ruleId: "JVF-ERR-001", category: "error_handling", severity: "warning", title: "printStackTrace() instead of logging", description: "e.printStackTrace().", impact: "Bypasses log aggregation.", detection: "printStackTrace(" },
+  { ruleId: "JVF-ERR-002", category: "error_handling", severity: "warning", title: "Empty catch block", description: "Swallowed exception.", impact: "Undiagnosable failures.", detection: "catch (…) { }" },
+  { ruleId: "JVF-STD-001", category: "coding_standards", severity: "warning", title: "System.out/err instead of logger", description: "Console print.", impact: "No levels/aggregation.", detection: "System.out/err.print" },
+  { ruleId: "JVF-STD-002", category: "coding_standards", severity: "warning", title: "String compared with == / !=", description: "Reference comparison on String.", impact: "Wrong comparisons.", detection: "== \" | \" ==" },
+  { ruleId: "JVF-SEC-001", category: "security", severity: "info", title: "java.util.Random used", description: "Predictable RNG.", impact: "Guessable if security-sensitive.", detection: "new Random(" },
+  { ruleId: "JVF-PER-001", category: "performance", severity: "info", title: "String concatenation in loop", description: "+= String inside a loop.", impact: "GC pressure.", detection: "for/while { … += \"" },
+  { ruleId: "JVF-STD-003", category: "coding_standards", severity: "info", title: "Raw collection type", description: "Collection without generics.", impact: "Loses type safety.", detection: "List x = new ArrayList()" },
+  { ruleId: "JVF-MNT-001", category: "maintainability", severity: "info", title: "Large class — consider splitting", description: "Very long class body.", impact: "Harder reviews/testing.", detection: "class > ~250 lines" },
+  { ruleId: "JVF-STD-004", category: "coding_standards", severity: "info", title: "Unresolved TODO/FIXME", description: "Leftover markers.", impact: "Unfinished work ships.", detection: "// TODO | // FIXME" },
+];
+
+const REST_ASSURED_RULES = [
+  { ruleId: "RA-AST-001", category: "assertions", severity: "warning", title: "No response assertions", description: "No .then()/statusCode()/body().", impact: "Passes without verifying response.", detection: "@Test/given() present, no assertion" },
+  { ruleId: "RA-AST-002", category: "assertions", severity: "info", title: "Status asserted but not body/schema", description: "statusCode() only.", impact: "Body regressions slip through.", detection: "statusCode( without body(/schema" },
+  { ruleId: "RA-SEC-001", category: "security", severity: "critical", title: "Hardcoded secret / token", description: "Literal credential or bearer.", impact: "Leak via git/logs.", detection: "password/token = \"…\" | Bearer <literal>" },
+  { ruleId: "RA-SEC-002", category: "security", severity: "warning", title: "TLS validation relaxed", description: "relaxedHTTPSValidation().", impact: "Passes against insecure endpoints.", detection: "relaxedHTTPSValidation" },
+  { ruleId: "RA-CFG-001", category: "ci_config", severity: "warning", title: "Hardcoded absolute URL / baseURI", description: "Full URL vs configurable baseURI.", impact: "Breaks across environments.", detection: "baseURI=\"http… | get(\"http…" },
+  { ruleId: "RA-REL-001", category: "reliability", severity: "warning", title: "Thread.sleep() in test", description: "Blocking hard wait.", impact: "Flaky and slow.", detection: "Thread.sleep(" },
+  { ruleId: "RA-STR-001", category: "structure", severity: "info", title: "No reusable RequestSpecification", description: "Repeated given() setup.", impact: "Duplicated auth/headers.", detection: "given() >2, no RequestSpecification" },
+  { ruleId: "RA-STD-001", category: "coding_standards", severity: "info", title: "System.out in test", description: "Console prints.", impact: "Noisy output.", detection: "System.out/err.print" },
+  { ruleId: "RA-STD-002", category: "coding_standards", severity: "info", title: "Unresolved TODO/FIXME", description: "Leftover markers.", impact: "Unfinished tests ship.", detection: "// TODO | // FIXME" },
+  { ruleId: "RA-AST-003", category: "assertions", severity: "warning", title: "No negative-path coverage", description: "Only 2xx/3xx statusCode() asserted.", impact: "Error/auth/validation paths untested.", detection: "statusCode( present, no 4xx/5xx" },
+  { ruleId: "RA-AST-004", category: "assertions", severity: "info", title: "No JSON-schema contract validation", description: "body() field checks without a schema.", impact: "Unasserted field drift unnoticed.", detection: "body( without matchesJsonSchema" },
+  { ruleId: "RA-AST-005", category: "assertions", severity: "info", title: "Response time / SLA never asserted", description: "No .time(...) assertion.", impact: "Perf regressions ship silently.", detection: "tests present, no time(/ResponseTime" },
+  { ruleId: "RA-SEC-003", category: "security", severity: "warning", title: "Full request/response logged", description: "log().all() / prettyPrint().", impact: "Tokens and PII in CI logs.", detection: "log().all( | prettyPrint( | prettyPeek(" },
+  { ruleId: "RA-SEC-004", category: "security", severity: "critical", title: "Credentials inlined in auth()", description: "basic/digest/oauth2 with string literals.", impact: "Committed credentials that can't be rotated.", detection: ".basic(\"…\" | .oauth2(\"…\"" },
+  { ruleId: "RA-REL-002", category: "reliability", severity: "warning", title: "No HTTP connect/read timeout", description: "No HttpClientConfig timeout setting.", impact: "A hung endpoint blocks the build.", detection: "tests present, no CONNECTION_TIMEOUT/SO_TIMEOUT" },
+  { ruleId: "RA-REL-003", category: "reliability", severity: "warning", title: "Exception swallowed inside test", description: "catch block with no fail()/rethrow.", impact: "Real failures reported as passes.", detection: "catch (…Exception) without fail(/throw/assertThrows" },
+  { ruleId: "RA-STR-002", category: "structure", severity: "warning", title: "Order-dependent tests", description: "Explicit execution ordering declared.", impact: "No isolation or parallelism; cascading failures.", detection: "@TestMethodOrder | @Order( | dependsOnMethods" },
+  { ruleId: "RA-STR-003", category: "structure", severity: "warning", title: "Shared mutable static state", description: "Non-final static field in a test class.", impact: "Order-dependent, parallel-unsafe tests.", detection: "static <type> field (not final)" },
+  { ruleId: "RA-STR-004", category: "structure", severity: "info", title: "Auth token re-fetched per test", description: "Multiple login/token calls, no @BeforeAll.", impact: "Slow suite; IdP rate limiting.", detection: "post(\"/login|/oauth/token\") >1, no @BeforeAll" },
+  { ruleId: "RA-STD-003", category: "coding_standards", severity: "warning", title: "Disabled / ignored test", description: "@Disabled or @Ignore.", impact: "Silent coverage loss.", detection: "@Disabled | @Ignore" },
+];
+
+const KARATE_RULES = [
+  { ruleId: "KA-AST-001", category: "assertions", severity: "warning", title: "Scenario without assertions", description: "No Then status / match.", impact: "Nothing verified.", detection: "Scenario:, no status/match" },
+  { ruleId: "KA-AST-002", category: "assertions", severity: "info", title: "Status asserted but not body", description: "status without match.", impact: "Body regressions slip through.", detection: "Then status, no match" },
+  { ruleId: "KA-CFG-001", category: "ci_config", severity: "warning", title: "Hardcoded URL", description: "Given url 'http…'.", impact: "Breaks across environments.", detection: "url 'http…'" },
+  { ruleId: "KA-SEC-001", category: "security", severity: "critical", title: "Hardcoded token / password", description: "Literal secret in feature.", impact: "Leak via git/logs.", detection: "token/password = '…' | Bearer <literal>" },
+  { ruleId: "KA-REL-001", category: "reliability", severity: "warning", title: "sleep in scenario", description: "Fixed sleep.", impact: "Flaky and slow.", detection: "sleep( | Thread.sleep" },
+  { ruleId: "KA-STR-001", category: "structure", severity: "info", title: "No Background for shared setup", description: "Multiple Scenarios, no Background.", impact: "Duplicated setup.", detection: "Scenario: >1, no Background:" },
+  { ruleId: "KA-STD-001", category: "coding_standards", severity: "info", title: "Leftover * print", description: "Debug prints.", impact: "Noisy output.", detection: "* print" },
+  { ruleId: "KA-STD-002", category: "coding_standards", severity: "info", title: "Unresolved TODO/FIXME", description: "Leftover markers.", impact: "Unfinished scenarios ship.", detection: "# TODO | # FIXME" },
+  { ruleId: "KA-AST-003", category: "assertions", severity: "warning", title: "No negative-path coverage", description: "Only 2xx/3xx 'status' asserted.", impact: "Error/auth/validation paths untested.", detection: "status <2xx> present, no status 4xx/5xx" },
+  { ruleId: "KA-AST-004", category: "assertions", severity: "info", title: "No fuzzy-match / schema validation", description: "match without #string/#number markers.", impact: "Type changes and dropped fields slip through.", detection: "match response without #marker" },
+  { ruleId: "KA-AST-005", category: "assertions", severity: "info", title: "assert used where match belongs", description: "* assert on response instead of match.", impact: "Loses deep comparison and diff output.", detection: "* assert … response" },
+  { ruleId: "KA-SEC-002", category: "security", severity: "warning", title: "TLS certificate validation disabled", description: "configure ssl = true.", impact: "Passes against bad/intercepted certs.", detection: "configure ssl = true" },
+  { ruleId: "KA-CFG-002", category: "ci_config", severity: "warning", title: "Environment URL defined in the feature", description: "* def baseUrl = 'http…'.", impact: "Feature pinned to one environment.", detection: "* def …Url/Host = 'http…'" },
+  { ruleId: "KA-STR-002", category: "structure", severity: "warning", title: "Global 'configure' inside a feature", description: "HTTP config set in the feature, not karate-config.js.", impact: "Drifts per feature; can leak across runs.", detection: "* configure headers/proxy/connectTimeout/…" },
+  { ruleId: "KA-STR-003", category: "structure", severity: "warning", title: "Scenario Outline without Examples", description: "Outline declared with no data table.", impact: "Placeholders never substituted; coverage absent.", detection: "Scenario Outline: without Examples:" },
+  { ruleId: "KA-REL-002", category: "reliability", severity: "info", title: "Response time / SLA never asserted", description: "responseTime never checked.", impact: "Gradual degradation goes unnoticed.", detection: "status asserted, no responseTime" },
+  { ruleId: "KA-STD-003", category: "coding_standards", severity: "info", title: "No tags on Feature or Scenarios", description: "No @tags anywhere in the feature.", impact: "No smoke subset or quarantine in CI.", detection: "Scenario: present, no ^@tag line" },
+];
+
+const PYTEST_API_RULES = [
+  { ruleId: "PYA-AST-001", category: "assertions", severity: "warning", title: "No response assertion", description: "No status_code/body assert.", impact: "Passes without verifying API.", detection: "def test_ present, no status_code" },
+  { ruleId: "PYA-AST-002", category: "assertions", severity: "info", title: "Status checked but not body", description: "status_code only.", impact: "Body regressions slip through.", detection: "status_code without .json()" },
+  { ruleId: "PYA-SEC-001", category: "security", severity: "critical", title: "Hardcoded secret / token", description: "Literal credential or bearer.", impact: "Leak via git/logs.", detection: "password/token = \"…\" | Bearer <literal>" },
+  { ruleId: "PYA-REL-001", category: "reliability", severity: "warning", title: "time.sleep() in test", description: "Fixed hard wait.", impact: "Flaky and slow.", detection: "time.sleep(" },
+  { ruleId: "PYA-PER-001", category: "performance", severity: "info", title: "HTTP request without timeout", description: "requests.* no timeout.", impact: "Can hang.", detection: "requests.get/post no timeout=" },
+  { ruleId: "PYA-STR-001", category: "structure", severity: "info", title: "No client/session fixture", description: "No @pytest.fixture.", impact: "Duplicated setup/auth.", detection: "tests present, no @pytest.fixture" },
+  { ruleId: "PYA-VAL-001", category: "validation", severity: "info", title: "No response schema validation", description: "Body not schema-validated.", impact: "Shape drift unnoticed.", detection: ".json() without jsonschema/pydantic" },
+  { ruleId: "PYA-STD-001", category: "coding_standards", severity: "info", title: "print() in test", description: "Console prints.", impact: "Noisy output.", detection: "print(" },
+  { ruleId: "PYA-STD-002", category: "coding_standards", severity: "warning", title: "Hardcoded base URL", description: "Full URL hard-coded.", impact: "Breaks across environments.", detection: "get(\"http…\")" },
+  { ruleId: "PYA-STD-003", category: "coding_standards", severity: "info", title: "Unresolved TODO/FIXME", description: "Leftover markers.", impact: "Unfinished tests ship.", detection: "# TODO | # FIXME" },
+  { ruleId: "PYA-AST-003", category: "assertions", severity: "warning", title: "No negative-path coverage", description: "Only 2xx/3xx status_code asserted.", impact: "Error/auth/validation paths untested.", detection: "status_code present, no 4xx/5xx or pytest.raises(HTTPError)" },
+  { ruleId: "PYA-AST-004", category: "assertions", severity: "warning", title: "Truthiness assertion on the response", description: "assert resp.ok / assert resp.", impact: "Any 2xx/3xx (or any object) passes.", detection: "assert …ok | assert resp" },
+  { ruleId: "PYA-SEC-002", category: "security", severity: "critical", title: "TLS verification disabled", description: "verify=False.", impact: "Passes against bad/intercepted certs.", detection: "verify=False" },
+  { ruleId: "PYA-SEC-003", category: "security", severity: "warning", title: "Full response body/headers logged", description: "print/logger of resp.text/headers/json().", impact: "Tokens, cookies and PII in CI logs.", detection: "print|logger.*(resp|response).(text|content|headers|json())" },
+  { ruleId: "PYA-REL-002", category: "reliability", severity: "warning", title: "Order-dependent / shared mutable state", description: "Ordering markers or module-level global.", impact: "Breaks isolation, xdist and random order.", detection: "@pytest.mark.dependency/order/run | global x" },
+  { ruleId: "PYA-REL-003", category: "reliability", severity: "warning", title: "Exception silently swallowed", description: "except block whose body is just pass.", impact: "Real failures reported as passes.", detection: "except …: pass" },
+  { ruleId: "PYA-PER-002", category: "performance", severity: "info", title: "Response time / SLA never asserted", description: "resp.elapsed / perf_counter never used.", impact: "Gradual degradation goes unnoticed.", detection: "tests present, no .elapsed/perf_counter" },
+  { ruleId: "PYA-VAL-002", category: "validation", severity: "info", title: "Response headers never validated", description: "No Content-Type or header assertion.", impact: "HTML error pages and dropped headers pass.", detection: ".json() without headers[/headers.get" },
+  { ruleId: "PYA-STR-002", category: "structure", severity: "info", title: "New connection per request (no Session)", description: "3+ requests.* calls without Session/Client.", impact: "Repeated TLS handshakes; no shared auth.", detection: "requests.get/post >=3, no requests.Session(/httpx.Client(" },
+  { ruleId: "PYA-STR-003", category: "structure", severity: "warning", title: "Auth token re-fetched per test", description: "Multiple login/token calls, no session-scoped fixture.", impact: "Slow suite; IdP rate limiting and 429 flakes.", detection: "get/post(\"…/login|/token|/oauth\") >1, no scope=\"session\" fixture" },
+  { ruleId: "PYA-STD-004", category: "coding_standards", severity: "warning", title: "Skipped / xfailed test", description: "@pytest.mark.skip/skipif/xfail.", impact: "Silent coverage loss.", detection: "@pytest.mark.skip|skipif|xfail | pytest.skip(" },
+];
+
+const POSTMAN_RULES = [
+  { ruleId: "PM-FMT-001", category: "coding_standards", severity: "info", title: "Not a Postman collection", description: "JSON isn't a v2.1 collection.", impact: "Nothing to audit.", detection: "no info/item shape" },
+  { ruleId: "PM-AST-001", category: "assertions", severity: "warning", title: "Requests without tests", description: "No pm.test scripts.", impact: "Newman verifies nothing.", detection: "request present, no pm.test(" },
+  { ruleId: "PM-AST-002", category: "assertions", severity: "info", title: "Tests without assertions", description: "pm.test with no pm.expect.", impact: "Trivially passing tests.", detection: "pm.test without pm.expect/response.to" },
+  { ruleId: "PM-SEC-001", category: "security", severity: "critical", title: "Hardcoded token / secret", description: "Literal token instead of {{var}}.", impact: "Secret leaks when shared.", detection: "Bearer <literal> | \"token\":\"literal\"" },
+  { ruleId: "PM-CFG-001", category: "ci_config", severity: "warning", title: "Hardcoded URL (no {{baseUrl}})", description: "Full host in request URL.", impact: "Can't retarget environments.", detection: "\"raw\":\"http…\" no {{" },
+  { ruleId: "PM-STD-001", category: "coding_standards", severity: "info", title: "console.log in scripts", description: "Leftover console.log.", impact: "Noisy Newman output.", detection: "console.log" },
+  { ruleId: "PM-AST-003", category: "assertions", severity: "info", title: "Status asserted but body never read", description: "No pm.response.json() anywhere.", impact: "Empty or error-shaped bodies pass.", detection: "to.have.status without pm.response.json(" },
+  { ruleId: "PM-AST-004", category: "assertions", severity: "warning", title: "No negative-path coverage", description: "Only 2xx/3xx statuses asserted.", impact: "Auth/validation/not-found paths untested.", detection: "status assertions present, none 4xx/5xx" },
+  { ruleId: "PM-AST-005", category: "assertions", severity: "warning", title: "Requests outnumber test scripts", description: "Fewer pm.test blocks than requests.", impact: "Some requests assert nothing.", detection: "count(\"request\":) > count(pm.test()" },
+  { ruleId: "PM-SEC-002", category: "security", severity: "warning", title: "Secret written into a persisted variable", description: "pm.environment/globals.set of a token.", impact: "Live token exported with the environment file.", detection: "pm.environment.set(\"…token/secret…\"" },
+  { ruleId: "PM-SEC-003", category: "security", severity: "critical", title: "eval() in a collection script", description: "Script executes dynamic code.", impact: "A spoofed response can run code on the runner.", detection: "eval(" },
+  { ruleId: "PM-SEC-004", category: "security", severity: "warning", title: "TLS verification disabled", description: "protocolProfileBehavior strictSSL:false.", impact: "Passes against bad/intercepted certs.", detection: "\"strictSSL\": false" },
+  { ruleId: "PM-SEC-005", category: "security", severity: "info", title: "No auth defined in the collection", description: "No \"auth\" block anywhere.", impact: "Auth drifts into raw literal headers.", detection: "requests present, no \"auth\":" },
+  { ruleId: "PM-CFG-002", category: "ci_config", severity: "warning", title: "Request pinned to localhost / raw IP", description: "URL targets localhost or a literal IP.", impact: "Fails everywhere but the author's machine.", detection: "\"raw\"/\"host\": localhost|127.0.0.1|a.b.c.d" },
+  { ruleId: "PM-STD-002", category: "coding_standards", severity: "info", title: "Deprecated Postman sandbox API", description: "tests[…], responseCode.code, postman.setEnvironmentVariable.", impact: "No per-assertion reporting; will break.", detection: "tests[\"…\"] | responseCode.code | postman.set…Variable" },
+];
+
+/**
+ * Cross-file duplicate detection rules — appended to every stack's catalog
+ * so they appear in the Rules tab and in the rule-why catalog.
+ */
+const CROSS_FILE_DUP_RULES = [
+  {
+    ruleId: "DUP-BLOCK-001",
+    category: "coding_standards",
+    severity: "warning",
+    title: "Duplicate test block across files",
+    description: "An identical test, describe, or setup block was found in another loaded file.",
+    impact: "Any bug or update must be applied in both places; one copy drifts silently.",
+    fix: "Extract the shared logic into a reusable helper, fixture, or page-object method and import it where needed.",
+    detection: "Cross-file block hash matching (normalised body)",
+  },
+  {
+    ruleId: "DUP-BLOCK-002",
+    category: "coding_standards",
+    severity: "info",
+    title: "Near-duplicate test block across files",
+    description: "A test or describe block is ≥75% similar (line-level Jaccard) to one in another loaded file.",
+    impact: "Copy-paste drift — changes to one copy are often not mirrored in the other.",
+    fix: "Extract common steps into a shared helper or parameterise the differing values; keep only one authoritative copy.",
+    detection: "Cross-file Jaccard similarity ≥ 75%",
+  },
+  {
+    ruleId: "DUP-SETUP-001",
+    category: "structure",
+    severity: "warning",
+    title: "Repeated setup block across files",
+    description: "An identical beforeEach / afterEach / beforeAll / afterAll block exists in multiple loaded files.",
+    impact: "Each file must be updated independently; a missed update causes inconsistent test behaviour.",
+    fix: "Move the shared setup into a Playwright fixture via test.extend() (or the equivalent for your stack) and import it in all affected files.",
+    detection: "Cross-file setup-block hash matching",
+  },
+  {
+    ruleId: "DUP-XPATH-001",
+    category: "selectors",
+    severity: "warning",
+    title: "Duplicate XPath used across files",
+    description: "The same XPath expression is used in multiple loaded test files.",
+    impact: "A DOM change breaks all files at once; each must be fixed separately without a shared abstraction.",
+    fix: "Extract the shared XPath into a Page Object or shared constants file and import it in all affected files.",
+    detection: "Cross-file XPath string matching",
+  },
+];
+
+function withDupRules(rules) {
+  return [...rules, ...CROSS_FILE_DUP_RULES];
+}
+
 export const RULE_CATALOG_BY_STACK = {
-  playwright: PLAYWRIGHT_RULES,
-  java_api: JAVA_API_RULES,
-  typescript: TYPESCRIPT_RULES,
-  playwright_java: PLAYWRIGHT_JAVA_RULES,
+  playwright: withDupRules(PLAYWRIGHT_RULES),
+  java_api: withDupRules(JAVA_API_RULES),
+  typescript: withDupRules(TYPESCRIPT_RULES),
+  playwright_java: withDupRules(PLAYWRIGHT_JAVA_RULES),
+  playwright_python: withDupRules(PLAYWRIGHT_PYTHON_RULES),
+  ts_frontend: withDupRules(TS_FRONTEND_RULES),
+  python_api: withDupRules(PYTHON_API_RULES),
+  python_frontend: withDupRules(PYTHON_FRONTEND_RULES),
+  java_frontend: withDupRules(JAVA_CORE_RULES),
+  restassured: withDupRules(REST_ASSURED_RULES),
+  karate: withDupRules(KARATE_RULES),
+  pytest_api: withDupRules(PYTEST_API_RULES),
+  postman: withDupRules(POSTMAN_RULES),
 };
 
 export function getRuleCatalog(stackId) {

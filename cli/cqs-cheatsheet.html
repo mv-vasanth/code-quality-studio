@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cqs CLI — Cheat Sheet</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    background: #fff;
+    color: #1e293b;
+    line-height: 1.5;
+  }
+
+  /* ── PAGE HEADER ── */
+  .page-header {
+    background: #0f172a;
+    color: #fff;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+  .page-header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  .page-header .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+  .badge {
+    background: #0d9488;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+  .verify-box {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 11px;
+    color: #166534;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .verify-box code { font-family: monospace; font-weight: 700; font-size: 12px; }
+
+  /* ── GRID ── */
+  .grid { flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    align-items: start;
+  }
+  .col-span-2 { grid-column: span 2; }
+
+  /* ── PAGE FLOW ── */
+  .page { height: 186mm; display: flex; flex-direction: column; page-break-after: always; break-after: page; }
+  .page:last-of-type { page-break-after: auto; break-after: auto; }
+  .section-bar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 2px solid #0f172a;
+    padding-bottom: 5px;
+    margin: 0 0 10px;
+  }
+  .section-bar h2 { font-size: 14px; font-weight: 800; color: #0f172a; letter-spacing: -0.2px; }
+  .section-bar .step { font-size: 10px; color: #64748b; font-weight: 600; }
+
+  /* ── SECTION CARD ── */
+  .card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .card-head {
+    padding: 7px 12px;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .card-body { padding: 10px 12px; }
+
+  /* colour themes per section */
+  .theme-slate  .card-head { background: #1e293b; color: #fff; }
+  .theme-teal   .card-head { background: #0d9488; color: #fff; }
+  .theme-blue   .card-head { background: #1d4ed8; color: #fff; }
+  .theme-purple .card-head { background: #7c3aed; color: #fff; }
+  .theme-amber  .card-head { background: #b45309; color: #fff; }
+  .theme-green  .card-head { background: #15803d; color: #fff; }
+  .theme-rose   .card-head { background: #be123c; color: #fff; }
+
+  /* ── CODE BLOCK ── */
+  .code-block {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    padding: 7px 10px;
+    font-family: 'Menlo', 'Courier New', monospace;
+    font-size: 11px;
+    color: #1e293b;
+    margin-bottom: 6px;
+    line-height: 1.7;
+  }
+  .code-block:last-child { margin-bottom: 0; }
+  .cmd { color: #0d9488; font-weight: 600; }
+  .cmt { color: #94a3b8; }
+  .kw  { color: #7c3aed; }
+  .str { color: #b45309; }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f1f5f9; font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: #64748b; padding: 5px 8px; text-align: left; }
+  td { padding: 5px 8px; border-bottom: 1px solid #f1f5f9; font-size: 11px; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td code { font-family: monospace; background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 11px; color: #0d9488; font-weight: 600; }
+  td.desc { color: #475569; }
+
+  /* ── SEVERITY CHIPS ── */
+  .chip {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 10px;
+    margin-right: 3px;
+  }
+  .chip-red    { background: #fef2f2; color: #dc2626; }
+  .chip-amber  { background: #fffbeb; color: #d97706; }
+  .chip-blue   { background: #eff6ff; color: #2563eb; }
+  .chip-teal   { background: #f0fdfa; color: #0d9488; }
+  .chip-purple { background: #f5f3ff; color: #7c3aed; }
+  .chip-green  { background: #f0fdf4; color: #16a34a; }
+  .chip-slate  { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+
+  /* ── STACKS GRID ── */
+  .stacks-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .stack-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 10.5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .stack-item code { font-family: monospace; font-size: 10px; color: #0d9488; }
+
+  /* ── STEP LIST ── */
+  .steps { list-style: none; counter-reset: steps; }
+  .steps li {
+    counter-increment: steps;
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+    align-items: flex-start;
+  }
+  .steps li::before {
+    content: counter(steps);
+    background: #0d9488;
+    color: #fff;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    text-align: center;
+    margin-top: 4px;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page-header { border-radius: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- PAGE HEADER -->
+<div class="page">
+<div class="page-header">
+  <div>
+    <h1>⚡ cqs — Code Quality Studio CLI</h1>
+    <div class="sub">18 stacks · 530 rules · offline · CI-ready · Node 18+</div>
+  </div>
+  
+  <div style="background:#0d9488;border-radius:8px;padding:8px 18px;text-align:center">
+    <div style="font-size:10px;color:#ccfbf1;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">Install from npm (anywhere)</div>
+    <div style="font-family:monospace;font-size:14px;font-weight:800;color:#fff;letter-spacing:.3px">npm install -g cqs-audit</div>
+    <div style="font-size:10px;color:#ccfbf1;margin-top:3px">npmjs.com/package/cqs-audit</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+    <div class="verify-box">
+      ✅ Verify: <code>cqs --list-stacks</code>
+    </div>
+    <div class="badge">v2.1.0</div>
+  </div>
+</div>
+<div class="section-bar">
+  <h2>1 · Install &amp; Everyday Use</h2>
+  <span class="step">Install → verify → run your first audit</span>
+</div>
+<div class="grid">
+  <div class="card theme-teal">
+    <div class="card-head">🌐 Install from npm (public — any machine)</div>
+    <div class="card-body">
+      <div class="code-block">
+        <span class="cmt"># Install globally from npm registry</span><br>
+        <span class="cmd">npm install -g cqs-audit</span><br><br>
+        <span class="cmt"># Verify</span><br>
+        <span class="cmd">cqs --help</span>
+      </div>
+      <div style="font-size:10.5px;color:#475569;margin-top:6px">📦 Package: <strong>cqs-audit</strong> on <a href="https://www.npmjs.com/package/cqs-audit" style="color:#0d9488">npmjs.com/package/cqs-audit</a></div>
+    </div>
+  </div>
+
+<div class="card theme-blue">
+    <div class="card-head">⚡ Core Commands</div>
+    <div class="card-body" style="padding:0">
+      <table>
+        <thead><tr><th>Command</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>cqs .</code></td><td class="desc">Analyse current folder — auto-detects stack</td></tr>
+          <tr><td><code>cqs ./tests/</code></td><td class="desc">Analyse a specific folder</td></tr>
+          <tr><td><code>cqs ./tests/ --stack playwright</code></td><td class="desc">Force a specific stack</td></tr>
+          <tr><td><code>cqs ./tests/ --severity critical</code></td><td class="desc">Show only critical findings</td></tr>
+          <tr><td><code>cqs ./tests/ --output json > report.json</code></td><td class="desc">Save JSON report for CI or sharing</td></tr>
+          <tr><td><code>cqs ./tests/ --output summary</code></td><td class="desc">One-line status — great for CI logs</td></tr>
+          <tr><td><code>cqs ./tests/ --open</code></td><td class="desc">Run analysis + open HTML report in browser</td></tr>
+          <tr><td><code>cqs --read-report report.json</code></td><td class="desc">Print summary of a saved JSON report</td></tr>
+          <tr><td><code>cqs --read-report report.json --open</code></td><td class="desc">Open saved report as HTML in browser</td></tr>
+          <tr><td><code>cqs --list-stacks</code></td><td class="desc">Show all 18 available stacks + IDs</td></tr>
+          <tr><td><code>cqs --help</code></td><td class="desc">Show help text and version number</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<div class="card theme-slate">
+    <div class="card-head">📋 All 18 Stacks (--stack &lt;id&gt;)</div>
+    <div class="card-body">
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">UI AUTOMATION</div>
+      <div class="stacks-grid" style="margin-bottom:6px">
+        <div class="stack-item">🎭 <code>playwright</code></div>
+        <div class="stack-item">♨️ <code>playwright_java</code></div>
+        <div class="stack-item">🐍 <code>playwright_python</code></div>
+        <div class="stack-item">🧭 <code>selenium_java</code></div>
+        <div class="stack-item">💠 <code>selenium_csharp</code></div>
+        <div class="stack-item">🌲 <code>cypress</code></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">MOBILE / MODEL-BASED</div>
+      <div class="stacks-grid" style="margin-bottom:6px">
+        <div class="stack-item">📲 <code>appium_java</code></div>
+        <div class="stack-item">🧱 <code>tosca_xml</code></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">API TESTING</div>
+      <div class="stacks-grid" style="margin-bottom:6px">
+        <div class="stack-item">🛡️ <code>restassured</code></div>
+        <div class="stack-item">🥋 <code>karate</code></div>
+        <div class="stack-item">🧪 <code>pytest_api</code></div>
+        <div class="stack-item">📮 <code>postman</code></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">APPLICATION CODE</div>
+      <div class="stacks-grid">
+        <div class="stack-item">☕ <code>java_api</code></div>
+        <div class="stack-item">🧰 <code>java_frontend</code></div>
+        <div class="stack-item">🔷 <code>typescript</code></div>
+        <div class="stack-item">⚛️ <code>ts_frontend</code></div>
+        <div class="stack-item">🗄️ <code>python_api</code></div>
+        <div class="stack-item">🧩 <code>python_frontend</code></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════ PAGE 2 — AI REVIEW ══════════ -->
+<div class="page">
+<div class="section-bar">
+  <h2>2 · AI-Assisted Review</h2>
+  <span class="step">Set an API key once, then every run can include an AI second eye</span>
+</div>
+<div class="grid">
+  <div class="card theme-purple">
+    <div class="card-head">🤖 AI Setup — Anthropic &amp; OpenAI</div>
+    <div class="card-body">
+      <div style="font-size:10px;font-weight:700;color:#7c3aed;margin-bottom:3px">ANTHROPIC (CLAUDE)</div>
+      <div class="code-block" style="font-size:10px">
+        <span class="cmt"># 1. Key from console.anthropic.com</span><br>
+        <span class="cmt"># 2. Persist it in your shell profile</span><br>
+        <span class="cmd">echo 'export ANTHROPIC_API_KEY=sk-ant-xxx' &gt;&gt; ~/.zshrc</span><br>
+        <span class="cmd">source ~/.zshrc</span><br>
+        <span class="cmt"># 3. Run — key picked up automatically</span><br>
+        <span class="cmd">cqs ./tests/ --ai anthropic</span>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#7c3aed;margin:6px 0 3px">OPENAI (GPT)</div>
+      <div class="code-block" style="font-size:10px">
+        <span class="cmt"># 1. Key from platform.openai.com</span><br>
+        <span class="cmd">echo 'export OPENAI_API_KEY=sk-xxx' &gt;&gt; ~/.zshrc</span><br>
+        <span class="cmd">source ~/.zshrc</span><br>
+        <span class="cmt"># 2. Run (default model gpt-4o-mini)</span><br>
+        <span class="cmd">cqs ./tests/ --ai openai</span>
+      </div>
+      <div style="font-size:10px;color:#475569;margin-top:5px">
+        Set the key <strong>once</strong> — every later run reads it from the environment.
+      </div>
+    </div>
+  </div>
+  <div class="card theme-purple">
+    <div class="card-head">☁️ AI Setup — Bedrock &amp; Vertex</div>
+    <div class="card-body">
+      <div style="font-size:10px;font-weight:700;color:#7c3aed;margin-bottom:3px">AWS BEDROCK</div>
+      <div class="code-block" style="font-size:10px">
+        <span class="cmd">echo 'export AWS_REGION=us-east-1' &gt;&gt; ~/.zshrc</span><br>
+        <span class="cmd">echo 'export AWS_ACCESS_KEY_ID=AKIAxxx' &gt;&gt; ~/.zshrc</span><br>
+        <span class="cmd">echo 'export AWS_SECRET_ACCESS_KEY=xxx' &gt;&gt; ~/.zshrc</span><br>
+        <span class="cmd">source ~/.zshrc</span><br>
+        <span class="cmd">cqs ./tests/ --ai bedrock</span>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#7c3aed;margin:6px 0 3px">GOOGLE VERTEX AI</div>
+      <div class="code-block" style="font-size:10px">
+        <span class="cmt"># Service-account JSON from the GCP console</span><br>
+        <span class="cmd">echo 'export VERTEX_PROJECT=my-proj' &gt;&gt; ~/.zshrc</span><br>
+        <span class="cmd">echo 'export VERTEX_LOCATION=us-central1' &gt;&gt; ~/.zshrc</span><br>
+        <span class="cmd">echo 'export GOOGLE_APPLICATION_CREDENTIALS=~/sa.json' &gt;&gt; ~/.zshrc</span><br>
+        <span class="cmd">source ~/.zshrc</span><br>
+        <span class="cmd">cqs ./tests/ --ai vertex</span>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 3px">INLINE (CI — no env var)</div>
+      <div class="code-block" style="font-size:9.5px">
+        <span class="cmd">cqs ./tests/ --ai anthropic --api-key sk-ant-xxx</span><br>
+        <span class="cmd">cqs ./tests/ --ai openai --api-key sk-xxx</span>
+      </div>
+    </div>
+  </div>
+  <div class="card theme-purple">
+    <div class="card-head">🚀 Core AI Commands (after key is set)</div>
+    <div class="card-body">
+      <div class="code-block" style="font-size:10px">
+        <span class="cmt"># Audit with AI second-eye review</span><br>
+        <span class="cmd">cqs ./tests/ --stack playwright --ai anthropic</span><br>
+        <span class="cmd">cqs ./tests/ --stack playwright --ai openai</span><br>
+        <span class="cmd">cqs ./tests/ --stack playwright --ai bedrock</span><br>
+        <span class="cmd">cqs ./tests/ --stack playwright --ai vertex</span>
+      </div>
+      <div class="code-block" style="font-size:10px">
+        <span class="cmt"># Review only the critical files</span><br>
+        <span class="cmd">cqs ./tests/ --ai anthropic --severity critical</span><br><br>
+        <span class="cmt"># AI review + open HTML report</span><br>
+        <span class="cmd">cqs ./tests/ --ai anthropic --open</span><br><br>
+        <span class="cmt"># AI review + save JSON</span><br>
+        <span class="cmd">cqs ./tests/ --ai anthropic --output json &gt; r.json</span>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:3px">PICK A STRONGER MODEL</div>
+      <div class="code-block" style="font-size:10px">
+        <span class="cmd">cqs ./tests/ --ai anthropic --model claude-sonnet-5</span><br>
+        <span class="cmd">cqs ./tests/ --ai openai --model gpt-4o</span>
+      </div>
+      <div style="font-size:10px;color:#475569;margin-top:5px">
+        AI review runs <strong>after</strong> the offline rules and only on files that already have critical or warning findings.
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════ PAGE 3 — CI/CD, OUTPUT & MAINTAINER ══════════ -->
+<div class="page">
+<div class="section-bar">
+  <h2>3 · CI/CD, Output Formats &amp; Packaging</h2>
+  <span class="step">Gate your pipeline, choose a report format, publish new versions</span>
+</div>
+<div class="grid">
+<div class="card theme-green">
+    <div class="card-head">🔗 CI / CD Integration</div>
+    <div class="card-body">
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">GITHUB ACTIONS</div>
+      <div class="code-block">
+        <span class="kw">- name:</span> <span class="str">Audit test quality</span><br>
+        &nbsp;&nbsp;<span class="kw">run:</span> <span class="cmd">cqs ./tests/ --output summary</span><br>
+        &nbsp;&nbsp;<span class="cmt"># exit 1 on criticals = failed step</span>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">GITLAB CI</div>
+      <div class="code-block">
+        <span class="kw">quality-gate:</span><br>
+        &nbsp;&nbsp;<span class="kw">script:</span> <span class="cmd">cqs ./tests/ --output json > r.json</span><br>
+        &nbsp;&nbsp;<span class="kw">artifacts:</span> <span class="str">{ paths: [r.json] }</span>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">PRE-COMMIT HOOK</div>
+      <div class="code-block">
+        <span class="cmd">cqs . --severity critical --output summary || exit 1</span>
+      </div>
+    </div>
+  </div>
+<div class="card theme-amber">
+    <div class="card-head">🎯 Output Formats &amp; Advanced</div>
+    <div class="card-body">
+      <div style="margin-bottom:8px">
+        <span class="chip chip-teal">pretty</span> Colour terminal — scores, findings, bars (default)<br>
+        <span class="chip chip-blue">json</span> Machine-readable — pipe to file for CI artefacts<br>
+        <span class="chip chip-slate">summary</span> One-liner: <code style="font-size:10px">score 90 · 5 critical · 12 warning</code>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">ADVANCED COMMANDS</div>
+      <div class="code-block">
+        <span class="cmt"># Filter by category</span><br>
+        <span class="cmd">cqs ./tests/ --category reliability</span><br><br>
+        <span class="cmt"># Multiple paths</span><br>
+        <span class="cmd">cqs ./src/tests/ ./e2e/ --stack playwright</span><br><br>
+        <span class="cmt"># Plain text (no ANSI — for log files)</span><br>
+        <span class="cmd">cqs ./tests/ --no-color</span><br><br>
+        <span class="cmt"># Save + open later</span><br>
+        <span class="cmd">cqs ./tests/ --output json > r.json</span><br>
+        <span class="cmd">cqs --read-report r.json --open</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════ PAGE 4 — IDE & AI AGENT INTEGRATION ══════════ -->
+<div class="page">
+<div class="section-bar">
+  <h2>4 · IDE &amp; AI Agent Integration</h2>
+  <span class="step">Run cqs from Cursor, or expose it as a tool your AI agent can call</span>
+</div>
+<div class="grid">
+<div class="card theme-rose">
+    <div class="card-head">🖱️ Using cqs with Cursor IDE</div>
+    <div class="card-body">
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">OPTION 1 — Terminal inside Cursor</div>
+      <div class="code-block">
+        <span class="cmt"># Open terminal in Cursor (Ctrl+`), then run normally</span><br>
+        <span class="cmd">cqs ./tests/ --stack playwright --open</span><br>
+        <span class="cmt"># HTML report opens in your default browser</span>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:5px 0 4px">OPTION 2 — Cursor Task (tasks.json)</div>
+      <div class="code-block" style="font-size:9.5px">
+        <span class="cmt">// .vscode/tasks.json</span><br>
+        <span class="str">"tasks"</span>: [{<br>
+        &nbsp;&nbsp;<span class="str">"label"</span>: <span class="str">"cqs audit"</span>,<br>
+        &nbsp;&nbsp;<span class="str">"type"</span>: <span class="str">"shell"</span>,<br>
+        &nbsp;&nbsp;<span class="str">"command"</span>: <span class="str">"cqs ${workspaceFolder}/tests/ --open"</span>,<br>
+        &nbsp;&nbsp;<span class="str">"group"</span>: <span class="str">"test"</span><br>
+        }]
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:5px 0 4px">OPTION 3 — Cursor AI + cqs together</div>
+      <div style="font-size:10.5px;color:#475569">
+        1. Run: <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px;color:#be123c">cqs ./tests/ --output json > r.json</code><br>
+        2. Open <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px;color:#be123c">r.json</code> in Cursor<br>
+        3. Ask Cursor AI: <em>"Fix the critical findings in this report"</em><br>
+        4. Cursor reads the JSON + your test files and applies fixes
+      </div>
+    </div>
+  </div>
+<div class="card" style="border-top:3px solid #6366f1;background:#fafafa;">
+    <div class="card-head" style="background:#6366f1;">⚡ MCP Server — cqs as an AI Tool</div>
+    <div class="card-body">
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">BUILD THE MCP SERVER</div>
+      <div class="code-block">
+        <span class="cmt"># From the cqs CLI source directory</span><br>
+        <span class="cmd">cd playwright-quality-studio/cli</span><br>
+        <span class="cmd">node build-mcp.mjs</span><br>
+        <span class="cmt"># → produces dist/cqs-mcp.js</span>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">CONFIG — SAME JSON FOR BOTH CLIENTS</div>
+      <div class="code-block" style="font-size:9.5px">
+        {<br>
+        &nbsp;&nbsp;<span class="str">"mcpServers"</span>: {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"cqs"</span>: {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"command"</span>: <span class="str">"node"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"args"</span>: [<span class="str">"/abs/path/dist/cqs-mcp.js"</span>]<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+        &nbsp;&nbsp;}<br>
+        }
+      </div>
+      <div style="font-size:10.5px;color:#475569;margin-bottom:6px">
+        Cursor → <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">.cursor/mcp.json</code><br>
+        Claude Code → <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">~/.claude/settings.json</code>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">MCP TOOLS EXPOSED</div>
+      <div style="font-size:10.5px;color:#475569">
+        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace;margin-bottom:3px">cqs_audit</span> — audit a path, returns findings<br>
+        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace;margin-bottom:3px">cqs_list_stacks</span> — list all 18 supported stacks<br>
+        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace">cqs_read_report</span> — summarise a JSON report file
+      </div>
+      <div style="margin-top:6px;font-size:10.5px;color:#475569">
+        Once registered, ask the AI: <em>"Audit my tests folder"</em> — the AI calls cqs_audit automatically.
+      </div>
+    </div>
+  </div>
+<div class="card" style="border-top:3px solid #0d9488;background:#fafafa;">
+    <div class="card-head" style="background:#0d9488;">🧠 Claude Code /cqs Skill</div>
+    <div class="card-body">
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">INSTALL THE SKILL (one-time)</div>
+      <div class="code-block">
+        <span class="cmt"># Create the skill directory</span><br>
+        <span class="cmd">mkdir -p ~/.claude/skills/cqs</span><br><br>
+        <span class="cmt"># Copy SKILL.md from the cqs repo</span><br>
+        <span class="cmd">cp cli/bin/cqs-skill.md ~/.claude/skills/cqs/SKILL.md</span><br><br>
+        <span class="cmt"># Or download directly (if cqs-audit is installed globally)</span><br>
+        <span class="cmd">cqs --list-stacks  # verify cqs is working</span>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">USE IN CLAUDE CODE SESSION</div>
+      <div class="code-block">
+        <span class="cmt"># In any Claude Code session, just type:</span><br>
+        <span class="cmd">/cqs</span><br><br>
+        <span class="cmt"># Claude will ask you for the path, then run the audit</span><br>
+        <span class="cmt"># and summarise findings directly in the conversation</span>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">EXAMPLE PROMPTS WITH SKILL</div>
+      <div style="font-size:10.5px;color:#475569;line-height:1.8">
+        <em>"Audit my tests and fix all critical issues"</em><br>
+        <em>"Run cqs on ./e2e/ and summarise what's wrong"</em><br>
+        <em>"Check my Playwright tests for quality issues"</em><br>
+        <em>"Review ./tests/ with AI — use Anthropic"</em>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">SKILL FILE LOCATION</div>
+      <div class="code-block" style="font-size:10px">
+        <span class="cmd">~/.claude/skills/cqs/SKILL.md</span>
+      </div>
+      <div style="margin-top:6px;font-size:10.5px;color:#475569">
+        Claude Code auto-loads skills from <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">~/.claude/skills/</code> — no restart needed after adding SKILL.md.
+      </div>
+    </div>
+  </div>
+</div>
+<div class="footer">
+  cqs v2.1.0 &nbsp;·&nbsp; <strong>npm install -g cqs-audit</strong> &nbsp;·&nbsp; AI: anthropic | openai | bedrock | vertex &nbsp;·&nbsp; MCP: cqs_audit | cqs_list_stacks | cqs_read_report &nbsp;·&nbsp; Skill: /cqs &nbsp;·&nbsp; Offline .tgz &amp; publishing → <strong>cqs-admin-cheatsheet.pdf</strong>
+</div>
+</div>
+
+
+
+</body>
+</html>

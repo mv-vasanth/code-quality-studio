@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "qcbot"
+version = "1.0.0"
+description = "Playwright & multi-stack test quality analyser — Python interface"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+keywords = ["playwright", "test quality", "code analysis", "ci"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+]
+
+# Node.js / npx are runtime prerequisites but cannot be declared here.
+# The package checks for them at call time and raises a clear error.
+dependencies = []
+
+[project.optional-dependencies]
+cli = ["click>=8.0"]
+
+[project.scripts]
+qcbot-py = "pw_quality.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/cqs/qcbot"
+Documentation = "https://github.com/cqs/qcbot/blob/main/cli/README.md"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pw_quality*"]

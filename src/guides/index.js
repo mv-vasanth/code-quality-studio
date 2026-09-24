@@ -421,6 +421,15 @@ const PLAYWRIGHT_JAVA_INTRO =
 
 const INTRO_BY_STACK = {
   playwright_java: PLAYWRIGHT_JAVA_INTRO,
+  playwright_python: "Standards for the Playwright Python binding (playwright.sync_api / async_api). Focus on snake_case locators, expect() web-first assertions, and pytest fixtures.",
+  ts_frontend: "Frontend standards for React/TypeScript UIs — safe rendering (XSS), correct hooks usage, accessible markup, and type safety.",
+  python_api: "Python service/API standards (FastAPI, Flask, Django) — SQL safety, secrets, input validation, error handling, and non-blocking I/O.",
+  python_frontend: "Server-rendered template standards (Django / Jinja) — output escaping, CSRF protection, and accessible markup.",
+  java_frontend: "General Java code-quality standards for non-API code — correctness, error handling, and idiomatic style.",
+  restassured: "REST Assured (Java) API-test standards — verify status, schema, and body; reusable specs; externalized config; no hardcoded secrets.",
+  karate: "Karate API-test standards — assert status and match the response body; share setup in Background; keep URLs and secrets in config.",
+  pytest_api: "Python API-test standards (pytest + requests/httpx) — assert status and body, validate schemas, use fixtures and timeouts, keep secrets in env.",
+  postman: "Postman / Newman collection standards — every request has pm.test assertions, use {{variables}} for URLs and secrets, keep scripts clean.",
   java_api: JAVA_API_INTRO,
   typescript: TYPESCRIPT_INTRO,
   playwright: BEST_PRACTICES_INTRO,

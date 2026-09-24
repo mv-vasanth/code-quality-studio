@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cqs CLI — Admin &amp; Packaging Cheat Sheet</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    background: #fff;
+    color: #1e293b;
+    line-height: 1.5;
+  }
+
+  /* ── PAGE HEADER ── */
+  .page-header {
+    background: #0f172a;
+    color: #fff;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+  .page-header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  .page-header .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+  .badge {
+    background: #0d9488;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+  .verify-box {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 11px;
+    color: #166534;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .verify-box code { font-family: monospace; font-weight: 700; font-size: 12px; }
+
+  /* ── GRID ── */
+  .grid { flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    align-items: start;
+  }
+  .col-span-2 { grid-column: span 2; }
+
+  /* ── PAGE FLOW ── */
+  .page { height: 186mm; display: flex; flex-direction: column; page-break-after: always; break-after: page; }
+  .page:last-of-type { page-break-after: auto; break-after: auto; }
+  .section-bar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 2px solid #0f172a;
+    padding-bottom: 5px;
+    margin: 0 0 10px;
+  }
+  .section-bar h2 { font-size: 14px; font-weight: 800; color: #0f172a; letter-spacing: -0.2px; }
+  .section-bar .step { font-size: 10px; color: #64748b; font-weight: 600; }
+
+  /* ── SECTION CARD ── */
+  .card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .card-head {
+    padding: 7px 12px;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .card-body { padding: 10px 12px; }
+
+  /* colour themes per section */
+  .theme-slate  .card-head { background: #1e293b; color: #fff; }
+  .theme-teal   .card-head { background: #0d9488; color: #fff; }
+  .theme-blue   .card-head { background: #1d4ed8; color: #fff; }
+  .theme-purple .card-head { background: #7c3aed; color: #fff; }
+  .theme-amber  .card-head { background: #b45309; color: #fff; }
+  .theme-green  .card-head { background: #15803d; color: #fff; }
+  .theme-rose   .card-head { background: #be123c; color: #fff; }
+
+  /* ── CODE BLOCK ── */
+  .code-block {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    padding: 7px 10px;
+    font-family: 'Menlo', 'Courier New', monospace;
+    font-size: 11px;
+    color: #1e293b;
+    margin-bottom: 6px;
+    line-height: 1.7;
+  }
+  .code-block:last-child { margin-bottom: 0; }
+  .cmd { color: #0d9488; font-weight: 600; }
+  .cmt { color: #94a3b8; }
+  .kw  { color: #7c3aed; }
+  .str { color: #b45309; }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f1f5f9; font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: #64748b; padding: 5px 8px; text-align: left; }
+  td { padding: 5px 8px; border-bottom: 1px solid #f1f5f9; font-size: 11px; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td code { font-family: monospace; background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 11px; color: #0d9488; font-weight: 600; }
+  td.desc { color: #475569; }
+
+  /* ── SEVERITY CHIPS ── */
+  .chip {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 10px;
+    margin-right: 3px;
+  }
+  .chip-red    { background: #fef2f2; color: #dc2626; }
+  .chip-amber  { background: #fffbeb; color: #d97706; }
+  .chip-blue   { background: #eff6ff; color: #2563eb; }
+  .chip-teal   { background: #f0fdfa; color: #0d9488; }
+  .chip-purple { background: #f5f3ff; color: #7c3aed; }
+  .chip-green  { background: #f0fdf4; color: #16a34a; }
+  .chip-slate  { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+
+  /* ── STACKS GRID ── */
+  .stacks-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .stack-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 10.5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .stack-item code { font-family: monospace; font-size: 10px; color: #0d9488; }
+
+  /* ── STEP LIST ── */
+  .steps { list-style: none; counter-reset: steps; }
+  .steps li {
+    counter-increment: steps;
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+    align-items: flex-start;
+  }
+  .steps li::before {
+    content: counter(steps);
+    background: #0d9488;
+    color: #fff;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 10px;
+    color: #94a3b8;
+  }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page-header { border-radius: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+<div class="page-header">
+  <div>
+    <h1>🔧 cqs — Admin &amp; Packaging Cheat Sheet</h1>
+    <div class="sub">For maintainers: build, package, publish, and distribute cqs offline</div>
+  </div>
+  <div style="background:#b45309;border-radius:8px;padding:8px 18px;text-align:center">
+    <div style="font-size:10px;color:#fef3c7;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">Offline install artefact</div>
+    <div style="font-family:monospace;font-size:14px;font-weight:800;color:#fff">cqs-audit-2.1.0.tgz</div>
+    <div style="font-size:10px;color:#fef3c7;margin-top:3px">npm pack → copy → install</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+    <div class="verify-box">✅ Verify: <code>cqs --list-stacks</code></div>
+    <div class="badge">v2.1.0</div>
+  </div>
+</div>
+<div class="section-bar">
+  <h2>A · Build, Package &amp; Distribute</h2>
+  <span class="step">Build the bundles → pack a .tgz → install it on a machine with no npm access</span>
+</div>
+<div class="grid">
+  <div class="card theme-purple">
+    <div class="card-head">🔧 Admin — Build &amp; Distribute</div>
+    
+    <div class="card-body">
+      <div class="code-block">
+        <span class="cmt"># First-time setup</span><br>
+        <span class="cmd">cd playwright-quality-studio/cli</span><br>
+        <span class="cmd">npm install</span><br>
+        <span class="cmd">npm run build</span><br>
+        <span class="cmd">npm install -g .</span><br><br>
+        <span class="cmt"># Create shareable tarball</span><br>
+        <span class="cmd">npm run build &amp;&amp; npm pack</span><br>
+        <span class="cmt"># → cqs-audit-2.1.0.tgz</span><br><br>
+        <span class="cmt"># Publish to npm (bump version first)</span><br>
+        <span class="cmd">npm run build &amp;&amp; npm publish --access public</span>
+      </div>
+      <div style="font-size:10.5px;color:#475569;margin-top:5px">⚙️ Bump version: edit <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">"version"</code> in <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">package.json</code> before rebuilding</div>
+    </div>
+  </div>
+  <div class="card theme-slate">
+    <div class="card-head">📦 Install from .tgz (offline / internal)</div>
+    
+    <div class="card-body">
+      <div class="code-block">
+        <span class="cmt"># With admin rights</span><br>
+        <span class="cmd">sudo npm install -g ./cqs-audit-2.1.0.tgz</span><br><br>
+        <span class="cmt"># Without admin (no sudo)</span><br>
+        <span class="cmd">npm install -g ./cqs-audit-2.1.0.tgz --prefix ~/.npm-global</span><br>
+        <span class="cmd">echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.zshrc</span><br>
+        <span class="cmd">source ~/.zshrc</span><br><br>
+        <span class="cmt"># Windows</span><br>
+        <span class="cmd">npm install -g .\cqs-audit-2.1.0.tgz</span>
+      </div>
+    </div>
+  </div>
+<div class="card theme-slate">
+    <div class="card-head">⚙️ Build Outputs &amp; MCP Server</div>
+    <div class="card-body">
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">BUILD BOTH BUNDLES</div>
+      <div class="code-block">
+        <span class="cmt"># CLI + MCP server in one go</span><br>
+        <span class="cmd">npm run build:all</span><br><br>
+        <span class="cmt"># Or individually</span><br>
+        <span class="cmd">npm run build</span><br>
+        <span class="cmd">npm run build:mcp</span>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">ARTEFACTS PRODUCED</div>
+      <div style="font-size:10.5px;color:#475569;line-height:1.9">
+        <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;color:#0d9488">dist/cqs.js</code> — the CLI (self-contained)<br>
+        <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;color:#0d9488">dist/cqs-mcp.js</code> — the MCP server
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">VERSION IS AUTOMATIC</div>
+      <div style="font-size:10.5px;color:#475569">
+        The build injects <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px">__CQS_VERSION__</code> from
+        <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px">package.json</code>. Bump the version there only — never edit the string in source.
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">REGENERATE THIS CHEAT SHEET</div>
+      <div class="code-block" style="font-size:9.5px">
+        <span class="cmd">chrome --headless=new --print-to-pdf=out.pdf sheet.html</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="footer">
+  cqs v2.1.0 — admin sheet &nbsp;·&nbsp; Day-to-day usage → <strong>cqs-cheatsheet.pdf</strong> &nbsp;·&nbsp; Node.js 18+
+</div>
+</div>
+
+
+
+</body>
+</html>

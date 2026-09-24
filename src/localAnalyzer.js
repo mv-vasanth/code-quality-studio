@@ -64,6 +64,9 @@ function scoreFromFindings(findings, category) {
 export function analysePlaywrightLocally(filename, content, options = {}) {
   const disabled = options.disabledRuleIds ?? new Set();
   const findings = [];
+  // Rules whose prerequisite was not met — shown as "Skipped" in the UI
+  // instead of silently counting as a passing score.
+  const skippedRules = [];
 
   const xpathLines = [
     ...lineMatches(content, /xpath\s*=/i),
@@ -71,6 +74,9 @@ export function analysePlaywrightLocally(filename, content, options = {}) {
     ...lineMatches(content, /page\.locator\s*\(\s*['"`]\s*\//),
   ];
   const xpathLocators = new Set(xpathLines).size;
+  if (xpathLocators === 0) {
+    skippedRules.push({ ruleId: "PW-SEL-006", reason: "No XPath locators found in this file" });
+  }
   if (xpathLocators > 0) {
     addFindingLocal(findings, {
       ruleId: "PW-SEL-001",
@@ -83,6 +89,37 @@ export function analysePlaywrightLocally(filename, content, options = {}) {
       line: xpathLines[0],
       reference: "https://playwright.dev/docs/locators",
     }, disabled);
+  }
+
+  // PW-SEL-006: repeated identical XPath within the same file
+  if (xpathLocators > 0) {
+    const lines = linesOf(content);
+    const xpathCounts = {};
+    const xpathFirstLine = {};
+    const xpathRe = /(?:locator|page\.locator)\s*\(\s*['"`](\/[^'"`]+|xpath=[^'"`]+)['"`]/g;
+    lines.forEach((line, idx) => {
+      let m;
+      while ((m = xpathRe.exec(line)) !== null) {
+        const xpath = m[1].trim();
+        xpathCounts[xpath] = (xpathCounts[xpath] || 0) + 1;
+        if (!xpathFirstLine[xpath]) xpathFirstLine[xpath] = idx + 1;
+      }
+    });
+    const dupes = Object.entries(xpathCounts).filter(([, n]) => n >= 2);
+    dupes.forEach(([xpath, count]) => {
+      const short = xpath.length > 60 ? xpath.slice(0, 60) + "…" : xpath;
+      addFindingLocal(findings, {
+        ruleId: "PW-SEL-006",
+        category: "selectors",
+        severity: "warning",
+        title: "Repeated XPath within file",
+        description: `The XPath "${short}" is used ${count} times in this file.`,
+        impact: "Repeated XPaths must be updated in multiple places when the DOM changes, increasing maintenance cost.",
+        fix: `// Extract to a helper or page-object method:\nconst submitBtn = page.locator('${xpath}');\n// Then reuse submitBtn throughout the test`,
+        line: xpathFirstLine[xpath],
+        reference: "https://playwright.dev/docs/pom",
+      }, disabled);
+    });
   }
 
   const idLines = lineMatches(content, /locator\s*\(\s*['"`]#/);
@@ -636,6 +673,480 @@ const close = page.getByRole('dialog').getByRole('button', { name: /close/i });`
     }, disabled);
   }
 
+  // ── Batch 3: Naming conventions & industry code practices (PW-NMC-*  PW-CPX-*) ──
+  const fileLines = linesOf(content);
+
+  // PW-NMC-001: Variable declared with PascalCase (should be camelCase)
+  {
+    const nmcVarMatches = [];
+    fileLines.forEach((line, idx) => {
+      const m = /^\s*(?:const|let|var)\s+([A-Z][a-zA-Z0-9]+)\s*[=:]/.exec(line);
+      if (!m) return;
+      const name = m[1];
+      if (/^[A-Z][A-Z0-9_]+$/.test(name)) return; // SCREAMING_SNAKE_CASE allowed for true constants
+      if (/^\s*(?:const|let|var)\s*\{/.test(line)) return; // destructuring
+      nmcVarMatches.push({ line: idx + 1, name });
+    });
+    if (nmcVarMatches.length > 0) {
+      addFindingLocal(findings, {
+        ruleId: "PW-NMC-001", category: "coding_standards", severity: "warning",
+        title: "Variable name should be camelCase",
+        description: `${nmcVarMatches.length} variable(s) use PascalCase: ${nmcVarMatches.slice(0, 3).map((m) => `"${m.name}" (line ${m.line})`).join(", ")}${nmcVarMatches.length > 3 ? "…" : ""}. Variables should use camelCase.`,
+        impact: "PascalCase is reserved for classes, types, and constructors — using it for variables causes confusion.",
+        fix: `// Before\nconst MyVariable = 'value';\n\n// After\nconst myVariable = 'value';`,
+        line: nmcVarMatches[0].line, reference: "https://www.typescriptlang.org/docs/handbook/declaration-files/do-s-and-don-ts.html",
+      }, disabled);
+    }
+  }
+
+  // PW-NMC-002: Class declared with camelCase (should be PascalCase)
+  {
+    const nmcClassMatches = [];
+    fileLines.forEach((line, idx) => {
+      const m = /^\s*(?:export\s+)?(?:default\s+)?(?:abstract\s+)?class\s+([a-z][a-zA-Z0-9]*)[\s{<(]/.exec(line);
+      if (m) nmcClassMatches.push({ line: idx + 1, name: m[1] });
+    });
+    if (nmcClassMatches.length > 0) {
+      addFindingLocal(findings, {
+        ruleId: "PW-NMC-002", category: "coding_standards", severity: "critical",
+        title: "Class name should be PascalCase",
+        description: `Class "${nmcClassMatches[0].name}" uses camelCase. Class names must start with an uppercase letter (PascalCase).`,
+        impact: "Readers and tools cannot distinguish classes from regular functions without PascalCase naming.",
+        fix: `// Before\nclass checkoutPage { }\n\n// After\nclass CheckoutPage { }`,
+        line: nmcClassMatches[0].line, reference: "https://www.typescriptlang.org/docs/handbook/declaration-files/do-s-and-don-ts.html",
+      }, disabled);
+    }
+  }
+
+  // PW-NMC-003: Standalone function named PascalCase in a spec file (should be camelCase)
+  {
+    const nmcFuncMatches = [];
+    fileLines.forEach((line, idx) => {
+      const m = /^\s*(?:export\s+)?(?:async\s+)?function\s+([A-Z][a-zA-Z0-9]+)\s*\(/.exec(line);
+      if (m) nmcFuncMatches.push({ line: idx + 1, name: m[1] });
+    });
+    if (nmcFuncMatches.length > 0 && /\.(spec|test)\./.test(filename)) {
+      addFindingLocal(findings, {
+        ruleId: "PW-NMC-003", category: "coding_standards", severity: "info",
+        title: "Helper function should be camelCase in spec file",
+        description: `Function "${nmcFuncMatches[0].name}" uses PascalCase. In test files, helper and setup functions should use camelCase; PascalCase is reserved for classes.`,
+        impact: "PascalCase functions look like constructors — misleads reviewers when used as plain helpers.",
+        fix: `// Before\nasync function LoginHelper(page) { }\n\n// After\nasync function loginHelper(page) { }`,
+        line: nmcFuncMatches[0].line, reference: "https://developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Writing_style_guide/Code_style_guide/JavaScript",
+      }, disabled);
+    }
+  }
+
+  // PW-NMC-004: Non-descriptive test name (very short or generic keyword)
+  {
+    const nmcTestNameMatches = [];
+    fileLines.forEach((line, idx) => {
+      const m = /\btest\s*\(\s*['"`]([^'"`]{1,9})['"`]/.exec(line);
+      if (!m) return;
+      const name = m[1].trim();
+      if (/^(test\d*|ok|check|verify|should|spec\d*|case\d*|\.\.\.|step\d*|flow\d*|it)$/i.test(name) || name.length < 5) {
+        nmcTestNameMatches.push({ line: idx + 1, name });
+      }
+    });
+    if (nmcTestNameMatches.length > 0) {
+      addFindingLocal(findings, {
+        ruleId: "PW-NMC-004", category: "coding_standards", severity: "info",
+        title: "Non-descriptive test name",
+        description: `${nmcTestNameMatches.length} test(s) have vague names: ${nmcTestNameMatches.slice(0, 3).map((m) => `"${m.name}" (line ${m.line})`).join(", ")}. Test names should describe the behaviour under test.`,
+        impact: "Vague names make failure reports unreadable and hide intent.",
+        fix: `// Before\ntest('ok', async ({ page }) => { });\n\n// After\ntest('shows success toast when checkout completes', async ({ page }) => { });`,
+        line: nmcTestNameMatches[0].line, reference: "https://playwright.dev/docs/test-annotations",
+      }, disabled);
+    }
+  }
+
+  // PW-NMC-005: TypeScript interface name not PascalCase
+  {
+    const nmcInterfaceMatches = [];
+    fileLines.forEach((line, idx) => {
+      const m = /^\s*(?:export\s+)?interface\s+([a-z][a-zA-Z0-9]*)[\s{<]/.exec(line);
+      if (m) nmcInterfaceMatches.push({ line: idx + 1, name: m[1] });
+    });
+    if (nmcInterfaceMatches.length > 0) {
+      addFindingLocal(findings, {
+        ruleId: "PW-NMC-005", category: "coding_standards", severity: "warning",
+        title: "Interface name should be PascalCase",
+        description: `Interface "${nmcInterfaceMatches[0].name}" does not use PascalCase. TypeScript interfaces must start with an uppercase letter.`,
+        impact: "Non-PascalCase interfaces are indistinguishable from variables in code reviews.",
+        fix: `// Before\ninterface userProfile { name: string }\n\n// After\ninterface UserProfile { name: string }`,
+        line: nmcInterfaceMatches[0].line, reference: "https://www.typescriptlang.org/docs/handbook/declaration-files/do-s-and-don-ts.html",
+      }, disabled);
+    }
+  }
+
+  // PW-NMC-006: TypeScript type alias not PascalCase
+  {
+    const nmcTypeMatches = [];
+    fileLines.forEach((line, idx) => {
+      const m = /^\s*(?:export\s+)?type\s+([a-z][a-zA-Z0-9]*)\s*[=<]/.exec(line);
+      if (m) nmcTypeMatches.push({ line: idx + 1, name: m[1] });
+    });
+    if (nmcTypeMatches.length > 0) {
+      addFindingLocal(findings, {
+        ruleId: "PW-NMC-006", category: "coding_standards", severity: "warning",
+        title: "Type alias should be PascalCase",
+        description: `Type alias "${nmcTypeMatches[0].name}" does not use PascalCase. TypeScript type aliases should start with an uppercase letter.`,
+        impact: "Inconsistent casing between types and interfaces causes confusion.",
+        fix: `// Before\ntype userStatus = 'active' | 'inactive';\n\n// After\ntype UserStatus = 'active' | 'inactive';`,
+        line: nmcTypeMatches[0].line, reference: "https://www.typescriptlang.org/docs/handbook/declaration-files/do-s-and-don-ts.html",
+      }, disabled);
+    }
+  }
+
+  // PW-NMC-007: Enum name not PascalCase
+  {
+    const nmcEnumMatches = [];
+    fileLines.forEach((line, idx) => {
+      const m = /^\s*(?:export\s+)?(?:const\s+)?enum\s+([a-z][a-zA-Z0-9]*)[\s{]/.exec(line);
+      if (m) nmcEnumMatches.push({ line: idx + 1, name: m[1] });
+    });
+    if (nmcEnumMatches.length > 0) {
+      addFindingLocal(findings, {
+        ruleId: "PW-NMC-007", category: "coding_standards", severity: "warning",
+        title: "Enum name should be PascalCase",
+        description: `Enum "${nmcEnumMatches[0].name}" does not use PascalCase. Enum names should start with an uppercase letter.`,
+        impact: "Lowercase enum names break the visual contract between types and values.",
+        fix: `// Before\nenum userRole { admin = 'admin' }\n\n// After\nenum UserRole { Admin = 'admin' }`,
+        line: nmcEnumMatches[0].line, reference: "https://www.typescriptlang.org/docs/handbook/enums.html",
+      }, disabled);
+    }
+  }
+
+  // PW-NMC-008: Boolean variable missing is/has/can/should prefix
+  {
+    const BOOL_OK_WORDS = /^(enabled|disabled|visible|hidden|active|inactive|valid|invalid|ready|loaded|open|closed|checked|selected|focused|required|optional|editable|found|exists|success|failed|done|complete|empty|full|dirty|pending|busy|running|stopped|muted|expanded|collapsed|published|archived|verified|confirmed|approved|rejected)$/i;
+    const nmcBoolMatches = [];
+    fileLines.forEach((line, idx) => {
+      const m = /^\s*(?:const|let)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)(?:\s*:\s*boolean)?\s*=\s*(true|false)\b/.exec(line);
+      if (!m) return;
+      const varName = m[1];
+      if (/^(is|has|can|should|was|will|did|are|were|would|could|shall)[A-Z_]/.test(varName)) return;
+      if (BOOL_OK_WORDS.test(varName)) return;
+      nmcBoolMatches.push({ line: idx + 1, name: varName });
+    });
+    if (nmcBoolMatches.length > 0) {
+      addFindingLocal(findings, {
+        ruleId: "PW-NMC-008", category: "coding_standards", severity: "info",
+        title: "Boolean variable missing is/has/can prefix",
+        description: `"${nmcBoolMatches[0].name}" is assigned a boolean literal but does not use the is/has/can/should naming convention.`,
+        impact: "Without the is/has prefix, readers cannot tell at a glance that a variable is boolean.",
+        fix: `// Before\nconst loggedIn = true;\n\n// After\nconst isLoggedIn = true;`,
+        line: nmcBoolMatches[0].line, reference: "https://www.typescriptlang.org/docs/handbook/declaration-files/do-s-and-don-ts.html",
+      }, disabled);
+    }
+  }
+
+  // PW-NMC-009: Describe block name starts with lowercase
+  {
+    const nmcDescribeMatches = [];
+    fileLines.forEach((line, idx) => {
+      const m = /(?:test\.describe|describe)\s*\(\s*['"`]([a-z][^'"`]*)['"`]/.exec(line);
+      if (m) nmcDescribeMatches.push({ line: idx + 1, name: m[1] });
+    });
+    if (nmcDescribeMatches.length > 0) {
+      const ex = nmcDescribeMatches[0];
+      addFindingLocal(findings, {
+        ruleId: "PW-NMC-009", category: "coding_standards", severity: "info",
+        title: "Describe block name starts with lowercase",
+        description: `describe("${ex.name.slice(0, 45)}${ex.name.length > 45 ? "…" : ""}") — block names conventionally start with an uppercase letter for readability in reports.`,
+        impact: "Inconsistent capitalisation in test reports makes it harder to scan suites at a glance.",
+        fix: `// Before\ndescribe('checkout flow', () => { });\n\n// After\ndescribe('Checkout flow', () => { });`,
+        line: ex.line, reference: "Team standards",
+      }, disabled);
+    }
+  }
+
+  // PW-NMC-010: Underscore-prefixed variable (outdated private notation)
+  {
+    const nmcUnderscoreMatches = [];
+    fileLines.forEach((line, idx) => {
+      const m = /^\s*(?:const|let|var)\s+(_[a-zA-Z][a-zA-Z0-9_]*)/.exec(line);
+      if (m) nmcUnderscoreMatches.push({ line: idx + 1, name: m[1] });
+    });
+    if (nmcUnderscoreMatches.length > 0) {
+      addFindingLocal(findings, {
+        ruleId: "PW-NMC-010", category: "coding_standards", severity: "info",
+        title: "Underscore-prefixed variable (outdated private notation)",
+        description: `"${nmcUnderscoreMatches[0].name}" uses a leading underscore. This was a pre-ES6 convention; use \`private\` (TypeScript) or \`#privateField\` (JS) instead.`,
+        impact: "Underscore-prefix is a naming workaround, not an enforcement mechanism — private/# provides real encapsulation.",
+        fix: `// Before\nconst _helper = new CheckoutHelper();\n\n// After — TypeScript class field:\nprivate helper = new CheckoutHelper();\n// After — JS private field:\n#helper = new CheckoutHelper();`,
+        line: nmcUnderscoreMatches[0].line, reference: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_class_fields",
+      }, disabled);
+    }
+  }
+
+  // ── Complexity & industry practice checks (PW-CPX-*) ──────────────────────
+
+  // PW-CPX-001: High cyclomatic complexity
+  {
+    const ifCount     = (content.match(/\bif\s*\(/g)       || []).length;
+    const elseIfCount = (content.match(/\belse\s+if\s*\(/g) || []).length;
+    const caseCount   = (content.match(/\bcase\s+[^:]+:/g) || []).length;
+    const logicCount  = (content.match(/(?:&&|\|\|)/g)      || []).length;
+    const totalCC = ifCount + elseIfCount + caseCount + Math.floor(logicCount / 2);
+    if (totalCC > 12) {
+      addFindingLocal(findings, {
+        ruleId: "PW-CPX-001", category: "coding_standards", severity: "warning",
+        title: "High cyclomatic complexity",
+        description: `${totalCC} branch points (${ifCount} if / ${elseIfCount} else-if / ${caseCount} case / ${logicCount} logical operators) — recommended maximum is 10. Complex code is harder to test and maintain.`,
+        impact: "High complexity correlates with defect density and test fragility.",
+        fix: `// Extract conditional blocks into named helper functions:\nasync function isUserAuthorised(page) {\n  return page.getByRole('button', { name: 'Admin' }).isVisible();\n}`,
+        line: null, reference: "https://en.wikipedia.org/wiki/Cyclomatic_complexity",
+      }, disabled);
+    }
+  }
+
+  // PW-CPX-002: Deeply nested code (4+ indent levels)
+  {
+    const deepLines = [];
+    fileLines.forEach((line, idx) => {
+      if (/^\t{4,}/.test(line) || /^ {16,}\S/.test(line)) deepLines.push(idx + 1);
+    });
+    if (deepLines.length > 2) {
+      addFindingLocal(findings, {
+        ruleId: "PW-CPX-002", category: "coding_standards", severity: "info",
+        title: "Deeply nested code (4+ levels)",
+        description: `${deepLines.length} line(s) are indented 4+ levels deep. Industry standards recommend ≤ 3 levels of nesting.`,
+        impact: "Deep nesting is a readability smell; it often hides unnecessary complexity.",
+        fix: `// Use early-return / guard clauses to flatten nesting:\nif (!condition) return;\nif (!other) throw new Error('...');\ndoWork();`,
+        line: deepLines[0], reference: "https://en.wikipedia.org/wiki/Code_smell",
+      }, disabled);
+    }
+  }
+
+  // PW-CPX-003: File too long relative to test count
+  {
+    const fileLineCount = fileLines.length;
+    if (fileLineCount > 200 && totalTests > 0) {
+      const avgLinesPerTest = Math.round(fileLineCount / totalTests);
+      if (avgLinesPerTest > 80) {
+        addFindingLocal(findings, {
+          ruleId: "PW-CPX-003", category: "coding_standards", severity: "info",
+          title: "Spec file too long — consider splitting",
+          description: `${fileLineCount} lines, ${totalTests} test(s) — avg ${avgLinesPerTest} lines/test. Files over 200 lines should usually be split by feature or page object.`,
+          impact: "Long spec files are harder to review, maintain, and run selectively.",
+          fix: `// Split into focused spec files:\n// checkout-happy-path.spec.ts\n// checkout-validation.spec.ts\n// checkout-payment-errors.spec.ts`,
+          line: null, reference: "https://playwright.dev/docs/best-practices",
+        }, disabled);
+      }
+    }
+  }
+
+  // PW-CPX-004: Function declared with 5+ parameters
+  {
+    const manyParamLines = [];
+    fileLines.forEach((line, idx) => {
+      const m = /(?:(?:async\s+)?function\s+\w*|(?:const|let)\s+\w+\s*=\s*(?:async\s+)?)\s*\(([^)]+)\)/.exec(line);
+      if (!m) return;
+      const commas = (m[1].match(/,/g) || []).length;
+      if (commas >= 4) manyParamLines.push({ line: idx + 1, count: commas + 1 });
+    });
+    if (manyParamLines.length > 0) {
+      addFindingLocal(findings, {
+        ruleId: "PW-CPX-004", category: "coding_standards", severity: "info",
+        title: "Function has too many parameters (5+)",
+        description: `A function at line ${manyParamLines[0].line} takes ${manyParamLines[0].count} parameters. Functions should take ≤ 4 arguments; use an options object or page-object pattern instead.`,
+        impact: "Long parameter lists are hard to read and maintain; callers must remember argument order.",
+        fix: `// Before\nasync function fillForm(page, name, email, phone, address) { }\n\n// After (options object)\nasync function fillForm(page, opts: { name; email; phone; address }) { }`,
+        line: manyParamLines[0].line, reference: "https://www.typescriptlang.org/docs/handbook/declaration-files/do-s-and-don-ts.html",
+      }, disabled);
+    }
+  }
+
+  // ── Modern Playwright API rules (v1.40+) ──────────────────────────────────
+
+  // PW-REL-009: Missing await on an async Playwright call (floating promise)
+  {
+    const floating = [];
+    // Calls passed to Promise.all/race/allSettled/any are awaited by the combinator,
+    // so they legitimately carry no `await` of their own.
+    let combinatorDepth = 0;
+    fileLines.forEach((line, idx) => {
+      const trimmed = line.trim();
+      if (/Promise\s*\.\s*(?:all|allSettled|race|any)\s*\(/.test(trimmed)) combinatorDepth++;
+      if (combinatorDepth > 0) {
+        const opens = (line.match(/[([]/g) || []).length;
+        const closes = (line.match(/[)\]]/g) || []).length;
+        // The combinator's own brackets close out on this line or a later one
+        if (closes > opens) combinatorDepth = Math.max(0, combinatorDepth - 1);
+        return;
+      }
+      if (/^\/\//.test(trimmed) || /^\*/.test(trimmed)) return;
+      // Array elements / call arguments end with a comma — not standalone statements
+      if (/,$/.test(trimmed)) return;
+      // A statement that starts with page./locator-ish call but has no await/return/void
+      if (!/^(?:page|frame|context|locator|element|\w*[Pp]age)\s*\.\s*\w+/.test(trimmed)) return;
+      if (/\b(?:await|return|void|yield)\b/.test(trimmed)) return;
+      // Only flag calls that are genuinely async in Playwright
+      if (!/\.(?:click|fill|press|check|uncheck|selectOption|hover|type|tap|dblclick|goto|waitFor\w*|setInputFiles|dragTo|focus|blur|clear|screenshot|close|reload|goBack|goForward)\s*\(/.test(trimmed)) return;
+      // Skip chained definitions and assignments (const x = page.locator(...))
+      if (/^\s*(?:const|let|var)\s/.test(line) || /=\s*$/.test(trimmed)) return;
+      floating.push(idx + 1);
+    });
+    if (floating.length > 0) {
+      addFindingLocal(findings, {
+        ruleId: "PW-REL-009", category: "reliability", severity: "critical",
+        title: "Missing await on async Playwright call",
+        description: `Line ${floating[0]} calls an async Playwright action without \`await\`${floating.length > 1 ? ` (${floating.length} occurrences)` : ""}. The promise floats and the test continues before the action completes.`,
+        impact: "Race conditions and phantom flakiness — the test may pass or fail depending on timing, and unhandled rejections can crash the worker.",
+        fix: `// Before\npage.getByRole('button', { name: 'Save' }).click();\n\n// After\nawait page.getByRole('button', { name: 'Save' }).click();`,
+        line: floating[0], reference: "https://playwright.dev/docs/actionability",
+      }, disabled);
+    }
+  }
+
+  // PW-NET-001: External network calls never intercepted
+  {
+    const hasExternalCalls = /https?:\/\/(?!localhost|127\.0\.0\.1)/.test(content);
+    const hasRouting = /page\.route\s*\(|context\.route\s*\(|\.routeFromHAR\s*\(|\.fulfill\s*\(/.test(content);
+    if (totalTests > 0 && hasExternalCalls && !hasRouting) {
+      addFindingLocal(findings, {
+        ruleId: "PW-NET-001", category: "reliability", severity: "warning",
+        title: "Third-party requests not intercepted",
+        description: "The spec references external URLs but never calls page.route() to stub them. Tests depend on live third-party services.",
+        impact: "Suite fails when an external service is slow, rate-limited, or down — failures unrelated to your application.",
+        fix: `await page.route('**/api.thirdparty.com/**', route =>\n  route.fulfill({ json: { status: 'ok' } })\n);`,
+        line: lineMatches(content, /https?:\/\/(?!localhost|127\.0\.0\.1)/)[0] ?? null,
+        reference: "https://playwright.dev/docs/network",
+      }, disabled);
+    }
+  }
+
+  // PW-STR-004: Long test body without test.step() grouping
+  {
+    const testBlocks = [];
+    let depth = 0, startLine = 0;
+    fileLines.forEach((line, idx) => {
+      if (/\btest\s*(?:\.\w+)?\s*\(\s*['"`]/.test(line) && depth === 0) { depth = 1; startLine = idx + 1; return; }
+      if (depth > 0) {
+        depth += (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
+        if (depth <= 0) { if (idx + 1 - startLine > 30) testBlocks.push({ start: startLine, len: idx + 1 - startLine }); depth = 0; }
+      }
+    });
+    if (testBlocks.length > 0 && !/test\.step\s*\(/.test(content)) {
+      addFindingLocal(findings, {
+        ruleId: "PW-STR-004", category: "structure", severity: "info",
+        title: "Long test without test.step() grouping",
+        description: `A test starting at line ${testBlocks[0].start} spans ${testBlocks[0].len} lines with no test.step() calls to structure it.`,
+        impact: "Trace viewer and HTML reports show one flat action list, making failures hard to localise in long journeys.",
+        fix: `await test.step('Log in', async () => {\n  await page.getByLabel('Email').fill(user.email);\n  await page.getByRole('button', { name: 'Sign in' }).click();\n});`,
+        line: testBlocks[0].start, reference: "https://playwright.dev/docs/api/class-test#test-step",
+      }, disabled);
+    }
+  }
+
+  // PW-PER-004: UI login repeated instead of reusing storageState
+  {
+    const loginHits = lineMatches(content, /(?:getByLabel|getByPlaceholder|locator|fill)\s*\([^)]*(?:password|passwd|pwd)/i);
+    if (loginHits.length >= 2 && !/storageState|globalSetup/.test(content)) {
+      addFindingLocal(findings, {
+        ruleId: "PW-PER-004", category: "performance", severity: "warning",
+        title: "UI login repeated — no storageState reuse",
+        description: `Password fields are filled ${loginHits.length} times and the spec never uses storageState. Each test logs in through the UI.`,
+        impact: "Adds several seconds per test and makes every test depend on the login page staying stable.",
+        fix: `// global.setup.ts — log in once, save cookies\nawait page.context().storageState({ path: 'auth.json' });\n\n// playwright.config.ts\nuse: { storageState: 'auth.json' }`,
+        line: loginHits[0], reference: "https://playwright.dev/docs/auth",
+      }, disabled);
+    }
+  }
+
+  // PW-AST-006: Polling loop instead of expect.poll / toPass
+  {
+    // A genuine polling loop sleeps *inside its own body*. Loops that iterate a
+    // collection are data-driven, not retries, so they are excluded.
+    const pollLoops = [];
+    fileLines.forEach((line, idx) => {
+      if (!/\b(?:while|for)\s*\(/.test(line)) return;
+      if (/\bof\b|\bin\b|\.length\b|\.forEach\b|\.entries\(|\.keys\(/.test(line)) return;
+      let depth = (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
+      if (depth <= 0) return;
+      for (let j = idx + 1; j < fileLines.length && depth > 0; j++) {
+        if (/waitForTimeout\s*\(|setTimeout\s*\(|time\.sleep\s*\(/.test(fileLines[j])) { pollLoops.push(idx + 1); break; }
+        depth += (fileLines[j].match(/\{/g) || []).length - (fileLines[j].match(/\}/g) || []).length;
+      }
+    });
+    if (pollLoops.length > 0 && !/expect\.poll|\.toPass\s*\(/.test(content)) {
+      addFindingLocal(findings, {
+        ruleId: "PW-AST-006", category: "assertions", severity: "warning",
+        title: "Manual retry loop instead of expect.poll()",
+        description: "A loop combined with a fixed delay implements hand-rolled polling. Playwright provides expect.poll() and expect(...).toPass() for this.",
+        impact: "Hand-written retries lack timeout control and produce unhelpful failure messages with no trace attachment.",
+        fix: `await expect.poll(async () => {\n  const res = await request.get('/api/job/1');\n  return (await res.json()).status;\n}, { timeout: 30_000 }).toBe('complete');`,
+        line: pollLoops[0], reference: "https://playwright.dev/docs/test-assertions#expectpoll",
+      }, disabled);
+    }
+  }
+
+  // PW-AST-007: Sequential independent assertions could be soft
+  {
+    const expectCount = countMatches(content, /await\s+expect\s*\(/g);
+    if (expectCount >= 8 && !/expect\.soft\s*\(/.test(content)) {
+      addFindingLocal(findings, {
+        ruleId: "PW-AST-007", category: "assertions", severity: "info",
+        title: "No soft assertions in an assertion-heavy spec",
+        description: `The file contains ${expectCount} hard assertions and no expect.soft(). The first failure aborts the test, hiding later problems.`,
+        impact: "Verification-style tests report one issue per run, so fixing a page takes several cycles instead of one.",
+        fix: `// Collect all mismatches in one run\nawait expect.soft(page.getByTestId('total')).toHaveText('$42.00');\nawait expect.soft(page.getByTestId('tax')).toHaveText('$3.50');`,
+        line: lineMatches(content, /await\s+expect\s*\(/)[0] ?? null,
+        reference: "https://playwright.dev/docs/test-assertions#soft-assertions",
+      }, disabled);
+    }
+  }
+
+  // PW-REL-010: Time-dependent test without page.clock
+  {
+    const timeHits = lineMatches(content, /new\s+Date\s*\(|Date\.now\s*\(|setTimeout\s*\(\s*[^,]+,\s*\d{4,}/);
+    if (timeHits.length > 0 && !/page\.clock/.test(content)) {
+      addFindingLocal(findings, {
+        ruleId: "PW-REL-010", category: "reliability", severity: "info",
+        title: "Time-dependent test without page.clock()",
+        description: `Line ${timeHits[0]} depends on real wall-clock time. Playwright's Clock API can freeze or fast-forward time deterministically.`,
+        impact: "Tests behave differently across timezones, at date boundaries, or when a timer is genuinely slow — a classic source of intermittent CI failures.",
+        fix: `await page.clock.install({ time: new Date('2026-01-01T10:00:00Z') });\nawait page.clock.fastForward('02:00'); // jump 2 hours`,
+        line: timeHits[0], reference: "https://playwright.dev/docs/clock",
+      }, disabled);
+    }
+  }
+
+  // PW-A11Y-003: ARIA snapshot testing not adopted
+  {
+    if (totalTests > 0 && /toMatchSnapshot|toHaveScreenshot/.test(content) && !/toMatchAriaSnapshot/.test(content)) {
+      addFindingLocal(findings, {
+        ruleId: "PW-A11Y-003", category: "accessibility", severity: "info",
+        title: "Pixel snapshots without an ARIA snapshot",
+        description: "The spec uses image or text snapshots but never toMatchAriaSnapshot(), which captures the accessibility tree instead of pixels.",
+        impact: "Pixel snapshots break on cosmetic changes and pass even when the accessible structure regresses for screen-reader users.",
+        fix: `await expect(page.getByRole('navigation')).toMatchAriaSnapshot(\`\n  - navigation:\n    - link "Home"\n    - link "Reports"\n\`);`,
+        line: lineMatches(content, /toMatchSnapshot|toHaveScreenshot/)[0] ?? null,
+        reference: "https://playwright.dev/docs/aria-snapshots",
+      }, disabled);
+    }
+  }
+
+  // PW-STD-007: tests carry no tag for selective runs
+  {
+    // Playwright supports both `test('name @smoke')` and `test('name', { tag: '@smoke' }, fn)`
+    const hasTitleTag = /(?:test|describe)\s*(?:\.\w+)?\s*\(\s*['"`][^'"`]*@[\w-]+/.test(content);
+    const hasTagOption = /\btag\s*:\s*(?:['"`]@|\[)/.test(content);
+    const hasGrepAnnotation = /test\.info\s*\(\s*\)\s*\.annotations|annotation\s*:\s*\{/.test(content);
+    if (totalTests > 0 && !hasTitleTag && !hasTagOption && !hasGrepAnnotation) {
+      addFindingLocal(findings, {
+        ruleId: "PW-STD-007", category: "coding_standards", severity: "info",
+        title: "Tests carry no tag for selective runs",
+        description: "No test or describe in this file carries a @tag in its title or a tag option, so these tests cannot be selected with --grep.",
+        impact: "CI must run the whole suite on every commit — no smoke subset, and a flaky spec can only be excluded by skipping it outright.",
+        fix: `// Either in the title\ntest('checkout completes @smoke', async ({ page }) => { /* ... */ });\n\n// Or as a tag option (Playwright 1.42+)\ntest('checkout completes', { tag: ['@smoke', '@billing'] }, async ({ page }) => { /* ... */ });\n\n// then: npx playwright test --grep @smoke`,
+        line: lineMatches(content, /\btest\s*\(/)[0] ?? null,
+        reference: "https://playwright.dev/docs/test-annotations#tag-tests",
+      }, disabled);
+    }
+  }
+
   const categoryScores = Object.fromEntries(
     CATEGORY_IDS.map((id) => [id, scoreFromFindings(findings, id)]),
   );
@@ -688,6 +1199,7 @@ const close = page.getByRole('dialog').getByRole('button', { name: /close/i });`
     summary,
     topPriority: findings.find((f) => f.severity === "critical")?.title ?? findings[0]?.title ?? "Keep improving locator strategy and assertions.",
     findings,
+    skippedRules,
     positives,
     metrics: {
       totalTests,

@@ -1,4 +1,4 @@
-export function scoreFromFindings(findings, category, categoryIds) {
+export function scoreFromFindings(findings, category) {
   const cat = findings.filter((f) => f.category === category);
   let s = 100;
   for (const f of cat) {
@@ -18,6 +18,7 @@ export function buildAuditResult({
   topPriority,
   positives,
   roadmap,
+  skippedRules = [], // [{ ruleId, reason }] — rules whose prerequisite was not met
 }) {
   const categoryScores = Object.fromEntries(
     categoryIds.map((id) => [id, scoreFromFindings(findings, id)]),
@@ -31,6 +32,7 @@ export function buildAuditResult({
     summary,
     topPriority: topPriority ?? findings.find((f) => f.severity === "critical")?.title ?? "Review warnings and align with stack best practices.",
     findings,
+    skippedRules, // [{ ruleId, reason }]
     positives: positives?.length ? positives : [{ title: "File analysed", description: "See findings for actionable improvements." }],
     metrics,
     roadmap: roadmap ?? [
@@ -40,6 +42,18 @@ export function buildAuditResult({
     ],
     _analysisMode: "local",
   };
+}
+
+/**
+ * Record that a rule was not evaluated because its prerequisite was not met.
+ * Call this instead of just `return` / `continue` when a guard condition is false.
+ *
+ * @param {Array} skippedRules  — the skippedRules array to push into
+ * @param {string} ruleId       — rule that was skipped
+ * @param {string} reason       — human-readable reason, e.g. "no XPath locators in file"
+ */
+export function skipRule(skippedRules, ruleId, reason) {
+  skippedRules.push({ ruleId, reason });
 }
 
 export function lineMatches(content, re) {

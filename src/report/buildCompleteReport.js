@@ -96,13 +96,13 @@ export function buildCompleteHtmlReport(payload) {
   <div class="wrap">
     <header class="report-hero">
       <h1>${escapeHtml(base)}</h1>
-      <div class="sub">Complete report · ${escapeHtml(payload.auditStack || "Quality")} · ${escapeHtml(formatReportDate(payload.generatedAt))}</div>
+      <div class="sub">${escapeHtml(payload.reportNoun || "Quality")} · complete report · ${escapeHtml(payload.auditStack || "Quality")} · ${escapeHtml(formatReportDate(payload.generatedAt))}</div>
     </header>
 
     <div class="toolbar" role="navigation" aria-label="Report downloads">
       <span>Export</span>
-      <button type="button" onclick="pqsDownload('markdown')">Markdown (.md)</button>
-      <button type="button" class="secondary" onclick="pqsDownload('json')">JSON data</button>
+      <button type="button" onclick="cqsDownload('markdown')">Markdown (.md)</button>
+      <button type="button" class="secondary" onclick="cqsDownload('json')">JSON data</button>
       <button type="button" class="ghost" onclick="window.print()">Print / PDF</button>
     </div>
 
@@ -125,7 +125,7 @@ export function buildCompleteHtmlReport(payload) {
       base: ${safeJsonForScript(base)},
       stamp: ${safeJsonForScript(stamp)}
     };
-    function pqsDownload(kind) {
+    function cqsDownload(kind) {
       const b64 = kind === "json" ? PQS_EXPORT.json : PQS_EXPORT.md;
       const mime = kind === "json" ? "application/json" : "text/markdown;charset=utf-8";
       const ext = kind === "json" ? "json" : "md";

@@ -1,4 +1,4 @@
-const KEY = (stackId) => `pqs-rule-settings-${stackId}`;
+const KEY = (stackId) => `cqs-rule-settings-${stackId}`;
 
 function defaultSettings() {
   return { disabled: {}, notes: {} };

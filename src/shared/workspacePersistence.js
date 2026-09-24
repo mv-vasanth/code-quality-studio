@@ -1,4 +1,4 @@
-const DB_NAME = "pqs-workspace-v1";
+const DB_NAME = "cqs-workspace-v1";
 const STORE = "meta";
 const SESSION_KEY = "current";
 

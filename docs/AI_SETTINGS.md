@@ -8,7 +8,7 @@
 
 ## Local storage
 
-Provider choice, models, and API keys are saved in **browser localStorage** (`pqs-ai-settings-v1`) on this device so you do not re-enter them each visit.
+Provider choice, models, and API keys are saved in **browser localStorage** (`cqs-ai-settings-v1`) on this device so you do not re-enter them each visit.
 
 - Not written to the git repo or project `.env`.
 - **Clear saved credentials** in the modal removes keys from storage and turns AI off.

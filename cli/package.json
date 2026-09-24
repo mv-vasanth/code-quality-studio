@@ -1,0 +1,44 @@
+{
+  "name": "cqs-audit",
+  "version": "2.1.0",
+  "description": "Code Quality Studio — CLI for auditing test files (Playwright, Cypress, Selenium, Appium, TOSCA and more)",
+  "type": "module",
+  "bin": {
+    "cqs": "dist/cqs.js"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "build:mcp": "node build-mcp.mjs",
+    "build:all": "node build.mjs && node build-mcp.mjs",
+    "dev": "node bin/cqs.entry.js"
+  },
+  "keywords": [
+    "playwright",
+    "cypress",
+    "selenium",
+    "test-quality",
+    "code-quality",
+    "lint",
+    "cli",
+    "mcp"
+  ],
+  "files": [
+    "dist/cqs.js",
+    "dist/cqs-mcp.js",
+    "README.md"
+  ],
+  "author": "Code Quality Studio",
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.21.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.21.5": true
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.1"
+  }
+}

@@ -2,6 +2,20 @@ import { analysePlaywright } from "./playwright.js";
 import { analyseJavaApiLocally } from "./javaApi.js";
 import { analyseTypeScriptLocally } from "./typescript.js";
 import { analysePlaywrightJavaLocally } from "./playwrightJava.js";
+import { analysePlaywrightPythonLocally } from "./playwrightPython.js";
+import { analyseTsFrontendLocally } from "./tsFrontend.js";
+import { analysePythonApiLocally } from "./pythonApi.js";
+import { analysePythonFrontendLocally } from "./pythonFrontend.js";
+import { analyseJavaCoreLocally } from "./javaCore.js";
+import { analyseRestAssuredLocally } from "./restAssured.js";
+import { analyseKarateLocally } from "./karate.js";
+import { analysePytestApiLocally } from "./pytestApi.js";
+import { analysePostmanLocally } from "./postman.js";
+import { analyseSeleniumJavaLocally } from "./seleniumJava.js";
+import { analyseSeleniumCsharpLocally } from "./seleniumCsharp.js";
+import { analyseCypressLocally } from "./cypress.js";
+import { analyseAppiumJavaLocally } from "./appiumJava.js";
+import { analyseToscaXmlLocally } from "./toscaXml.js";
 import { getDisabledRuleIdsForAnalysis } from "../rules/ruleSettingsStorage.js";
 import { runCustomRules } from "../rules/customRulesStorage.js";
 import { scoreFromFindings } from "./analyzerUtils.js";
@@ -12,6 +26,20 @@ const RUNNERS = {
   java_api: analyseJavaApiLocally,
   typescript: analyseTypeScriptLocally,
   playwright_java: analysePlaywrightJavaLocally,
+  playwright_python: analysePlaywrightPythonLocally,
+  ts_frontend: analyseTsFrontendLocally,
+  python_api: analysePythonApiLocally,
+  python_frontend: analysePythonFrontendLocally,
+  java_frontend: analyseJavaCoreLocally,
+  restassured: analyseRestAssuredLocally,
+  karate: analyseKarateLocally,
+  pytest_api: analysePytestApiLocally,
+  postman: analysePostmanLocally,
+  selenium_java: analyseSeleniumJavaLocally,
+  selenium_csharp: analyseSeleniumCsharpLocally,
+  cypress: analyseCypressLocally,
+  appium_java: analyseAppiumJavaLocally,
+  tosca_xml: analyseToscaXmlLocally,
 };
 
 /** Merge user-defined custom-rule findings into a result and recompute scores. */

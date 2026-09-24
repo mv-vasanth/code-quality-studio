@@ -1,8 +1,9 @@
 import { grade } from "../shared/grade.js";
 import { getGuideForStack } from "../guides/index.js";
 import { loadUncheckedPracticeTitles } from "../practiceChecklistState.js";
-import { severityRank, categoryLabel } from "./reportUtils.js";
+import { severityRank } from "./reportUtils.js";
 import { filesWithViewResults } from "../shared/fileResults.js";
+import { getPersona } from "../stacks/definitions.js";
 import { enrichFindingForReport } from "../shared/findingPresentation.js";
 
 function enrichFindingRow(f, stackIdForFix, categories, files) {
@@ -91,12 +92,13 @@ export function buildFindingsReportPayload({
   const stackId = auditStack?.id ?? "playwright";
   const guide = getGuideForStack(stackId);
   const stackIdForFix = auditStack?.id ?? "playwright";
-  const checklistKey = auditStack?.checklistStorageKey ?? "pqs-playwright-practices";
+  const checklistKey = auditStack?.checklistStorageKey ?? "cqs-playwright-practices";
 
   return {
     generatedAt: new Date().toISOString(),
     projectName: projectName || auditStack?.defaultProjectName || "Quality audit",
     auditStack: auditStack?.name ?? "Playwright E2E",
+    reportNoun: getPersona(auditStack?.persona ?? "tester").reportNoun,
     analysisMode: analysisModeLabel || "unknown",
     verdict: buildVerdict(summary),
     summary,

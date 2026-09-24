@@ -6,6 +6,7 @@ const CATEGORY_IDS = AUDIT_STACKS.java_api.categories.map((c) => c.id);
 export function analyseJavaApiLocally(filename, content, options = {}) {
   const disabledRuleIds = options.disabledRuleIds ?? new Set();
   const findings = [];
+  const lines = content.split(/\r?\n/);
 
   const sqlConcat = lineMatches(content, /\+\s*["']|["']\s*\+.*SELECT|executeQuery\s*\(\s*["'][^"']*\+/i);
   if (sqlConcat.length || /Statement\s+\w+\s*=|createStatement\s*\(/.test(content)) {
@@ -265,6 +266,195 @@ export function analyseJavaApiLocally(filename, content, options = {}) {
     impact: "Incomplete logic can ship unnoticed.",
     fix: "Resolve the item or link it to a tracked issue.",
     line: jTodo[0],
+  }, disabledRuleIds);
+
+  // ── Security ──────────────────────────────────────────────────────────────
+
+  const pathTraversal = lineMatches(content, /new\s+File\s*\(\s*(?!["'])[\w.]*(?:request|param|input|userPath|fileName|filename)|Paths\.get\s*\(\s*(?!["'])[\w.]*(?:request|param|input|fileName|filename)/i);
+  if (pathTraversal.length) pushFinding(findings, {
+    ruleId: "JV-SEC-005", category: "security", severity: "critical",
+    title: "Path traversal risk — user input in a file path",
+    description: "A file path is built from a request/user-supplied value without normalisation, so \"../\" segments can escape the intended directory.",
+    impact: "An attacker can read or overwrite arbitrary files on the server (CWE-22).",
+    fix: `Path base = Paths.get("/srv/uploads").toAbsolutePath().normalize();\nPath target = base.resolve(fileName).normalize();\nif (!target.startsWith(base)) throw new SecurityException("Invalid path");`,
+    line: pathTraversal[0], reference: "https://cwe.mitre.org/data/definitions/22.html",
+  }, disabledRuleIds);
+
+  const deser = lineMatches(content, /new\s+ObjectInputStream\s*\(|\.readObject\s*\(\s*\)/);
+  if (deser.length) pushFinding(findings, {
+    ruleId: "JV-SEC-006", category: "security", severity: "critical",
+    title: "Unsafe Java deserialization",
+    description: "ObjectInputStream.readObject() reconstructs arbitrary classes from the byte stream.",
+    impact: "If the stream is attacker-controlled this is remote code execution via gadget chains (CWE-502).",
+    fix: `// Prefer a data format that does not instantiate arbitrary types\nObjectMapper mapper = new ObjectMapper();\nMyDto dto = mapper.readValue(json, MyDto.class);`,
+    line: deser[0], reference: "https://cwe.mitre.org/data/definitions/502.html",
+  }, disabledRuleIds);
+
+  const xmlParser = lineMatches(content, /DocumentBuilderFactory\.newInstance|SAXParserFactory\.newInstance|XMLInputFactory\.newInstance/);
+  const xxeGuarded = /disallow-doctype-decl|XMLConstants\.FEATURE_SECURE_PROCESSING|setExpandEntityReferences\s*\(\s*false|IS_SUPPORTING_EXTERNAL_ENTITIES/.test(content);
+  if (xmlParser.length && !xxeGuarded) pushFinding(findings, {
+    ruleId: "JV-SEC-007", category: "security", severity: "critical",
+    title: "XML parser without XXE protection",
+    description: "An XML parser factory is created without disabling DOCTYPE declarations or external entities.",
+    impact: "XML External Entity attacks can read local files or trigger SSRF from parsed documents (CWE-611).",
+    fix: `DocumentBuilderFactory f = DocumentBuilderFactory.newInstance();\nf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);\nf.setXIncludeAware(false);\nf.setExpandEntityReferences(false);`,
+    line: xmlParser[0], reference: "https://cwe.mitre.org/data/definitions/611.html",
+  }, disabledRuleIds);
+
+  const logSensitive = lineMatches(content, /log(?:ger)?\s*\.\s*(?:info|debug|warn|error|trace)\s*\([^)]*(?:password|passwd|secret|token|apiKey|api_key|ssn|creditCard|cvv)/i);
+  if (logSensitive.length) pushFinding(findings, {
+    ruleId: "JV-SEC-008", category: "security", severity: "critical",
+    title: "Sensitive data written to logs",
+    description: `A log statement at line ${logSensitive[0]} interpolates a credential or personal identifier.`,
+    impact: "Secrets and PII leak into log aggregators and backups, where they are rarely access-controlled or rotated.",
+    fix: `// Log an identifier, never the secret itself\nlog.info("Authenticated userId={}", user.getId());`,
+    line: logSensitive[0], reference: "https://cwe.mitre.org/data/definitions/532.html",
+  }, disabledRuleIds);
+
+  // ── Concurrency ───────────────────────────────────────────────────────────
+
+  const unsafeFormatter = lineMatches(content, /(?:private|public|protected|static)[\w\s]*\b(?:SimpleDateFormat|Calendar)\s+\w+\s*=/);
+  if (unsafeFormatter.length) pushFinding(findings, {
+    ruleId: "JV-CON-003", category: "concurrency", severity: "critical",
+    title: "SimpleDateFormat / Calendar held as a shared field",
+    description: "SimpleDateFormat and Calendar are mutable and not thread-safe, but this one is a field shared across requests.",
+    impact: "Under concurrency this silently produces wrong dates or throws — a bug that never reproduces in single-threaded tests.",
+    fix: `// Thread-safe and immutable\nprivate static final DateTimeFormatter FMT =\n    DateTimeFormatter.ofPattern("yyyy-MM-dd");`,
+    line: unsafeFormatter[0], reference: "https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html",
+  }, disabledRuleIds);
+
+  const unboundedPool = lineMatches(content, /Executors\.newCachedThreadPool\s*\(|Executors\.newFixedThreadPool\s*\(\s*\d{3,}/);
+  if (unboundedPool.length) pushFinding(findings, {
+    ruleId: "JV-CON-004", category: "concurrency", severity: "warning",
+    title: "Unbounded or oversized thread pool",
+    description: "newCachedThreadPool() grows without limit; a very large fixed pool has the same effect.",
+    impact: "A traffic spike creates threads until the JVM exhausts memory, taking the service down rather than shedding load.",
+    fix: `new ThreadPoolExecutor(8, 32, 60L, TimeUnit.SECONDS,\n    new ArrayBlockingQueue<>(500),\n    new ThreadPoolExecutor.CallerRunsPolicy());`,
+    line: unboundedPool[0],
+  }, disabledRuleIds);
+
+  // ── Data access ───────────────────────────────────────────────────────────
+
+  const repoWrites = countMatches(content, /\.(?:save|saveAll|delete|deleteAll|update|persist|merge)\s*\(/g);
+  const isService = /@Service\b|@Component\b/.test(content);
+  if (isService && repoWrites >= 2 && !/@Transactional/.test(content)) pushFinding(findings, {
+    ruleId: "JV-DAT-002", category: "data_access", severity: "critical",
+    title: "Multiple writes without @Transactional",
+    description: `This service performs ${repoWrites} repository write calls but declares no @Transactional boundary.`,
+    impact: "A failure part-way through leaves the database in a half-written state that no rollback will undo.",
+    fix: `@Transactional\npublic void transfer(Long from, Long to, BigDecimal amount) {\n    accounts.debit(from, amount);\n    accounts.credit(to, amount);\n}`,
+    line: lineMatches(content, /\.(?:save|delete|update|persist|merge)\s*\(/)[0] ?? null,
+  }, disabledRuleIds);
+
+  const unpaged = lineMatches(content, /\.findAll\s*\(\s*\)/);
+  if (unpaged.length) pushFinding(findings, {
+    ruleId: "JV-DAT-003", category: "data_access", severity: "warning",
+    title: "findAll() without pagination",
+    description: "findAll() with no Pageable loads the entire table into memory.",
+    impact: "Fine on a seeded dev database, then OOMs in production once the table grows.",
+    fix: `Page<User> page = userRepository.findAll(PageRequest.of(0, 50));`,
+    line: unpaged[0],
+  }, disabledRuleIds);
+
+  // ── Error handling ────────────────────────────────────────────────────────
+
+  const optionalGet = lineMatches(content, /\.get\s*\(\s*\)/).filter((ln) => {
+    const l = lines[ln - 1] || "";
+    return /Optional|findBy|findById/.test(l) && !/isPresent|isEmpty|orElse|ifPresent/.test(l);
+  });
+  if (optionalGet.length) pushFinding(findings, {
+    ruleId: "JV-ERR-004", category: "error_handling", severity: "warning",
+    title: "Optional.get() without a presence check",
+    description: `Line ${optionalGet[0]} unwraps an Optional directly instead of handling the empty case.`,
+    impact: "Throws NoSuchElementException, which surfaces as an opaque HTTP 500 rather than a meaningful 404.",
+    fix: `User user = userRepository.findById(id)\n    .orElseThrow(() -> new ResourceNotFoundException("User " + id));`,
+    line: optionalGet[0],
+  }, disabledRuleIds);
+
+  const rawResource = lineMatches(content, /=\s*new\s+(?:FileInputStream|FileOutputStream|FileReader|FileWriter|BufferedReader|Socket|Scanner)\s*\(/)
+    .filter((ln) => !/try\s*\(/.test(lines[ln - 1] || ""));
+  if (rawResource.length) pushFinding(findings, {
+    ruleId: "JV-ERR-005", category: "error_handling", severity: "warning",
+    title: "Closeable opened outside try-with-resources",
+    description: `A stream or reader is opened at line ${rawResource[0]} without try-with-resources.`,
+    impact: "An exception before close() leaks the file handle or socket; enough leaks exhaust the descriptor limit.",
+    fix: `try (BufferedReader reader = new BufferedReader(new FileReader(path))) {\n    return reader.lines().toList();\n}`,
+    line: rawResource[0],
+  }, disabledRuleIds);
+
+  // ── Performance ───────────────────────────────────────────────────────────
+
+  // Only String accumulators matter here — `count += 1` on an int is not a defect.
+  const stringVars = new Set();
+  for (const line of lines) {
+    const m = /\bString\s+(\w+)\s*=/.exec(line);
+    if (m) stringVars.add(m[1]);
+  }
+  const isStringAccum = (text) => {
+    for (const re of [/(\w+)\s*\+=\s*[^;]+;/g, /(\w+)\s*=\s*\1\s*\+\s*[^;]+;/g]) {
+      let m;
+      while ((m = re.exec(text))) if (stringVars.has(m[1])) return true;
+    }
+    return false;
+  };
+  const concatInLoop = [];
+  lines.forEach((line, idx) => {
+    if (!/\b(?:for|while)\s*\(/.test(line)) return;
+    let depth = (line.match(/\{/g) || []).length - (line.match(/\}/g) || []).length;
+    if (depth <= 0) {
+      // Single-line loop: the whole body is on this line
+      if (isStringAccum(line.slice(line.indexOf("{") + 1))) concatInLoop.push(idx + 1);
+      return;
+    }
+    for (let j = idx + 1; j < lines.length && depth > 0; j++) {
+      if (isStringAccum(lines[j])) { concatInLoop.push(j + 1); break; }
+      depth += (lines[j].match(/\{/g) || []).length - (lines[j].match(/\}/g) || []).length;
+    }
+  });
+  if (concatInLoop.length) pushFinding(findings, {
+    ruleId: "JV-PER-002", category: "performance", severity: "warning",
+    title: "String concatenation inside a loop",
+    description: `Line ${concatInLoop[0]} builds a String with + inside a loop, allocating a new String each iteration.`,
+    impact: "Quadratic time and garbage churn; noticeable once the loop runs thousands of times.",
+    fix: `StringBuilder sb = new StringBuilder();\nfor (String part : parts) sb.append(part);\nreturn sb.toString();`,
+    line: concatInLoop[0],
+  }, disabledRuleIds);
+
+  const httpClient = lineMatches(content, /new\s+RestTemplate\s*\(\s*\)|HttpClient\.newHttpClient\s*\(\s*\)/);
+  const hasTimeout = /setConnectTimeout|setReadTimeout|connectTimeout|HttpComponentsClientHttpRequestFactory|\.timeout\s*\(/.test(content);
+  if (httpClient.length && !hasTimeout) pushFinding(findings, {
+    ruleId: "JV-PER-003", category: "performance", severity: "critical",
+    title: "HTTP client without timeouts",
+    description: "A RestTemplate or HttpClient is created with default settings, which means no connect or read timeout.",
+    impact: "One slow upstream ties up request threads until the pool is exhausted — the classic cascading outage.",
+    fix: `RestTemplate rt = new RestTemplateBuilder()\n    .setConnectTimeout(Duration.ofSeconds(2))\n    .setReadTimeout(Duration.ofSeconds(5))\n    .build();`,
+    line: httpClient[0],
+  }, disabledRuleIds);
+
+  // ── API design ────────────────────────────────────────────────────────────
+
+  const isController = /@RestController\b|@Controller\b/.test(content);
+  if (isController && /@Entity\b/.test(content)) pushFinding(findings, {
+    ruleId: "JV-API-004", category: "api_design", severity: "warning",
+    title: "JPA entity exposed by a controller",
+    description: "A @Entity type is referenced directly in a controller instead of a dedicated response DTO.",
+    impact: "Every column becomes part of the public contract, lazy associations blow up during serialisation, and a schema rename silently breaks clients.",
+    fix: `public record UserResponse(Long id, String email) {\n    static UserResponse from(User u) { return new UserResponse(u.getId(), u.getEmail()); }\n}`,
+    line: lineMatches(content, /@Entity\b/)[0] ?? null,
+  }, disabledRuleIds);
+
+  // ── Java standards ────────────────────────────────────────────────────────
+
+  const hasEquals = /public\s+boolean\s+equals\s*\(\s*Object/.test(content);
+  const hasHashCode = /public\s+int\s+hashCode\s*\(\s*\)/.test(content);
+  if (hasEquals !== hasHashCode) pushFinding(findings, {
+    ruleId: "JV-STD-003", category: "java_standards", severity: "warning",
+    title: `${hasEquals ? "equals() without hashCode()" : "hashCode() without equals()"}`,
+    description: "equals() and hashCode() must be overridden together to honour the Object contract.",
+    impact: "Objects that are equal land in different hash buckets, so HashMap/HashSet lookups silently miss.",
+    fix: `@Override public boolean equals(Object o) { /* ... */ }\n@Override public int hashCode() { return Objects.hash(id); }`,
+    line: lineMatches(content, hasEquals ? /public\s+boolean\s+equals\s*\(/ : /public\s+int\s+hashCode\s*\(/)[0] ?? null,
+    reference: "https://docs.oracle.com/javase/8/docs/api/java/lang/Object.html#hashCode--",
   }, disabledRuleIds);
 
   const crit = findings.filter((f) => f.severity === "critical").length;

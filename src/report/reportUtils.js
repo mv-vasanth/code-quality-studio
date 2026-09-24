@@ -1,4 +1,4 @@
-export const CHECKLIST_STORAGE_KEY = "pqs-best-practices-checked";
+export const CHECKLIST_STORAGE_KEY = "cqs-best-practices-checked";
 
 export function slugify(name) {
   return (

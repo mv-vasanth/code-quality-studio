@@ -237,20 +237,20 @@ flowchart LR
   subgraph Entry
     main[main.jsx] --> App[App.jsx] --> CTX[AiSettingsProvider]
   end
-  CTX --> PQS[PlaywrightQualityStudio]
+  CTX --> CQS[PlaywrightQualityStudio]
 
   subgraph Shell["Studio shell (state owner)"]
-    PQS --> TABS[Overview · Files · Findings · Rules · Radar · Roadmap · Guide]
+    CQS --> TABS[Overview · Files · Findings · Rules · Radar · Roadmap · Guide]
   end
 
-  PQS --> RFA[runFileAnalysis]
+  CQS --> RFA[runFileAnalysis]
   RFA --> LOC[analyzers/*]
   RFA --> RAIP[runAuditAiForProvider → runAuditAi]
   RAIP --> ADAPT[invoke Anthropic / Bedrock / Google / Vertex]
 
-  PQS --> FR[shared/fileResults<br/>read model]
-  PQS --> WP[workspacePersistence<br/>IndexedDB]
-  PQS --> RPT[exportFindingsReport → report/*]
+  CQS --> FR[shared/fileResults<br/>read model]
+  CQS --> WP[workspacePersistence<br/>IndexedDB]
+  CQS --> RPT[exportFindingsReport → report/*]
 ```
 
 - **Entry / context** — `main → App → AiSettingsProvider → PlaywrightQualityStudio`. Settings
@@ -273,21 +273,21 @@ flowchart LR
 ```mermaid
 sequenceDiagram
   participant U as User
-  participant PQS as Studio
+  participant CQS as Studio
   participant RFA as runFileAnalysis
   participant L as Local analyzer
   participant AI as AI provider
 
-  U->>PQS: Drop / pick files (or folder)
-  PQS->>PQS: filter by stack.filePattern, read .text(), add rows (status: pending)
+  U->>CQS: Drop / pick files (or folder)
+  CQS->>CQS: filter by stack.filePattern, read .text(), add rows (status: pending)
   loop each new/changed file
-    PQS->>RFA: analyseFile(file, "local")
+    CQS->>RFA: analyseFile(file, "local")
     RFA->>L: runLocalAnalysis(stackId, name, content)
-    L-->>PQS: resultLocal (status: done)
+    L-->>CQS: resultLocal (status: done)
     loop each enabled+credentialed provider
-      PQS->>RFA: analyseFile(file, "ai", providerId)
+      CQS->>RFA: analyseFile(file, "ai", providerId)
       RFA->>AI: runAuditAiForProvider → invoke*
-      AI-->>PQS: resultsAi[providerId]
+      AI-->>CQS: resultsAi[providerId]
     end
   end
 ```
@@ -368,11 +368,11 @@ This keeps data flow easy to follow but concentrates risk — see §12.
 
 | Data | Mechanism | Key |
 |------|-----------|-----|
-| AI settings (keys, models, enabled flags) | `localStorage` | `pqs-ai-settings-v1` |
-| Per-stack rule enable/disable + notes | `localStorage` | `pqs-rule-settings-<stackId>` |
-| Best-practice checklist state | `localStorage` | `pqs-<stack>-practices` (per stack) |
-| Active stack (session) | `sessionStorage` | `pqs-active-stack` |
-| Working session (files + results) | `IndexedDB` | db `pqs-workspace-v1`, store `meta`, key `current` |
+| AI settings (keys, models, enabled flags) | `localStorage` | `cqs-ai-settings-v1` |
+| Per-stack rule enable/disable + notes | `localStorage` | `cqs-rule-settings-<stackId>` |
+| Best-practice checklist state | `localStorage` | `cqs-<stack>-practices` (per stack) |
+| Active stack (session) | `sessionStorage` | `cqs-active-stack` |
+| Working session (files + results) | `IndexedDB` | db `cqs-workspace-v1`, store `meta`, key `current` |
 
 Settings are **migrated on load** (`migrateAiSettings`) to add newer fields (multi-provider
 `enabledProviders`, Google `authMode`) to older saved blobs.
@@ -413,7 +413,7 @@ Ranked roughly by severity.
    tab bodies into components and move `analyseFile`/`rerunAll*`/`loadFiles` into a hook
    (`useAuditWorkspace`).
 3. **No tests and no TypeScript.** The critical `AuditResult` contract is enforced only by
-   convention. The two ad-hoc harnesses (`test-pqs-once.mjs`, `test-pqs-java-once.mjs` at repo root)
+   convention. The two ad-hoc harnesses (`test-cqs-once.mjs`, `test-cqs-java-once.mjs` at repo root)
    are the closest thing to coverage. → add a schema validator for `AuditResult` at the parse
    boundary and unit tests for each analyzer + `fileResults`.
 4. **Sequential analysis.** Large folders analyse one file (and one provider) at a time. → bounded
@@ -422,7 +422,7 @@ Ranked roughly by severity.
    `shared/theme.js` and re-exported by `shared/grade.js`; older copies (`constants/categories.js`,
    `shared/severity.js`) were moved to `_archive/` during cleanup. Keep a single source per concept.
 6. **Naming drift.** The app is "Code Quality Studio" and multi-stack, but the shell component,
-   package name, and many `pqs-`/`playwright` identifiers still say Playwright. Cosmetic, but confusing.
+   package name, and many `cqs-`/`playwright` identifiers still say Playwright. Cosmetic, but confusing.
 7. **Hardcoded model defaults age out.** Default model ids live in `aiSettingsDefaults.js`
    (`claude-sonnet-4-6`, `gemini-1.5-flash`, a Bedrock Claude 3.5 id). These will drift from
    current models and should be reviewed periodically.

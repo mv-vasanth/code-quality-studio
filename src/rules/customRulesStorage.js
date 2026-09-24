@@ -17,7 +17,7 @@
  *   }
  */
 
-const KEY = (stackId) => `pqs-custom-rules-${stackId}`;
+const KEY = (stackId) => `cqs-custom-rules-${stackId}`;
 
 export function loadCustomRules(stackId) {
   try {
