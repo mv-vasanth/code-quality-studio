@@ -10,7 +10,7 @@ import { grade } from "../../shared/grade.js";
 export default function FileCategoryScores({
   categories,
   result,
-  max = 6,
+  max = Infinity,
   columns = 1,
   onSelectCategory,
   activeCategory,

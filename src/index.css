@@ -13,5 +13,10 @@
   --pqs-header: #0f172a;
 }
 * { box-sizing: border-box; }
-body { margin: 0; -webkit-font-smoothing: antialiased; }
+html, body, #root { height: 100%; margin: 0; }
+body { -webkit-font-smoothing: antialiased; }
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}

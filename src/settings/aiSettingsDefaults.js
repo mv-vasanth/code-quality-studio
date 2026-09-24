@@ -33,6 +33,15 @@ export const DEFAULT_AI_SETTINGS = {
     bedrock: false,
     google: false,
   },
+  // Safety flag for the AI remediation agent.
+  // When true (default), the "Fix all critical" action in the browser UI and the
+  // CLI's `qcbot remediate` command will only process files that match recognised
+  // test/spec naming patterns (*.spec.ts, *.test.ts, test_*.py, *Test.java …).
+  // Set to false only if you are certain your target directory contains only test files.
+  remediateTestFilesOnly: true,
+  // Custom rules added by the user (via ✨ Suggest rules → Add rule, or manually).
+  // Each entry: { id, title, severity, pattern, message, createdAt }
+  customRules: [],
   anthropic: {
     apiKey: "",
     model: "claude-sonnet-4-6",

@@ -7,7 +7,7 @@ import StudioTerminal from "./StudioTerminal.jsx";
  * Slim persistent footer. Always-available access to a rules terminal and
  * "How are scores calculated?" — both open as popovers above the footer.
  */
-export default function StudioFooter({ categoryCount = 10, modeLabel, files = [], stackId, onRunRules }) {
+export default function StudioFooter({ categoryCount = 10, modeLabel, files = [], stackId, onRunRules, allFindings = [], ruleSettings = {}, onAddFiles }) {
   const [open, setOpen] = useState(false);
   const [termOpen, setTermOpen] = useState(false);
 
@@ -65,7 +65,7 @@ export default function StudioFooter({ categoryCount = 10, modeLabel, files = []
               aria-label="Rules terminal"
               style={{ position: "absolute", right: 0, bottom: "calc(100% + 8px)", zIndex: 41, width: "min(760px, 94vw)" }}
             >
-              <StudioTerminal files={files} stackId={stackId} onRunRules={onRunRules} />
+              <StudioTerminal files={files} stackId={stackId} onRunRules={onRunRules} allFindings={allFindings} ruleSettings={ruleSettings} onAddFiles={onAddFiles} />
             </div>
           </>
         )}

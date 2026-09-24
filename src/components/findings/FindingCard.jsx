@@ -38,9 +38,13 @@ const metaDot = (color) => ({
   flexShrink: 0,
 });
 
-export default function FindingCard({ f, categories = [], stackId = "playwright", onOpenPractices }) {
+export default function FindingCard({ f, categories = [], stackId = "playwright", onOpenPractices, onAiFix = null }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [aiFix, setAiFix] = useState(null);
+  const [aiFixLoading, setAiFixLoading] = useState(false);
+  const [aiFixError, setAiFixError] = useState(null);
+  const [aiFixCopied, setAiFixCopied] = useState(false);
   const sev = SEV[f.severity] || SEV.info;
   const cat = categories.find((c) => c.id === f.category) || {
     icon: "📋",
@@ -81,6 +85,35 @@ export default function FindingCard({ f, categories = [], stackId = "playwright"
     },
     [solutionCode],
   );
+
+  const handleAiFix = useCallback(async (e) => {
+    e.stopPropagation();
+    if (!onAiFix || aiFixLoading) return;
+    setAiFixLoading(true);
+    setAiFixError(null);
+    setAiFix(null);
+    try {
+      const result = await onAiFix(f);
+      setAiFix(result);
+    } catch (err) {
+      setAiFixError(err.message || "AI fix failed");
+    } finally {
+      setAiFixLoading(false);
+    }
+  }, [onAiFix, f, aiFixLoading]);
+
+  const copyAiFix = useCallback(async (e) => {
+    e.stopPropagation();
+    if (!aiFix) return;
+    // Extract just the code block from the response
+    const codeMatch = aiFix.match(/```[\w]*\n?([\s\S]*?)```/);
+    const text = codeMatch ? codeMatch[1].trim() : aiFix;
+    try {
+      await navigator.clipboard.writeText(text);
+      setAiFixCopied(true);
+      setTimeout(() => setAiFixCopied(false), 2000);
+    } catch { /* clipboard blocked */ }
+  }, [aiFix]);
 
   const lead = simpleTerms || whyHelp.whyUse;
 
@@ -172,6 +205,39 @@ export default function FindingCard({ f, categories = [], stackId = "playwright"
               {f.ruleId && <span style={{ fontFamily: theme.fontMono }}>· {f.ruleId}</span>}
             </div>
           </div>
+
+          {onAiFix && (
+            <button
+              type="button"
+              onClick={handleAiFix}
+              disabled={aiFixLoading}
+              title="Generate an AI fix for this finding"
+              style={{
+                fontSize: 10.5,
+                fontWeight: 700,
+                padding: "4px 10px",
+                borderRadius: theme.radius.sm,
+                border: `1px solid #a78bfa`,
+                background: aiFixLoading ? "#f5f3ff" : "#ede9fe",
+                color: "#7c3aed",
+                cursor: aiFixLoading ? "not-allowed" : "pointer",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              {aiFixLoading ? (
+                <>
+                  <span style={{ width: 9, height: 9, border: "1.5px solid #a78bfa", borderTopColor: "#7c3aed", borderRadius: "50%", animation: "spin 0.7s linear infinite", display: "inline-block" }} />
+                  Generating…
+                </>
+              ) : (
+                "✨ AI Fix"
+              )}
+            </button>
+          )}
 
           {hasDetails && (
             <span
@@ -305,6 +371,46 @@ export default function FindingCard({ f, categories = [], stackId = "playwright"
                 ) : (
                   f.reference
                 )}
+              </div>
+            )}
+
+            {/* ── AI Fix result panel ── */}
+            {(aiFix || aiFixError) && (
+              <div style={{ marginTop: 14, borderTop: `1px solid #ede9fe`, paddingTop: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", color: "#7c3aed", textTransform: "uppercase" }}>
+                    ✨ AI-generated fix
+                  </div>
+                  {aiFix && (
+                    <button
+                      type="button"
+                      onClick={copyAiFix}
+                      style={{ fontSize: 10, fontWeight: 600, padding: "3px 9px", borderRadius: theme.radius.sm, border: "1px solid #a78bfa", background: aiFixCopied ? "#ede9fe" : "#fff", color: "#7c3aed", cursor: "pointer" }}
+                    >
+                      {aiFixCopied ? "✓ Copied" : "Copy code"}
+                    </button>
+                  )}
+                </div>
+                {aiFixError && (
+                  <p style={{ margin: 0, fontSize: 12, color: theme.color.danger }}>{aiFixError}</p>
+                )}
+                {aiFix && (() => {
+                  // Parse EXPLANATION + code block
+                  const explMatch = aiFix.match(/EXPLANATION:\s*(.+?)(?:\n|$)/i);
+                  const codeMatch = aiFix.match(/```[\w]*\n?([\s\S]*?)```/);
+                  const explanation = explMatch?.[1]?.trim();
+                  const code = codeMatch?.[1]?.trim() ?? aiFix;
+                  return (
+                    <>
+                      {explanation && (
+                        <p style={{ margin: "0 0 8px", fontSize: 12, color: "#5b21b6", lineHeight: 1.5, fontStyle: "italic" }}>
+                          {explanation}
+                        </p>
+                      )}
+                      <CodeBlock variant="solution">{code}</CodeBlock>
+                    </>
+                  );
+                })()}
               </div>
             )}
           </div>

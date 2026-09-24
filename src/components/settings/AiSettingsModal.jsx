@@ -72,6 +72,67 @@ export default function AiSettingsModal({ open, onClose, setupFromToggle = false
             </label>
           )}
 
+          {/* Safety toggle — always visible, independent of AI on/off */}
+          <div
+            style={{
+              background: settings.remediateTestFilesOnly !== false ? "#f0fdf4" : "#fef9c3",
+              border: `1px solid ${settings.remediateTestFilesOnly !== false ? "#86efac" : "#fde68a"}`,
+              borderRadius: 10,
+              padding: "10px 12px",
+            }}
+          >
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={settings.remediateTestFilesOnly !== false}
+                onChange={(e) =>
+                  updateSettings({ remediateTestFilesOnly: e.target.checked })
+                }
+                style={{ marginTop: 2, flexShrink: 0 }}
+              />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#111", display: "flex", alignItems: "center", gap: 6 }}>
+                  🛡 Restrict AI fixes to test files only
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: "1px 7px",
+                      borderRadius: 10,
+                      background: settings.remediateTestFilesOnly !== false ? "#dcfce7" : "#fef3c7",
+                      color: settings.remediateTestFilesOnly !== false ? "#14532d" : "#92400e",
+                    }}
+                  >
+                    {settings.remediateTestFilesOnly !== false ? "ON — recommended" : "OFF — use with caution"}
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: "#4b5563", marginTop: 4, lineHeight: 1.5 }}>
+                  When enabled, the <strong>✨ Fix all critical</strong> action only processes files matching
+                  recognised test-file naming patterns (
+                  <code style={{ fontSize: 10, background: "#e5e7eb", padding: "0 3px", borderRadius: 3 }}>*.spec.ts</code>,{" "}
+                  <code style={{ fontSize: 10, background: "#e5e7eb", padding: "0 3px", borderRadius: 3 }}>*.test.ts</code>,{" "}
+                  <code style={{ fontSize: 10, background: "#e5e7eb", padding: "0 3px", borderRadius: 3 }}>test_*.py</code>,{" "}
+                  <code style={{ fontSize: 10, background: "#e5e7eb", padding: "0 3px", borderRadius: 3 }}>*Test.java</code> …).
+                  Production source files are skipped automatically.
+                </div>
+                {settings.remediateTestFilesOnly === false && (
+                  <div
+                    style={{
+                      marginTop: 6,
+                      fontSize: 11,
+                      color: "#92400e",
+                      background: "#fef3c7",
+                      borderRadius: 6,
+                      padding: "5px 8px",
+                    }}
+                  >
+                    ⚠️ AI may rewrite non-test files. Only disable if you are certain the target folder contains test files only.
+                  </div>
+                )}
+              </div>
+            </label>
+          </div>
+
           {setupFromToggle && (
             <p style={{ margin: 0, fontSize: 12, color: "#0f766e", background: "#f0fdfa", padding: 10, borderRadius: 8 }}>
               Turn on AI review after you save a valid provider below.

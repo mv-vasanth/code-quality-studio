@@ -25,3 +25,6 @@ dist-ssr
 
 # npm pack output (regenerate with: npm pack)
 *.tgz
+
+# generated audit output
+pw-quality-report/

@@ -29,7 +29,7 @@ export default function AnalysisViewToggle({
   const onDark = variant === "onDark";
   const hasAi = providersWithResults.length > 0;
   const options = [
-    { id: "local", label: compact ? "Rules" : "Standard rules", disabled: !hasLocal },
+    { id: "local", label: compact ? "Local" : "Standard rules", disabled: !hasLocal },
     ...AI_PROVIDERS.map((p) => ({
       id: p.id,
       label: p.shortLabel,
@@ -48,18 +48,7 @@ export default function AnalysisViewToggle({
       aria-label="Results view"
       style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}
     >
-      <span
-        style={{
-          fontSize: 10,
-          fontWeight: 700,
-          color: onDark ? "#94a3b8" : "#64748b",
-          letterSpacing: "0.05em",
-          textTransform: "uppercase",
-          marginRight: 4,
-        }}
-      >
-        View
-      </span>
+      {/* "View" label removed — tab pills are self-explanatory */}
       {options.map((o) => (
         <button
           key={o.id}

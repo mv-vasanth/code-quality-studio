@@ -113,7 +113,7 @@ export function buildExecutiveHtml(payload) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${escapeHtml(projectName)} — Executive summary</title>
+  <title>${escapeHtml(projectName)} — ${escapeHtml(payload.reportNoun || "Quality")} executive summary</title>
   <style>
     @page { size: A4; margin: 14mm; }
     * { box-sizing: border-box; }
@@ -149,7 +149,7 @@ export function buildExecutiveHtml(payload) {
 </head>
 <body>
   <h1>${escapeHtml(projectName)}</h1>
-  <div class="meta">${escapeHtml(auditStack)} · ${escapeHtml(formatReportDate(payload.generatedAt))} · ${escapeHtml(analysisMode)}</div>
+  <div class="meta">${escapeHtml(payload.reportNoun || "Quality")} · ${escapeHtml(auditStack)} · ${escapeHtml(formatReportDate(payload.generatedAt))} · ${escapeHtml(analysisMode)}</div>
 
   <div class="verdict">
     <h2>${escapeHtml(verdict.headline)}</h2>
