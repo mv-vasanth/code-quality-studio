@@ -31,6 +31,7 @@ import { analyseCypressLocally }       from "../../src/analyzers/cypress.js";
 import { analyseAppiumJavaLocally }    from "../../src/analyzers/appiumJava.js";
 import { analyseToscaXmlLocally }      from "../../src/analyzers/toscaXml.js";
 import { AUDIT_STACKS }                from "../../src/stacks/definitions.js";
+import { RULES_FILENAME, discoverRulesFile, loadRulesFile, runFileRules } from "../../src/rules/fileRules.js";
 
 // ── Runner map ────────────────────────────────────────────────────────────────
 const RUNNERS = {
@@ -77,6 +78,7 @@ function parseArgs(argv) {
   const args = {
     paths: [], stack: null, severity: "all", category: null, output: "pretty",
     help: false, listStacks: false, readReport: null, open: false,
+    rulesFile: null, noRules: false,
     // AI flags
     ai: null, apiKey: null, model: null,
     awsRegion: null, awsAccessKey: null, awsSecretKey: null,
@@ -94,6 +96,8 @@ function parseArgs(argv) {
     else if ((a === "--output" || a === "-o") && argv[i+1])   { args.output = argv[++i]; }
     else if ((a === "--read-report" || a === "-r") && argv[i+1]) { args.readReport = argv[++i]; }
     else if (a === "--open")                                      { args.open = true; }
+    else if (a === "--rules")                                     { args.rulesFile = argv[++i]; }
+    else if (a === "--no-rules")                                  { args.noRules = true; }
     else if (a === "--ai" && argv[i+1])                           { args.ai = argv[++i]; }
     else if (a === "--api-key" && argv[i+1])                      { args.apiKey = argv[++i]; }
     else if (a === "--model" && argv[i+1])                        { args.model = argv[++i]; }
@@ -174,6 +178,8 @@ ${b("OPTIONS")}
   -o, --output  <fmt>             Output format: pretty | json | summary
   -r, --read-report <file>        Read a saved JSON report and print summary
       --open                      Open the HTML report in the browser after analysis
+      --rules <file>              Use this cqs-rules.json (default: discovered by walking up)
+      --no-rules                  Ignore any cqs-rules.json found
       --no-color                  Disable ANSI colours
   -h, --help                      Show this help
 
@@ -899,6 +905,20 @@ async function main() {
     process.exit(1);
   }
 
+  // Project rules from cqs-rules.json (explicit --rules, or discovered by walking up)
+  let ruleSet = { rules: [], disabled: [], errors: [], path: null };
+  if (!args.noRules) {
+    const rulesPath = args.rulesFile
+      ? resolve(args.rulesFile)
+      : discoverRulesFile(inputPaths[0] ?? process.cwd());
+    if (rulesPath) ruleSet = loadRulesFile(rulesPath, stackId);
+  }
+  if (ruleSet.path) {
+    console.error(`  Project rules: ${ruleSet.rules.length} from ${ruleSet.path}`);
+  }
+  for (const err of ruleSet.errors) console.error(`  ${RULES_FILENAME}: ${err}`);
+  const disabledRuleIds = new Set(ruleSet.disabled);
+
   // Run analysis
   const runner = RUNNERS[stackId];
   const results = [];
@@ -909,7 +929,9 @@ async function main() {
     catch { console.error(`  Cannot read: ${file}`); continue; }
 
     fileContents[file] = content;
-    const result = runner(basename(file), content, { disabledRuleIds: new Set() });
+    const result = runner(basename(file), content, { disabledRuleIds });
+    const custom = runFileRules(ruleSet.rules, basename(file), content, { disabledRuleIds });
+    if (custom.length) result.findings = [...(result.findings ?? []), ...custom];
     // Tag each finding with its source file for later grouping
     for (const f of result.findings ?? []) f._file = file;
     results.push({ file, result });
