@@ -285,8 +285,131 @@
     </div>
   </div>
 </div>
+</div><!-- end page A -->
+
+<!-- ══════════ PAGE B — BINARIES, LOCAL DEV, PROJECT RULES ══════════ -->
+<div class="page">
+<div class="section-bar">
+  <h2>B · Standalone Binaries, Local Dev &amp; Project Rules</h2>
+  <span class="step">Ship cqs to machines with no Node · run the web app · enforce team rules in CI</span>
+</div>
+<div class="grid">
+
+  <!-- STANDALONE BINARIES -->
+  <div class="card" style="border-top:3px solid #0f172a;">
+    <div class="card-head" style="background:#0f172a;color:#fff;">🧊 Standalone Binary (no Node needed)</div>
+    <div class="card-body">
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">BUILD FOR THIS MACHINE</div>
+      <div class="code-block" style="font-size:10px">
+        <span class="cmd">npm run build:binary</span><br>
+        <span class="cmt"># → dist/bin/cqs-&lt;platform&gt;-&lt;arch&gt;  (~107 MB)</span>
+      </div>
+
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:6px 9px;margin-bottom:6px">
+        <div style="font-size:10px;font-weight:800;color:#b91c1c;margin-bottom:3px">⚠ USE AN NVM NODE TO BUILD</div>
+        <div style="font-size:10px;color:#7f1d1d;margin-bottom:4px">
+          Some Node builds ship the SEA fuse string twice and injection fails. The build stops early and tells you.
+        </div>
+        <div class="code-block" style="font-size:9.5px;margin-bottom:0">
+          <span class="cmd">export PATH="$HOME/.nvm/versions/\</span><br>
+          &nbsp;&nbsp;<span class="cmd">node/v22.22.3/bin:$PATH"</span><br>
+          <span class="cmd">npm run build:binary</span>
+        </div>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">ALL PLATFORMS (CI)</div>
+      <div style="font-size:10.5px;color:#475569;margin-bottom:5px">
+        SEA cannot cross-compile, so each target builds on its own runner. Push a <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">v*</code> tag:
+      </div>
+      <div class="code-block" style="font-size:10px">
+        <span class="cmd">git tag v2.1.0 &amp;&amp; git push --tags</span><br>
+        <span class="cmt"># .github/workflows/release-binaries.yml</span>
+      </div>
+      <div style="font-size:10.5px;color:#475569">
+        Builds <strong>darwin-arm64 · darwin-x64 · linux-x64 · linux-arm64 · win32-x64</strong>, attaches them to the GitHub release with SHA256SUMS.
+      </div>
+      <div style="font-size:10px;color:#64748b;margin-top:5px">
+        macOS quarantines downloads: <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">xattr -d com.apple.quarantine cqs</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOCAL DEV -->
+  <div class="card theme-teal">
+    <div class="card-head">💻 Run the Project Locally</div>
+    <div class="card-body">
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">WEB APP (VITE)</div>
+      <div class="code-block" style="font-size:10px">
+        <span class="cmt"># from the repo root</span><br>
+        <span class="cmd">npm install</span><br>
+        <span class="cmd">npm run dev</span><br>
+        <span class="cmt"># → http://localhost:5173</span>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">OTHER ROOT SCRIPTS</div>
+      <div class="code-block" style="font-size:10px">
+        <span class="cmd">npm run build</span> <span class="cmt"># production bundle</span><br>
+        <span class="cmd">npm run preview</span> <span class="cmt"># serve that build</span><br>
+        <span class="cmd">npm run lint</span> <span class="cmt"># eslint</span>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">CLI FROM SOURCE</div>
+      <div class="code-block" style="font-size:10px">
+        <span class="cmd">cd cli</span><br>
+        <span class="cmd">npm install &amp;&amp; npm run build:all</span><br>
+        <span class="cmd">npm install -g .</span>
+      </div>
+
+      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:6px 9px;font-size:10.5px;color:#166534">
+        <strong>Offline by default.</strong> All 530 rules run locally — no telemetry, and the MCP server makes no network calls. Code is sent out <em>only</em> when you pass <code style="background:#dcfce7;padding:1px 4px;border-radius:3px">--ai</code>.
+      </div>
+    </div>
+  </div>
+
+  <!-- PROJECT RULES -->
+  <div class="card" style="border-top:3px solid #6366f1;">
+    <div class="card-head" style="background:#6366f1;color:#fff;">📋 Project Rules (cqs-rules.json)</div>
+    <div class="card-body">
+      <div style="font-size:10.5px;color:#475569;margin-bottom:5px">
+        Committed next to your tests and discovered by walking up to the repo root — so CI and teammates get the same rules.
+      </div>
+      <div class="code-block" style="font-size:9.5px">
+        {<br>
+        &nbsp;&nbsp;<span class="str">"version"</span>: 1,<br>
+        &nbsp;&nbsp;<span class="str">"disabled"</span>: [<span class="str">"PW-SEL-002"</span>],<br>
+        &nbsp;&nbsp;<span class="str">"rules"</span>: [{<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"id"</span>: <span class="str">"ACME-001"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"stacks"</span>: [<span class="str">"playwright"</span>],<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"category"</span>: <span class="str">"selectors"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"severity"</span>: <span class="str">"critical"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"title"</span>: <span class="str">"Use data-qa"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"match"</span>: { <span class="str">"type"</span>: <span class="str">"regex"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"pattern"</span>: <span class="str">"getByTestId\\("</span> }<br>
+        &nbsp;&nbsp;}]<br>
+        }
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">CLI FLAGS</div>
+      <div class="code-block" style="font-size:10px">
+        <span class="cmd">cqs ./tests/ --rules ./team-rules.json</span><br>
+        <span class="cmd">cqs ./tests/ --no-rules</span>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">MCP TOOLS FOR RULES</div>
+      <div style="font-size:10.5px;color:#475569;line-height:1.7">
+        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace">cqs_list_rules</span> — check coverage first<br>
+        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace">cqs_validate_rules</span> — lint the file<br>
+        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace">cqs_test_rule</span> — dry-run, show real matches
+      </div>
+      <div style="font-size:10px;color:#64748b;margin-top:5px">
+        Invalid rules are reported and skipped — a typo never aborts the audit.
+      </div>
+    </div>
+  </div>
+
+</div>
 <div class="footer">
-  cqs v2.1.0 — admin sheet &nbsp;·&nbsp; Day-to-day usage → <strong>cqs-cheatsheet.pdf</strong> &nbsp;·&nbsp; Node.js 18+
+  cqs v2.1.0 — admin sheet &nbsp;·&nbsp; Day-to-day usage → <strong>cqs-cheatsheet.pdf</strong> &nbsp;·&nbsp; Node.js 18+ to build · none to run the binary
 </div>
 </div>
 
