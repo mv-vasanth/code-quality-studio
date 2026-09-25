@@ -35,6 +35,8 @@ import { RULES_FILENAME, discoverRulesFile, loadRulesFile, runFileRules } from "
 import { buildFixPrompt, extractCode, evaluateFix, lineDiff } from "../../src/rules/remediate.js";
 import { formatVerification } from "../../src/rules/verifyFix.js";
 import { buildReview, reviewSummary } from "../../src/rules/prReview.js";
+import { buildFindingsReportPayload } from "../../src/report/buildPayload.js";
+import { buildCompleteHtmlReport } from "../../src/report/buildCompleteReport.js";
 
 // ── Runner map ────────────────────────────────────────────────────────────────
 const RUNNERS = {
@@ -408,177 +410,46 @@ function printJson(stackId, results, args) {
 }
 
 // ── HTML Report Generator ─────────────────────────────────────────────────────
-function buildHtmlReport(report, aiResults = []) {
-  const { stack, files, avgScore, summary, results = [] } = report;
-  const gradeColor = avgScore >= 90 ? "#16a34a" : avgScore >= 75 ? "#0891b2" : avgScore >= 60 ? "#d97706" : "#dc2626";
-  const gradeLetter = avgScore >= 90 ? "A" : avgScore >= 75 ? "B" : avgScore >= 60 ? "C" : avgScore >= 40 ? "D" : "F";
-
-  // Top files by critical count
-  const sortedFiles = [...results].sort((a, b) => {
-    const ac = (a.findings ?? []).filter(f => f.severity === "critical").length;
-    const bc = (b.findings ?? []).filter(f => f.severity === "critical").length;
-    return bc - ac;
+/**
+ * Render the same HTML report the web app produces.
+ *
+ * The CLI used to carry its own cut-down builder, so `--open` looked nothing
+ * like the app. buildCompleteHtmlReport is a pure string builder, so it works
+ * here as-is; only the payload shape needs adapting.
+ */
+function renderWebReport(stackId, fileResults, { projectName, aiResults = [] } = {}) {
+  const stack = AUDIT_STACKS[stackId] ?? AUDIT_STACKS.playwright;
+  const payload = buildFindingsReportPayload({
+    projectName: projectName || `cqs audit — ${stack.name}`,
+    // filesWithViewResults reads resultLocal for the "local" view and copies it
+    // onto .result — passing only .result yields an empty report.
+    files: fileResults.map(({ file, result }) => ({
+      name: typeof file === "string" ? file : String(file),
+      status: "done",
+      resultLocal: result,
+      result,
+    })),
+    categories: stack.categories,
+    analysisModeLabel: aiResults.length ? "Standard rules + AI review" : "Standard rules",
+    auditStack: stack,
   });
-
-  // Top rules
-  const ruleCounts = {};
-  for (const r of results) {
-    for (const f of (r.findings ?? [])) {
-      if (!ruleCounts[f.ruleId]) ruleCounts[f.ruleId] = { count: 0, title: f.title, sev: f.severity };
-      ruleCounts[f.ruleId].count++;
+  let html = buildCompleteHtmlReport(payload);
+  if (aiResults.length) {
+    const section = aiResults.filter((a) => a.text).map((a) =>
+      `<section style="margin:24px 0;padding:16px;border:1px solid #e2e8f0;border-radius:8px">
+         <h3 style="margin:0 0 8px">${a.fname}</h3>
+         <pre style="white-space:pre-wrap;font-size:13px;line-height:1.6;margin:0">${
+           String(a.text).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]))
+         }</pre>
+       </section>`).join("\n");
+    if (section) {
+      html = html.replace(/<\/body>/i,
+        `<div style="max-width:1100px;margin:32px auto;padding:0 24px">
+           <h2>AI second-eye review</h2>${section}
+         </div></body>`);
     }
   }
-  const topRules = Object.entries(ruleCounts).sort((a, b) => b[1].count - a[1].count).slice(0, 10);
-
-  // Category averages
-  const catTotals = {}; const catCounts2 = {};
-  for (const r of results) {
-    for (const [cat, score] of Object.entries(r.categoryScores ?? {})) {
-      catTotals[cat] = (catTotals[cat] ?? 0) + score;
-      catCounts2[cat] = (catCounts2[cat] ?? 0) + 1;
-    }
-  }
-  const catAvgs = Object.entries(catTotals)
-    .map(([cat, total]) => ({ cat, avg: Math.round(total / catCounts2[cat]) }))
-    .sort((a, b) => a.avg - b.avg);
-
-  const sevColor = sev => sev === "critical" ? "#dc2626" : sev === "warning" ? "#d97706" : "#2563eb";
-  const sevBg = sev => sev === "critical" ? "#fef2f2" : sev === "warning" ? "#fffbeb" : "#eff6ff";
-  const scoreCol = s => s >= 90 ? "#16a34a" : s >= 75 ? "#0891b2" : s >= 60 ? "#d97706" : "#dc2626";
-
-  const filesHtml = sortedFiles.map(r => {
-    const fc = (r.findings ?? []).filter(f => f.severity === "critical").length;
-    const fw = (r.findings ?? []).filter(f => f.severity === "warning").length;
-    const fi = (r.findings ?? []).filter(f => f.severity === "info").length;
-    const sc = r.overallScore ?? 0;
-    const fname = basename(r.file ?? "");
-    const findingsHtml = (r.findings ?? []).map(f => `
-      <div style="padding:8px 12px;border-bottom:1px solid #f1f5f9;display:flex;gap:10px;align-items:flex-start">
-        <span style="background:${sevBg(f.severity)};color:${sevColor(f.severity)};font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;margin-top:2px">${f.severity.toUpperCase().slice(0,4)}</span>
-        <div>
-          <div style="font-weight:600;font-size:13px;color:#1e293b">${f.title ?? ""} <span style="font-size:11px;color:#94a3b8;font-weight:400">[${f.ruleId ?? ""}]${f.line ? ` :${f.line}` : ""}</span></div>
-          <div style="font-size:12px;color:#64748b;margin-top:2px">${f.description ?? ""}</div>
-          ${f.fix ? `<div style="font-size:11px;color:#059669;margin-top:3px">💡 ${f.fix}</div>` : ""}
-        </div>
-      </div>`).join("");
-    return `
-    <details style="border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;overflow:hidden">
-      <summary style="padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;background:#f8fafc;list-style:none;user-select:none">
-        <span style="background:${scoreCol(sc)};color:#fff;font-weight:700;font-size:13px;padding:3px 10px;border-radius:6px;min-width:36px;text-align:center">${sc}</span>
-        <span style="font-weight:600;font-size:14px;color:#1e293b;flex:1">${fname}</span>
-        ${fc ? `<span style="background:#fef2f2;color:#dc2626;font-size:12px;font-weight:700;padding:2px 8px;border-radius:4px">${fc} critical</span>` : ""}
-        ${fw ? `<span style="background:#fffbeb;color:#d97706;font-size:12px;font-weight:700;padding:2px 8px;border-radius:4px">${fw} warn</span>` : ""}
-        ${fi ? `<span style="background:#eff6ff;color:#2563eb;font-size:12px;font-weight:700;padding:2px 8px;border-radius:4px">${fi} info</span>` : ""}
-      </summary>
-      <div style="font-size:11px;color:#94a3b8;padding:4px 16px;background:#f8fafc;border-bottom:1px solid #e2e8f0">${r.file ?? ""}</div>
-      ${findingsHtml || `<div style="padding:12px 16px;color:#64748b;font-size:13px">✓ No findings</div>`}
-    </details>`;
-  }).join("");
-
-  const rulesHtml = topRules.map(([ruleId, info]) => `
-    <tr>
-      <td style="padding:8px 12px;font-weight:700;color:${sevColor(info.sev)};font-size:18px">${info.count}</td>
-      <td style="padding:8px 12px;font-family:monospace;font-size:12px;color:#64748b">${ruleId}</td>
-      <td style="padding:8px 12px;font-size:13px;color:#1e293b">${info.title}</td>
-      <td style="padding:8px 12px"><span style="background:${sevBg(info.sev)};color:${sevColor(info.sev)};font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px">${info.sev}</span></td>
-    </tr>`).join("");
-
-  const catsHtml = catAvgs.map(({ cat, avg }) => {
-    const pct = avg;
-    const col = scoreCol(avg);
-    return `
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-      <div style="width:110px;font-size:12px;color:#64748b;text-align:right">${cat}</div>
-      <div style="flex:1;background:#e2e8f0;border-radius:4px;height:12px;overflow:hidden">
-        <div style="width:${pct}%;background:${col};height:100%;border-radius:4px;transition:width .3s"></div>
-      </div>
-      <div style="width:36px;font-weight:700;font-size:13px;color:${col}">${avg}</div>
-    </div>`;
-  }).join("");
-
-  const now = new Date().toLocaleString();
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>cqs Report — ${stack?.name ?? "Code Quality"}</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f1f5f9;color:#1e293b;min-height:100vh}
-  .header{background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);color:#fff;padding:32px 40px}
-  .header h1{font-size:28px;font-weight:800;letter-spacing:-0.5px}
-  .header .sub{font-size:14px;color:#94a3b8;margin-top:4px}
-  .stats{display:flex;gap:16px;margin-top:24px;flex-wrap:wrap}
-  .stat{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:16px 24px;min-width:140px}
-  .stat .val{font-size:32px;font-weight:800;line-height:1}
-  .stat .lbl{font-size:12px;color:#94a3b8;margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
-  .body{max-width:1200px;margin:0 auto;padding:32px 24px}
-  .section{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:24px;overflow:hidden}
-  .section-head{padding:16px 20px;border-bottom:1px solid #f1f5f9;font-weight:700;font-size:15px;color:#0f172a;display:flex;align-items:center;gap:8px}
-  .section-body{padding:20px}
-  table{width:100%;border-collapse:collapse}
-  tr:hover{background:#f8fafc}
-  details>summary::-webkit-details-marker{display:none}
-  @media(max-width:600px){.stats{gap:10px}.stat{min-width:120px;padding:12px 16px}}
-</style>
-</head>
-<body>
-<div class="header">
-  <h1>⚡ cqs Code Quality Report</h1>
-  <div class="sub">${stack?.name ?? ""} &nbsp;·&nbsp; Generated ${now} &nbsp;·&nbsp; cqs v${CQS_VERSION}</div>
-  <div class="stats">
-    <div class="stat"><div class="val" style="color:${gradeColor}">${avgScore}<span style="font-size:18px;margin-left:4px">${gradeLetter}</span></div><div class="lbl">Overall Score</div></div>
-    <div class="stat"><div class="val">${files}</div><div class="lbl">Files Analysed</div></div>
-    <div class="stat"><div class="val" style="color:#dc2626">${summary.critical}</div><div class="lbl">Critical</div></div>
-    <div class="stat"><div class="val" style="color:#d97706">${summary.warning}</div><div class="lbl">Warning</div></div>
-    <div class="stat"><div class="val" style="color:#2563eb">${summary.info}</div><div class="lbl">Info</div></div>
-  </div>
-</div>
-
-<div class="body">
-
-  ${catAvgs.length ? `
-  <div class="section">
-    <div class="section-head">📊 Category Scores</div>
-    <div class="section-body">${catsHtml}</div>
-  </div>` : ""}
-
-  <div class="section">
-    <div class="section-head">🔴 Top Rule Violations</div>
-    <div class="section-body" style="padding:0">
-      <table>
-        <thead><tr style="background:#f8fafc;font-size:11px;text-transform:uppercase;color:#64748b">
-          <th style="padding:8px 12px;text-align:left">Count</th>
-          <th style="padding:8px 12px;text-align:left">Rule ID</th>
-          <th style="padding:8px 12px;text-align:left">Description</th>
-          <th style="padding:8px 12px;text-align:left">Severity</th>
-        </tr></thead>
-        <tbody>${rulesHtml}</tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-head">📁 Files &nbsp;<span style="font-size:12px;color:#94a3b8;font-weight:400">click a file to expand findings</span></div>
-    <div class="section-body">${filesHtml}</div>
-  </div>
-
-  ${aiResults.length ? `
-  <div class="section">
-    <div class="section-head" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff">🤖 AI Second-Eye Review</div>
-    <div class="section-body">
-      ${aiResults.map(r => `
-      <details style="border:1px solid #e2e8f0;border-radius:8px;margin-bottom:10px;overflow:hidden" open>
-        <summary style="padding:10px 16px;cursor:pointer;background:#f5f3ff;font-weight:700;font-size:13px;color:#4f46e5;list-style:none">${r.fname}</summary>
-        <div style="padding:16px;font-size:13px;color:#1e293b;line-height:1.7;white-space:pre-wrap;font-family:-apple-system,sans-serif">${r.text ? r.text.replace(/</g,"&lt;").replace(/>/g,"&gt;") : `<span style="color:#dc2626">Error: ${r.error}</span>`}</div>
-      </details>`).join("")}
-    </div>
-  </div>` : ""}
-
-</div>
-</body>
-</html>`;
+  return html;
 }
 
 // ── AI Engine ─────────────────────────────────────────────────────────────────
@@ -1219,7 +1090,13 @@ async function main() {
   if (args.listStacks) { printStacks(); process.exit(0); }
   if (args.readReport) {
     const report = printReportSummary(args.readReport);
-    if (args.open && report) openHtmlReport(buildHtmlReport(report));
+    if (args.open && report) {
+      const restored = (report.results || []).map((r) => ({
+        file: r.file,
+        result: { overallScore: r.overallScore, categoryScores: r.categoryScores, findings: r.findings || [] },
+      }));
+      openHtmlReport(renderWebReport(report.stack?.id || "playwright", restored, { projectName: report.stack?.name }));
+    }
     process.exit(0);
   }
 
@@ -1326,7 +1203,7 @@ async function main() {
         findings: result.findings,
       })),
     };
-    openHtmlReport(buildHtmlReport(report, aiResults));
+    openHtmlReport(renderWebReport(stackId, results, { aiResults }));
   }
 
   // Exit with non-zero if any criticals found (useful for CI)
