@@ -35,7 +35,7 @@ npm view cqs-audit version    # latest on npm
 ### Build from source
 
 ```bash
-git clone https://github.com/mv-vasanth/code-quality-studio.git
+# from a checkout of the repository
 cd code-quality-studio
 npm install && npm run build     # builds the web app — needed for reports
 cd cli
@@ -166,8 +166,8 @@ Seven tools: `cqs_audit`, `cqs_report`, `cqs_list_stacks`, `cqs_list_rules`,
 `cqs_validate_rules`, `cqs_test_rule`, `cqs_read_report`. `cqs_report` writes
 the same self-contained report the CLI does.
 
-Full walkthrough for every client, written from scratch:
-**[docs/MCP_GUIDE.md](https://github.com/mv-vasanth/code-quality-studio/blob/main/docs/MCP_GUIDE.md)**
+A full walkthrough for every client ships with the source, in
+`docs/MCP_GUIDE.md`.
 
 ---
 
@@ -252,8 +252,9 @@ Validate and try rules before committing them with `cqs_validate_rules` and
 
 ---
 
-## Links
+## Further reading
 
-- [Repository](https://github.com/mv-vasanth/code-quality-studio)
-- [MCP guide](https://github.com/mv-vasanth/code-quality-studio/blob/main/docs/MCP_GUIDE.md)
-- [Architecture overview](https://github.com/mv-vasanth/code-quality-studio/blob/main/docs/ARCHITECTURE_OVERVIEW.md)
+Shipped with the source:
+
+- `docs/MCP_GUIDE.md` — using cqs from an AI assistant, from scratch
+- `docs/ARCHITECTURE_OVERVIEW.md` — how the analysis engine works

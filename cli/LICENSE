@@ -1,0 +1,28 @@
+Copyright (c) 2026 Code Quality Studio. All rights reserved.
+
+This software is provided as source-available, not open source.
+
+No licence is granted to use, copy, modify, merge, publish, distribute,
+sublicense, or sell this software or any derivative of it, except with the
+prior written permission of the copyright holder.
+
+Viewing the source, and reporting issues, are welcome.
+
+This is a holding notice while licensing terms are finalised. It is expected
+to be replaced by a permissive or source-available licence in a future
+release. Until then, treat any use beyond reading the source as requiring
+permission.
+
+NOTE ON EARLIER RELEASES
+Versions of the npm package `cqs-audit` up to and including 2.3.1 were
+published under the MIT Licence. That grant is irrevocable for those
+versions and is unaffected by this notice, which applies only to this source
+tree and to releases made after it.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
