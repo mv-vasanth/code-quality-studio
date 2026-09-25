@@ -32,6 +32,8 @@ import { analyseAppiumJavaLocally }    from "../../src/analyzers/appiumJava.js";
 import { analyseToscaXmlLocally }      from "../../src/analyzers/toscaXml.js";
 import { AUDIT_STACKS }                from "../../src/stacks/definitions.js";
 import { RULES_FILENAME, discoverRulesFile, loadRulesFile, runFileRules } from "../../src/rules/fileRules.js";
+import { buildFixPrompt, extractCode, evaluateFix, lineDiff } from "../../src/rules/remediate.js";
+import { formatVerification } from "../../src/rules/verifyFix.js";
 
 // ── Runner map ────────────────────────────────────────────────────────────────
 const RUNNERS = {
@@ -79,12 +81,14 @@ function parseArgs(argv) {
     paths: [], stack: null, severity: "all", category: null, output: "pretty",
     help: false, listStacks: false, readReport: null, open: false,
     rulesFile: null, noRules: false,
+    command: null, dryRun: false, commit: false, branch: null, maxFiles: 10, force: false,
     // AI flags
     ai: null, apiKey: null, model: null,
     awsRegion: null, awsAccessKey: null, awsSecretKey: null,
     vertexProject: null, vertexLocation: null, vertexKeyFile: null,
   };
   let i = 0;
+  if (argv[0] === "remediate") { args.command = "remediate"; i = 1; }
   while (i < argv.length) {
     const a = argv[i];
     if (a === "--help" || a === "-h")        { args.help = true; }
@@ -98,6 +102,12 @@ function parseArgs(argv) {
     else if (a === "--open")                                      { args.open = true; }
     else if (a === "--rules")                                     { args.rulesFile = argv[++i]; }
     else if (a === "--no-rules")                                  { args.noRules = true; }
+    else if (a === "--dry-run")                                   { args.dryRun = true; }
+    else if (a === "--commit")                                    { args.commit = true; }
+    else if (a === "--branch" && argv[i+1])                       { args.branch = argv[++i]; }
+    else if (a === "--max-files" && argv[i+1])                    { args.maxFiles = parseInt(argv[++i], 10) || 10; }
+    else if (a === "--force")                                     { args.force = true; }
+    else if (a === "--provider" && argv[i+1])                     { args.ai = argv[++i]; }
     else if (a === "--ai" && argv[i+1])                           { args.ai = argv[++i]; }
     else if (a === "--api-key" && argv[i+1])                      { args.apiKey = argv[++i]; }
     else if (a === "--model" && argv[i+1])                        { args.model = argv[++i]; }
@@ -861,10 +871,143 @@ function printReportSummary(filePath) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
+// ── Remediation agent (cqs remediate) ────────────────────────────────────────
+function gitState(dir) {
+  try {
+    execSync("git rev-parse --is-inside-work-tree", { cwd: dir, stdio: "pipe" });
+  } catch { return { isRepo: false, clean: false }; }
+  const out = execSync("git status --porcelain", { cwd: dir, encoding: "utf8", stdio: "pipe" });
+  return { isRepo: true, clean: out.trim() === "" };
+}
+
+async function runRemediate(args) {
+  const aiConfig = resolveAiConfig(args);
+  if (!aiConfig) {
+    console.error(`  ${C.red()}remediate needs an AI provider.${C.reset()}  e.g. --ai anthropic  (or --provider anthropic)`);
+    process.exit(1);
+  }
+
+  const inputPaths = args.paths.length ? args.paths : ["."];
+  const root = resolve(inputPaths[0]);
+
+  // Writing to source files is only safe if the user can undo it.
+  if (!args.dryRun) {
+    const git = gitState(existsSync(root) && statSync(root).isFile() ? dirname(root) : root);
+    if (!git.isRepo && !args.force) {
+      console.error(`  ${C.red()}Not a git repository — fixes could not be undone.${C.reset()}`);
+      console.error(`  Re-run with ${b("--dry-run")} to preview, or ${b("--force")} to write anyway.\n`);
+      process.exit(1);
+    }
+    if (git.isRepo && !git.clean && !args.force) {
+      console.error(`  ${C.red()}Working tree has uncommitted changes.${C.reset()}`);
+      console.error(`  Commit or stash first so the fixes are reviewable, or pass ${b("--force")}.\n`);
+      process.exit(1);
+    }
+  }
+
+  // Collect + audit
+  let stackId = args.stack;
+  let allFiles = [];
+  for (const p of inputPaths) allFiles.push(...collectFiles(p, stackId ?? "playwright"));
+  if (!stackId) { stackId = detectStack(allFiles); allFiles = []; for (const p of inputPaths) allFiles.push(...collectFiles(p, stackId)); }
+  if (!RUNNERS[stackId]) { console.error(`  Unknown stack: ${stackId}`); process.exit(1); }
+
+  let ruleSet = { rules: [], disabled: [], errors: [], path: null };
+  if (!args.noRules) {
+    const rp = args.rulesFile ? resolve(args.rulesFile) : discoverRulesFile(root);
+    if (rp) ruleSet = loadRulesFile(rp, stackId);
+  }
+  const disabledRuleIds = new Set(ruleSet.disabled);
+  const runner = RUNNERS[stackId];
+  const auditFn = (name, content) => {
+    const r = runner(name, content, { disabledRuleIds });
+    const custom = runFileRules(ruleSet.rules, name, content, { disabledRuleIds });
+    return { findings: [...(r.findings ?? []), ...custom], overallScore: r.overallScore ?? 0 };
+  };
+
+  const wanted = (f) => args.severity === "all" ? true : f.severity === args.severity;
+  const targets = [];
+  for (const file of allFiles) {
+    let content; try { content = readFileSync(file, "utf8"); } catch { continue; }
+    const findings = auditFn(basename(file), content).findings.filter(wanted);
+    if (findings.length) targets.push({ file, content, findings });
+  }
+
+  const sev = args.severity === "all" ? "all severities" : args.severity;
+  console.log(`\n  ${C.cyan()}${C.bold()}🛠  Remediation agent${C.reset()}  ${dim(`· ${AUDIT_STACKS[stackId].name} · ${sev}`)}`);
+  if (args.dryRun) console.log(`  ${C.yellow()}DRY RUN — nothing will be written${C.reset()}`);
+  console.log(`  ${dim("─".repeat(64))}\n`);
+
+  if (targets.length === 0) { console.log(`  ${C.green()}Nothing to fix.${C.reset()}\n`); return; }
+
+  const batch = targets.slice(0, args.maxFiles);
+  if (targets.length > batch.length) {
+    console.log(`  ${dim(`${targets.length} files match; fixing the first ${batch.length} (--max-files to change)`)}\n`);
+  }
+
+  const applied = [], rejected = [];
+  for (const { file, content, findings } of batch) {
+    const fname = basename(file);
+    process.stdout.write(`  ${dim("⏳")} ${fname.padEnd(46)} `);
+    let proposed = null, err = null;
+    try {
+      const prompt = buildFixPrompt(fname, content, findings);
+      const provider = aiConfig.provider;
+      let text;
+      if      (provider === "anthropic") text = await callAnthropic(prompt, aiConfig.apiKey, aiConfig.model);
+      else if (provider === "bedrock")   text = await callBedrock(prompt, aiConfig);
+      else if (provider === "vertex")    text = await callVertex(prompt, aiConfig);
+      else if (provider === "openai")    text = await callOpenAI(prompt, aiConfig.apiKey, aiConfig.model);
+      proposed = extractCode(text);
+    } catch (e) { err = e.message; }
+
+    if (err) { console.log(`${C.red()}✗ ${err}${C.reset()}`); rejected.push({ fname, reason: err }); continue; }
+
+    const verdict = evaluateFix({ auditFn, filename: fname, original: content, proposed });
+    if (!verdict.accept) {
+      console.log(`${C.yellow()}skipped${C.reset()}  ${dim(verdict.reason)}`);
+      rejected.push({ fname, reason: verdict.reason });
+      continue;
+    }
+
+    const d = verdict.diff;
+    console.log(`${C.green()}✓${C.reset()}  ${dim(`${d.before.critical}C/${d.before.warning}W → ${d.after.critical}C/${d.after.warning}W`)}`);
+    if (args.dryRun) {
+      for (const l of lineDiff(content, proposed).slice(0, 24)) {
+        const col = l.type === "+" ? C.green() : l.type === "-" ? C.red() : C.gray();
+        console.log(`      ${col}${l.type} ${l.text.slice(0, 96)}${C.reset()}`);
+      }
+      console.log();
+    } else {
+      writeFileSync(file, proposed, "utf8");
+    }
+    applied.push({ file, fname, diff: d });
+  }
+
+  console.log(`\n  ${dim("─".repeat(64))}`);
+  console.log(`  ${C.green()}${C.bold()}${applied.length}${C.reset()} fixed   ${C.yellow()}${rejected.length}${C.reset()} skipped`);
+  for (const r of rejected) console.log(`    ${dim(`· ${r.fname}: ${r.reason}`)}`);
+
+  if (!args.dryRun && applied.length && (args.branch || args.commit)) {
+    const cwd = existsSync(root) && statSync(root).isFile() ? dirname(root) : root;
+    try {
+      if (args.branch) { execSync(`git checkout -b ${JSON.stringify(args.branch)}`, { cwd, stdio: "pipe" }); console.log(`  branch: ${args.branch}`); }
+      if (args.commit) {
+        for (const a of applied) execSync(`git add ${JSON.stringify(a.file)}`, { cwd, stdio: "pipe" });
+        const msg = `fix: cqs remediation — ${applied.length} file(s)\n\nApplied by cqs remediate; each fix was re-audited and only kept\nwhen it reduced findings without introducing a new critical.`;
+        execSync(`git commit -m ${JSON.stringify(msg)}`, { cwd, stdio: "pipe" });
+        console.log(`  committed ${applied.length} file(s)`);
+      }
+    } catch (e) { console.error(`  ${C.red()}git step failed: ${e.message}${C.reset()}`); }
+  }
+  console.log();
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
 
   if (args.help)       { printHelp();   process.exit(0); }
+  if (args.command === "remediate") { await runRemediate(args); return; }
   if (args.listStacks) { printStacks(); process.exit(0); }
   if (args.readReport) {
     const report = printReportSummary(args.readReport);
