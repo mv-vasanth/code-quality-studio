@@ -349,9 +349,13 @@
         <span class="cmd">cqs ./tests/ --ai vertex</span>
       </div>
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 3px">INLINE (CI — no env var)</div>
-      <div class="code-block" style="font-size:9.5px">
+      <div class="code-block" style="font-size:9px">
         <span class="cmd">cqs ./tests/ --ai anthropic --api-key sk-ant-xxx</span><br>
-        <span class="cmd">cqs ./tests/ --ai openai --api-key sk-xxx</span>
+        <span class="cmd">cqs ./tests/ --ai openai --api-key sk-xxx</span><br>
+        <span class="cmd">cqs ./tests/ --ai bedrock --aws-region us-east-1 \</span><br>
+        &nbsp;&nbsp;<span class="cmd">--aws-access-key KEY --aws-secret-key SECRET</span><br>
+        <span class="cmd">cqs ./tests/ --ai vertex --vertex-project proj \</span><br>
+        &nbsp;&nbsp;<span class="cmd">--vertex-location us-central1 --vertex-key-file sa.json</span>
       </div>
     </div>
   </div>
