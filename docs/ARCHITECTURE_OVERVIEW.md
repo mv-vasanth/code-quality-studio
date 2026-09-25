@@ -170,6 +170,23 @@ there is no regression net for the 530 rules.
 - **`index.js` divergence** — features added there silently skip CLI and CI.
 - **Scoring is unweighted** — cross-stack score comparisons are not meaningful.
 
+### On splitting `localAnalyzer.js`
+
+The obvious tidy-up is to move Playwright's 65 rules into `src/analyzers/` like
+the other 17 stacks. **Measure before attempting it.** The rules are not
+independent: 14 function-scope variables span more than 200 lines, and several
+— `xpathLocators`, `hardWaits`, `totalTests`, `hasUserFacingLocators` — are
+computed by early rules and consumed 1000+ lines later by the metrics,
+`positives` and `summary` blocks.
+
+Splitting therefore means threading a shared context through all 65 rules, or
+recomputing those values per file where they will drift. That is a restructure,
+not a file move, and with no regression tests there is nothing to prove it
+behaved identically afterwards.
+
+Build the golden-master test first (snapshot every finding across a real suite,
+assert unchanged output). Then the split becomes verifiable — and optional.
+
 ---
 
 ## 7. Operational notes
