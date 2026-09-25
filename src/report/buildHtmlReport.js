@@ -60,6 +60,39 @@ function sectionBlock(title, inner) {
   return `<section class="block"><h2>${escapeHtml(title)}</h2>${inner}</section>`;
 }
 
+
+/** Category score bars, mirroring the scorecard shown in the app. */
+function renderCategoryBars(payload) {
+  const cats = (payload.categoryAverages || []).filter((c) => c.score !== null);
+  if (!cats.length) return "";
+  const rows = cats.map((c) => {
+    const tone = c.score >= 90 ? "#16a34a" : c.score >= 75 ? "#0d9488" : c.score >= 60 ? "#d97706" : "#dc2626";
+    return `<div style="display:flex;align-items:center;gap:10px;margin:6px 0">
+      <div style="width:170px;font-size:13px;color:#334155">${escapeHtml(c.icon)} ${escapeHtml(c.label)}</div>
+      <div style="flex:1;height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden">
+        <div style="width:${c.score}%;height:100%;background:${c.color}"></div>
+      </div>
+      <div style="width:34px;text-align:right;font-size:13px;font-weight:600;color:${tone}">${c.score}</div>
+      <div style="width:64px;text-align:right;font-size:12px;color:#94a3b8">${c.findingCount || 0} finding${c.findingCount === 1 ? "" : "s"}</div>
+    </div>`;
+  }).join("");
+  return `<div>${rows}</div>`;
+}
+
+/** The three-phase fix roadmap the analyzers already produce. */
+function renderRoadmap(payload) {
+  const phases = (payload.roadmap || []).filter((p) => (p.actions || []).length);
+  if (!phases.length) return "";
+  const blocks = phases.map((ph) => `
+    <div style="margin:10px 0;padding:10px 14px;border-left:3px solid ${ph.color};background:#f8fafc;border-radius:0 6px 6px 0">
+      <div style="font-weight:600;font-size:13px;color:${ph.color};margin-bottom:4px">${escapeHtml(ph.phase)}</div>
+      <ul style="margin:0;padding-left:18px">${
+        ph.actions.map((a) => `<li style="font-size:13px;color:#334155;margin:2px 0">${escapeHtml(a)}</li>`).join("")
+      }</ul>
+    </div>`).join("");
+  return `<div>${blocks}</div>`;
+}
+
 export function buildHtmlReport(payload) {
   const tone = verdictTone[payload.verdict.tone] || verdictTone.neutral;
   const { summary, verdict, fileScores, findingsBySeverity, topPriorities, projectName, analysisMode, generatedAt } =
@@ -164,12 +197,14 @@ export function buildHtmlReport(payload) {
       <div class="stat"><div class="n">${summary.filesAnalysed}</div><div class="l">Files OK</div></div>
     </div>
 
+    ${(() => { const b = renderCategoryBars(payload); return b ? sectionBlock("Category scores", b) : ""; })()}
     ${topPriorities.length ? sectionBlock("Start here", priorities) : ""}
     ${renderGroup(`Fix now — critical (${findingsBySeverity.critical.length})`, findingsBySeverity.critical)}
     ${renderGroup(`Fix soon — warnings (${findingsBySeverity.warning.length})`, findingsBySeverity.warning)}
     ${renderGroup(`Suggestions — info (${findingsBySeverity.info.length})`, findingsBySeverity.info)}
     ${!payload.findings.length ? sectionBlock("Findings", "<p>No issues flagged by automated rules.</p>") : ""}
     ${sectionBlock("File scorecard", scorecard)}
+    ${(() => { const r = renderRoadmap(payload); return r ? sectionBlock("Fix roadmap", r) : ""; })()}
     ${gaps}
     <footer>Code Quality Studio — share this file with your team or attach to a ticket.</footer>
   </div>

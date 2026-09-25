@@ -130,5 +130,19 @@ export function buildFindingsReportPayload({
     pendingFiles: pending.map((f) => f.name),
     bestPracticesNotMarkedPassed: loadUncheckedPracticeTitles(checklistKey, guide.practices),
     categories: categories.map((c) => ({ id: c.id, label: c.label })),
+    categoryAverages: categories.map((c) => {
+      const vals = analysed
+        .map((f) => f.result?.categoryScores?.[c.id])
+        .filter((v) => typeof v === "number");
+      return {
+        id: c.id,
+        label: c.label,
+        icon: c.icon ?? "",
+        color: c.color ?? "#64748b",
+        score: vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null,
+        findingCount: allFindings.filter((f) => f.category === c.id).length,
+      };
+    }),
+    roadmap: analysed[0]?.result?.roadmap ?? [],
   };
 }
