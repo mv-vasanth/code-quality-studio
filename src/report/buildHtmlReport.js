@@ -1,5 +1,6 @@
 import { escapeHtml, formatReportDate } from "./reportUtils.js";
 import { verdictTone, severity } from "./reportTheme.js";
+import { radarGeometry } from "../components/charts/radarGeometry.js";
 
 function severityStyle(sev) {
   const s = severity[sev] || severity.info;
@@ -77,6 +78,37 @@ function renderCategoryBars(payload) {
     </div>`;
   }).join("");
   return `<div>${rows}</div>`;
+}
+
+/**
+ * The app's Coverage Radar, as inline SVG.
+ *
+ * Shares radarGeometry with components/charts/RadarChart.jsx — only the
+ * rendering differs, because the report is a string and has no React runtime.
+ */
+function renderRadar(payload, accent = "#14b8a6") {
+  const cats = (payload.categoryAverages || []).filter((c) => c.score !== null);
+  if (cats.length < 3) return ""; // a radar needs a polygon, not a line
+
+  const scores = Object.fromEntries(cats.map((c) => [c.id, c.score]));
+  const g = radarGeometry(scores, cats);
+
+  const rings  = g.rings.map((ring) =>
+    `<polygon points="${ring.points}" fill="none" stroke="#e5e7eb" stroke-width="0.5"/>`).join("");
+  const spokes = g.spokes.map((e) =>
+    `<line x1="${g.cx}" y1="${g.cy}" x2="${e.x}" y2="${e.y}" stroke="#e5e7eb" stroke-width="0.5"/>`).join("");
+  const dots   = g.dots.map((p) => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="${accent}"/>`).join("");
+  const labels = g.labels.map((l) =>
+    `<text x="${l.x}" y="${l.y}" text-anchor="${l.anchor}" dominant-baseline="central"
+      style="font-size:8px;fill:#555;font-family:system-ui">${escapeHtml(l.icon)} ${escapeHtml(l.text)}</text>`).join("");
+
+  // Widened viewBox so the outward-anchored labels aren't clipped.
+  return `<svg width="${g.size}" height="${g.size}" viewBox="-30 0 ${g.size + 60} ${g.size}"
+    style="display:block;margin:0 auto;max-width:100%" role="img" aria-label="Coverage radar by category">
+    ${rings}${spokes}
+    <polygon points="${g.polygon}" fill="${accent}22" stroke="${accent}" stroke-width="2"/>
+    ${dots}${labels}
+  </svg>`;
 }
 
 /** The three-phase fix roadmap the analyzers already produce. */
@@ -167,6 +199,8 @@ export function buildHtmlReport(payload) {
     table.meta td { padding: 2px 0; }
     .fix-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
     @media (max-width: 640px) { .fix-cols { grid-template-columns: 1fr; } }
+    .cat-cols { display: grid; grid-template-columns: 300px 1fr; gap: 18px; align-items: center; }
+    @media (max-width: 860px), print { .cat-cols { grid-template-columns: 1fr; } }
     .col-label { font-size: 0.7rem; font-weight: 700; margin-bottom: 4px; }
     .actual-label { color: #b91c1c; }
     pre.actual { background: #1c1917; color: #fecaca; border: 1px solid #fca5a5; }
@@ -197,7 +231,18 @@ export function buildHtmlReport(payload) {
       <div class="stat"><div class="n">${summary.filesAnalysed}</div><div class="l">Files OK</div></div>
     </div>
 
-    ${(() => { const b = renderCategoryBars(payload); return b ? sectionBlock("Category scores", b) : ""; })()}
+    ${(() => {
+      // Radar and bars show the same numbers two ways: the radar gives shape at
+      // a glance, the bars give exact scores and counts. Side by side on screen,
+      // stacked when narrow or printed.
+      const bars = renderCategoryBars(payload);
+      if (!bars) return "";
+      const radar = renderRadar(payload);
+      const inner = radar
+        ? `<div class="cat-cols"><div>${radar}</div><div>${bars}</div></div>`
+        : bars;
+      return sectionBlock("Category scores", inner);
+    })()}
     ${topPriorities.length ? sectionBlock("Start here", priorities) : ""}
     ${renderGroup(`Fix now — critical (${findingsBySeverity.critical.length})`, findingsBySeverity.critical)}
     ${renderGroup(`Fix soon — warnings (${findingsBySeverity.warning.length})`, findingsBySeverity.warning)}
