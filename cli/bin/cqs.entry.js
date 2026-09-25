@@ -88,7 +88,7 @@ function parseArgs(argv) {
     vertexProject: null, vertexLocation: null, vertexKeyFile: null,
   };
   let i = 0;
-  if (argv[0] === "remediate") { args.command = "remediate"; i = 1; }
+  if (argv[0] === "remediate") { args.command = "remediate"; args.severity = "critical"; i = 1; }
   while (i < argv.length) {
     const a = argv[i];
     if (a === "--help" || a === "-h")        { args.help = true; }
@@ -180,6 +180,7 @@ ${b("USAGE")}
   cqs [path...]                   Analyse files/folders (defaults to current directory)
   cqs --list-stacks               List all available stacks
   cqs --read-report <file>        Print summary of a saved JSON report
+  cqs remediate [path...]         AI-fix findings, verifying each fix before keeping it
 
 ${b("OPTIONS")}
   -s, --stack  <id>               Force a stack (see --list-stacks for IDs)
@@ -202,7 +203,7 @@ ${b("EXAMPLES")}
   cqs ./e2e/ -s selenium_java -S warning
   cqs . --list-stacks
 
-${b("AI REVIEW")}  ${dim("(adds second-eye review on top of 300+ rules)")}
+${b("AI REVIEW")}  ${dim("(adds second-eye review on top of 530 rules)")}
   cqs ./tests/ --ai anthropic --api-key sk-ant-xxx
   cqs ./tests/ --ai bedrock --aws-region us-east-1 --aws-access-key KEY --aws-secret-key SECRET
   cqs ./tests/ --ai vertex --vertex-project my-proj --vertex-location us-central1 --vertex-key-file sa.json
@@ -211,6 +212,21 @@ ${b("AI REVIEW")}  ${dim("(adds second-eye review on top of 300+ rules)")}
   ANTHROPIC_API_KEY=sk-ant-xxx cqs ./tests/ --ai anthropic
   AWS_REGION=us-east-1 AWS_ACCESS_KEY_ID=K AWS_SECRET_ACCESS_KEY=S cqs ./tests/ --ai bedrock
   VERTEX_PROJECT=p VERTEX_LOCATION=us-central1 GOOGLE_APPLICATION_CREDENTIALS=sa.json cqs ./tests/ --ai vertex
+
+${b("REMEDIATE")}  ${dim("(AI writes the fix; every fix is re-audited before it is kept)")}
+  cqs remediate ./tests/ --ai anthropic --dry-run      ${dim("preview the diff, write nothing")}
+  cqs remediate ./tests/ --ai anthropic                ${dim("apply fixes in place")}
+  cqs remediate ./tests/ --ai anthropic --branch fix/cqs --commit
+
+      --dry-run                   Show the diff without writing
+      --branch <name>             Create a branch before committing
+      --commit                    git commit the applied fixes
+      --severity <level>          Which findings to fix (default: critical)
+      --max-files <n>             Cap files per run (default: 10)
+      --force                     Write even if the git tree is dirty
+
+  ${dim("A fix is rejected if it introduces a new critical, changes nothing, or")}
+  ${dim("drops half the file. Writing is refused unless the git tree is clean.")}
 `);
 }
 
@@ -994,8 +1010,8 @@ async function runRemediate(args) {
       if (args.branch) { execSync(`git checkout -b ${JSON.stringify(args.branch)}`, { cwd, stdio: "pipe" }); console.log(`  branch: ${args.branch}`); }
       if (args.commit) {
         for (const a of applied) execSync(`git add ${JSON.stringify(a.file)}`, { cwd, stdio: "pipe" });
-        const msg = `fix: cqs remediation — ${applied.length} file(s)\n\nApplied by cqs remediate; each fix was re-audited and only kept\nwhen it reduced findings without introducing a new critical.`;
-        execSync(`git commit -m ${JSON.stringify(msg)}`, { cwd, stdio: "pipe" });
+        const msg = `fix: cqs remediation — ${applied.length} file(s)\n\nApplied by cqs remediate; each fix was re-audited and only kept\nwhen it reduced findings without introducing a new critical.\n`;
+        execSync("git commit -F -", { cwd, input: msg, stdio: ["pipe", "pipe", "pipe"] });
         console.log(`  committed ${applied.length} file(s)`);
       }
     } catch (e) { console.error(`  ${C.red()}git step failed: ${e.message}${C.reset()}`); }
