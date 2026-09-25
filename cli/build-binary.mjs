@@ -10,6 +10,7 @@
  * Usage:  node build-binary.mjs
  */
 import { build } from "esbuild";
+import { readBuiltApp, appDefines } from "./embedApp.mjs";
 import { execFileSync } from "child_process";
 import { mkdirSync, copyFileSync, chmodSync, writeFileSync, readFileSync, statSync, rmSync } from "fs";
 import { fileURLToPath } from "url";
@@ -58,6 +59,7 @@ await build({
   outfile: entry,
   define: {
     __CQS_VERSION__: JSON.stringify(version),
+    ...appDefines(readBuiltApp()),
     // Vite-only helper (shouldUseLocalAnalysis) that the CLI never calls, but which
     // esbuild still pulls in. import.meta is illegal in CJS, so stub it out.
     "import.meta.env": "{}",

@@ -90,6 +90,12 @@ export async function saveWorkspace(session) {
 }
 
 export async function loadWorkspace() {
+  // A self-contained report (cqs --open) inlines the app and injects the
+  // workspace here, so the offline copy restores through exactly the same
+  // path as a saved session — no separate hydration branch to keep in sync.
+  const injected = globalThis.__CQS_WORKSPACE__;
+  if (injected?.files?.length) return injected;
+
   try {
     const db = await openDb();
     const data = await txGet(db);

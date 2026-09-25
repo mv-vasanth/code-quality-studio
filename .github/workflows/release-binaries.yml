@@ -35,6 +35,14 @@ jobs:
         with:
           node-version: 22.22.3
 
+      # The binary inlines the built web app so `cqs --open` can emit it
+      # offline. Without this step the app is missing and --open silently
+      # degrades to the flat HTML report.
+      - name: Build web app
+        run: |
+          npm ci
+          npm run build
+
       - name: Install dependencies
         working-directory: cli
         run: npm ci

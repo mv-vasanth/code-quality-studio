@@ -8,8 +8,12 @@ import { tmpdir } from "os";
 import { execSync } from "child_process";
 import process from "process";
 
-/* global __CQS_VERSION__ */
+/* global __CQS_VERSION__, __CQS_APP_JS__, __CQS_APP_CSS__ */
 const CQS_VERSION = typeof __CQS_VERSION__ !== "undefined" ? __CQS_VERSION__ : "1.0.0";
+// The built web app, inlined at bundle time. Empty when the CLI was built
+// without `npm run build` having produced dist/assets — see build.mjs.
+const CQS_APP_JS  = typeof __CQS_APP_JS__  !== "undefined" ? __CQS_APP_JS__  : "";
+const CQS_APP_CSS = typeof __CQS_APP_CSS__ !== "undefined" ? __CQS_APP_CSS__ : "";
 
 // ── Analyzers (imported directly — bypass localStorage in index.js) ──────────
 import { analysePlaywright }           from "../../src/analyzers/playwright.js";
@@ -37,6 +41,7 @@ import { formatVerification } from "../../src/rules/verifyFix.js";
 import { buildReview, reviewSummary } from "../../src/rules/prReview.js";
 import { buildFindingsReportPayload } from "../../src/report/buildPayload.js";
 import { buildCompleteHtmlReport } from "../../src/report/buildCompleteReport.js";
+import { buildAppHtmlReport, workspaceFromResults } from "../../src/report/buildAppReport.js";
 
 // ── Runner map ────────────────────────────────────────────────────────────────
 const RUNNERS = {
@@ -429,6 +434,28 @@ function printJson(stackId, results, args) {
  * like the app. buildCompleteHtmlReport is a pure string builder, so it works
  * here as-is; only the payload shape needs adapting.
  */
+/**
+ * Render the full app as a single offline file.
+ *
+ * Returns "" when the app wasn't embedded at build time, so callers fall back
+ * to the flat report rather than writing a blank page.
+ */
+function renderAppReport(stackId, fileResults, { projectName } = {}) {
+  if (!CQS_APP_JS) return "";
+  const stack = AUDIT_STACKS[stackId] ?? AUDIT_STACKS.playwright;
+  const workspace = workspaceFromResults({
+    stackId,
+    projectName: projectName || stack.defaultProjectName || `cqs audit — ${stack.name}`,
+    results: fileResults,
+  });
+  return buildAppHtmlReport({
+    appJs: CQS_APP_JS,
+    appCss: CQS_APP_CSS,
+    workspace,
+    title: `${workspace.projectName} — Code Quality Studio`,
+  });
+}
+
 function renderWebReport(stackId, fileResults, { projectName, aiResults = [] } = {}) {
   const stack = AUDIT_STACKS[stackId] ?? AUDIT_STACKS.playwright;
   const payload = buildFindingsReportPayload({
@@ -1107,7 +1134,9 @@ async function main() {
         file: r.file,
         result: { overallScore: r.overallScore, categoryScores: r.categoryScores, findings: r.findings || [] },
       }));
-      openHtmlReport(renderWebReport(report.stack?.id || "playwright", restored, { projectName: report.stack?.name }));
+      const sid = report.stack?.id || "playwright";
+      openHtmlReport(renderAppReport(sid, restored, { projectName: report.stack?.name })
+                     || renderWebReport(sid, restored, { projectName: report.stack?.name }));
     }
     process.exit(0);
   }
@@ -1215,7 +1244,10 @@ async function main() {
         findings: result.findings,
       })),
     };
-    openHtmlReport(renderWebReport(stackId, results, { aiResults }));
+    // The app carries every view; the flat report is the fallback when it
+    // was not embedded, and is still what --report html produces.
+    openHtmlReport(aiResults.length ? renderWebReport(stackId, results, { aiResults })
+                                    : (renderAppReport(stackId, results) || renderWebReport(stackId, results)));
   }
 
   // Exit with non-zero if any criticals found (useful for CI)

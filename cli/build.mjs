@@ -5,6 +5,7 @@
  * Usage:  node build.mjs
  */
 import { build } from "esbuild";
+import { readBuiltApp, appDefines } from "./embedApp.mjs";
 import { writeFileSync, chmodSync, mkdirSync, readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -13,6 +14,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Read version from package.json — injected into the bundle at build time
 const { version } = JSON.parse(readFileSync(join(__dirname, "package.json"), "utf8"));
+
+const app = readBuiltApp();
+if (app.js) {
+  console.log(`\n  embedded app: ${(app.js.length / 1024).toFixed(0)} KB js + ${(app.css.length / 1024).toFixed(1)} KB css`);
+}
 
 mkdirSync(join(__dirname, "dist"), { recursive: true });
 
@@ -23,8 +29,8 @@ const result = await build({
   target: "node18",
   format: "esm",
   outfile: join(__dirname, "dist/cqs.js"),
-  // Inject version from package.json at build time
-  define: { __CQS_VERSION__: JSON.stringify(version) },
+  // Inject version and the built app from package.json / dist at build time
+  define: { __CQS_VERSION__: JSON.stringify(version), ...appDefines(app) },
   // Exclude Node.js built-ins (they're always available)
   external: ["fs", "path", "process", "url", "os", "crypto", "stream", "util", "events"],
   // Mark AWS/Google SDKs as external — CLI doesn't need AI providers
