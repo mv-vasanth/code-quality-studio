@@ -138,7 +138,19 @@ function parseArgs(argv) {
 function collectFiles(inputPath, stackId) {
   const pattern = AUDIT_STACKS[stackId]?.filePattern;
   const abs = resolve(inputPath);
-  if (!existsSync(abs)) { console.error(`  Path not found: ${abs}`); process.exit(1); }
+  if (!existsSync(abs)) {
+    console.error(`  Path not found: ${abs}`);
+    // A bare word that is not a path is usually a mistyped or unsupported
+    // subcommand — on an older build "remediate" lands here as a path.
+    if (!inputPath.includes("/") && !inputPath.includes(".")) {
+      const known = ["remediate", "pr-review"];
+      const near = known.find((k) => k.startsWith(inputPath.slice(0, 4)) || inputPath.startsWith(k.slice(0, 4)));
+      if (near) {
+        console.error(`  Did you mean \`cqs ${near} ...\`? This build is ${CQS_VERSION} — run \`cqs --help\` to see its commands.`);
+      }
+    }
+    process.exit(1);
+  }
   const stat = statSync(abs);
   if (stat.isFile()) return [abs];
 
