@@ -7,16 +7,19 @@
  *   cqs_list_stacks  — list all 18 supported stacks
  *   cqs_read_report  — summarise a saved JSON report
  */
+/* global __CQS_APP_JS__, __CQS_APP_CSS__ */
 import { Server }               from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { readFileSync, readdirSync, statSync, existsSync } from "fs";
+import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
 import { resolve, basename, join } from "path";
 
 // ── Analyzers (same direct imports as the CLI) ────────────────────────────────
+import { buildAppHtmlReport, workspaceFromResults } from "../../src/report/buildAppReport.js";
 import { analysePlaywright }            from "../../src/analyzers/playwright.js";
 import { analyseJavaApiLocally }        from "../../src/analyzers/javaApi.js";
 import { analyseTypeScriptLocally }     from "../../src/analyzers/typescript.js";
@@ -164,6 +167,7 @@ function runAudit(inputPath, stackId, severity = "all", category = null, rulesFi
 
   return {
     stackId, stackName: AUDIT_STACKS[stackId].name,
+    results,
     files: results.length, avgScore, grade: grade(avgScore),
     summary: { critical: crit, warning: warn, info },
     hasCritical: crit > 0,
@@ -172,6 +176,12 @@ function runAudit(inputPath, stackId, severity = "all", category = null, rulesFi
 }
 
 // ── MCP Server ────────────────────────────────────────────────────────────────
+// The built web app, inlined at bundle time — same as the CLI. Empty when the
+// app was not built before bundling, in which case cqs_report says so rather
+// than writing a blank page.
+const APP_JS  = typeof __CQS_APP_JS__  !== "undefined" ? __CQS_APP_JS__  : "";
+const APP_CSS = typeof __CQS_APP_CSS__ !== "undefined" ? __CQS_APP_CSS__ : "";
+
 const server = new Server(
   { name: "cqs-mcp", version: VERSION },
   { capabilities: { tools: {} } }
@@ -189,6 +199,19 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           stack:    { type: "string",  description: "Stack ID to use (e.g. playwright, cypress, selenium_java, tosca_xml). Auto-detected from file extensions if omitted." },
           severity: { type: "string",  description: "Filter findings by severity", enum: ["all", "critical", "warning", "info"], default: "all" },
           category: { type: "string",  description: "Filter findings by category ID (e.g. reliability, selectors, assertions)" },
+        },
+        required: ["path"],
+      },
+    },
+    {
+      name: "cqs_report",
+      description: "Audit a path and write a self-contained HTML report the user can open in a browser. The report embeds the full Code Quality Studio UI \u2014 Overview, Files, Findings, Rule Settings, Coverage Radar, Roadmap \u2014 and needs no server or network. Returns the file path. Use this when the user wants to see or share results rather than read them in chat.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          path:   { type: "string", description: "Absolute or relative path to a file or folder to audit" },
+          stack:  { type: "string", description: "Stack ID (e.g. playwright, cypress, selenium_java). Auto-detected if omitted." },
+          output: { type: "string", description: "Where to write the .html. Defaults to a temp file." },
         },
         required: ["path"],
       },
@@ -265,6 +288,32 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         args.include_custom === false ? false : (args.rules_file ? resolve(args.rules_file) : undefined)
       );
       return { content: [{ type: "text", text: result.text }] };
+    }
+
+    if (name === "cqs_report") {
+      if (!APP_JS) {
+        throw new Error("This build has no embedded app. Rebuild with `npm run build` at the repo root, then `node build-mcp.mjs`.");
+      }
+      const target = resolve(args.path ?? ".");
+      const audit = runAudit(target, args.stack ?? null);
+      const html = buildAppHtmlReport({
+        appJs: APP_JS,
+        appCss: APP_CSS,
+        workspace: workspaceFromResults({
+          stackId: audit.stackId,
+          // Same default the CLI uses, so both emit an identical report.
+          projectName: AUDIT_STACKS[audit.stackId].defaultProjectName || `cqs audit \u2014 ${audit.stackName}`,
+          results: audit.results,
+        }),
+        title: `${AUDIT_STACKS[audit.stackId].defaultProjectName || audit.stackName} \u2014 Code Quality Studio`,
+      });
+      const out = args.output ? resolve(args.output) : join(tmpdir(), `cqs-report-${Date.now()}.html`);
+      writeFileSync(out, html, "utf8");
+      return { content: [{ type: "text", text:
+        `Report written to ${out}\n\n` +
+        `${audit.files} files \u00b7 score ${audit.avgScore} (${audit.grade}) \u00b7 ` +
+        `${audit.summary.critical} critical, ${audit.summary.warning} warning, ${audit.summary.info} info\n\n` +
+        `Open it in a browser \u2014 it is self-contained, no server needed.` }] };
     }
 
     if (name === "cqs_list_rules") {

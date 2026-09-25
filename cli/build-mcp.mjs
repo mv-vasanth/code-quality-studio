@@ -5,6 +5,7 @@
  * Usage:  node build-mcp.mjs
  */
 import { build } from "esbuild";
+import { readBuiltApp, appDefines } from "./embedApp.mjs";
 import { writeFileSync, chmodSync, mkdirSync, readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -47,6 +48,7 @@ const result = await build({
   format: "esm",
   outfile: join(__dirname, "dist/cqs-mcp.js"),
   define: {
+    ...appDefines(readBuiltApp({ quiet: true })),
     __CQS_VERSION__: JSON.stringify(version),
     __CQS_BUILTIN_RULES__: JSON.stringify(builtinRules),
   },
