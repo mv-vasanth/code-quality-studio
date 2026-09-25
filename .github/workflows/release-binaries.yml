@@ -1,0 +1,91 @@
+name: Release standalone binaries
+
+# Node's SEA cannot cross-compile, so each target is built on its own runner.
+# Produces a `cqs` executable that needs no Node.js on the user's machine.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-14,       target: darwin-arm64 }
+          - { os: macos-13,       target: darwin-x64   }
+          - { os: ubuntu-22.04,   target: linux-x64    }
+          - { os: ubuntu-22.04-arm, target: linux-arm64 }
+          - { os: windows-latest, target: win32-x64, ext: ".exe" }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned deliberately: some Node builds ship the SEA fuse string twice and
+      # postject then refuses to inject. build-binary.mjs fails fast with that
+      # diagnostic if it happens again on a future version.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.3
+
+      - name: Install dependencies
+        working-directory: cli
+        run: npm ci
+
+      - name: Build standalone binary
+        working-directory: cli
+        run: node build-binary.mjs
+
+      - name: Smoke test with no Node on PATH
+        working-directory: cli
+        shell: bash
+        run: |
+          BIN="dist/bin/cqs-${{ matrix.target }}${{ matrix.ext }}"
+          test -f "$BIN" || { echo "missing $BIN"; exit 1; }
+          env -i "$PWD/$BIN" --list-stacks --no-color | tail -5
+          env -i "$PWD/$BIN" --help >/dev/null
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cqs-${{ matrix.target }}
+          path: cli/dist/bin/cqs-${{ matrix.target }}${{ matrix.ext }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts, merge-multiple: true }
+
+      - name: Checksums
+        run: |
+          cd artifacts
+          chmod +x cqs-* 2>/dev/null || true
+          sha256sum cqs-* > SHA256SUMS
+          cat SHA256SUMS
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          body: |
+            Standalone `cqs` binaries — **no Node.js required**.
+
+            ```bash
+            # macOS (Apple Silicon)
+            curl -L -o cqs https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/cqs-darwin-arm64
+            chmod +x cqs && ./cqs --help
+            ```
+
+            macOS may quarantine a downloaded binary: `xattr -d com.apple.quarantine cqs`.
+
+            Prefer npm? `npm install -g cqs-audit`
