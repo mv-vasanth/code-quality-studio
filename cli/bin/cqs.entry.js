@@ -34,6 +34,7 @@ import { AUDIT_STACKS }                from "../../src/stacks/definitions.js";
 import { RULES_FILENAME, discoverRulesFile, loadRulesFile, runFileRules } from "../../src/rules/fileRules.js";
 import { buildFixPrompt, extractCode, evaluateFix, lineDiff } from "../../src/rules/remediate.js";
 import { formatVerification } from "../../src/rules/verifyFix.js";
+import { buildReview, reviewSummary } from "../../src/rules/prReview.js";
 
 // ── Runner map ────────────────────────────────────────────────────────────────
 const RUNNERS = {
@@ -82,6 +83,7 @@ function parseArgs(argv) {
     help: false, listStacks: false, readReport: null, open: false,
     rulesFile: null, noRules: false,
     command: null, dryRun: false, commit: false, branch: null, maxFiles: 10, force: false,
+    repo: null, pr: null, token: null, threshold: null, maxComments: 30, onlyAdded: false,
     // AI flags
     ai: null, apiKey: null, model: null,
     awsRegion: null, awsAccessKey: null, awsSecretKey: null,
@@ -89,6 +91,7 @@ function parseArgs(argv) {
   };
   let i = 0;
   if (argv[0] === "remediate") { args.command = "remediate"; args.severity = "critical"; i = 1; }
+  if (argv[0] === "pr-review") { args.command = "pr-review"; i = 1; }
   while (i < argv.length) {
     const a = argv[i];
     if (a === "--help" || a === "-h")        { args.help = true; }
@@ -107,6 +110,12 @@ function parseArgs(argv) {
     else if (a === "--branch" && argv[i+1])                       { args.branch = argv[++i]; }
     else if (a === "--max-files" && argv[i+1])                    { args.maxFiles = parseInt(argv[++i], 10) || 10; }
     else if (a === "--force")                                     { args.force = true; }
+    else if (a === "--repo" && argv[i+1])                         { args.repo = argv[++i]; }
+    else if (a === "--pr" && argv[i+1])                           { args.pr = argv[++i]; }
+    else if (a === "--token" && argv[i+1])                        { args.token = argv[++i]; }
+    else if (a === "--threshold" && argv[i+1])                    { args.threshold = parseInt(argv[++i], 10); }
+    else if (a === "--max-comments" && argv[i+1])                 { args.maxComments = parseInt(argv[++i], 10) || 30; }
+    else if (a === "--only-added")                                { args.onlyAdded = true; }
     else if (a === "--provider" && argv[i+1])                     { args.ai = argv[++i]; }
     else if (a === "--ai" && argv[i+1])                           { args.ai = argv[++i]; }
     else if (a === "--api-key" && argv[i+1])                      { args.apiKey = argv[++i]; }
@@ -181,6 +190,7 @@ ${b("USAGE")}
   cqs --list-stacks               List all available stacks
   cqs --read-report <file>        Print summary of a saved JSON report
   cqs remediate [path...]         AI-fix findings, verifying each fix before keeping it
+  cqs pr-review                   Review a pull request with inline GitHub comments
 
 ${b("OPTIONS")}
   -s, --stack  <id>               Force a stack (see --list-stacks for IDs)
@@ -227,6 +237,21 @@ ${b("REMEDIATE")}  ${dim("(AI writes the fix; every fix is re-audited before it 
 
   ${dim("A fix is rejected if it introduces a new critical, changes nothing, or")}
   ${dim("drops half the file. Writing is refused unless the git tree is clean.")}
+
+${b("PR REVIEW")}  ${dim("(inline GitHub comments on the changed files)")}
+  cqs pr-review --repo owner/name --pr 42 --token ghp_xxx --dry-run
+  cqs pr-review --stack playwright --threshold 80      ${dim("in GitHub Actions")}
+
+      --repo <owner/name>         Defaults to GITHUB_REPOSITORY
+      --pr <number>               Auto-detected from the Actions event
+      --token <ghp_...>           Defaults to GITHUB_TOKEN
+      --threshold <n>             Exit non-zero when the score is below n
+      --dry-run                   Print the review instead of posting it
+      --only-added                Comment only on lines the PR added
+      --max-comments <n>          Cap inline comments (default: 30)
+
+  ${dim("Findings on lines outside the diff cannot be commented inline, so they")}
+  ${dim("are collected into the review summary instead of being dropped.")}
 `);
 }
 
@@ -1019,11 +1044,178 @@ async function runRemediate(args) {
   console.log();
 }
 
+// ── PR review bot (cqs pr-review) ────────────────────────────────────────────
+const GH_API = process.env.GITHUB_API_URL || "https://api.github.com";
+
+async function gh(path, token, init = {}) {
+  const res = await fetch(`${GH_API}${path}`, {
+    ...init,
+    headers: {
+      accept: "application/vnd.github+json",
+      authorization: `Bearer ${token}`,
+      "x-github-api-version": "2022-11-28",
+      "content-type": "application/json",
+      ...(init.headers || {}),
+    },
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    let detail = text.slice(0, 400);
+    try { detail = JSON.parse(text).message || detail; } catch { /* keep raw */ }
+    throw new Error(`GitHub ${res.status} on ${path}: ${detail}`);
+  }
+  return text ? JSON.parse(text) : null;
+}
+
+/** Fill in repo / pr / token from the GitHub Actions environment when not passed. */
+function resolvePrContext(args) {
+  const token = args.token || process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  let repo = args.repo || process.env.GITHUB_REPOSITORY;
+  let pr = args.pr;
+
+  if (!pr && process.env.GITHUB_EVENT_PATH && existsSync(process.env.GITHUB_EVENT_PATH)) {
+    try {
+      const ev = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, "utf8"));
+      pr = ev.pull_request?.number ?? ev.number;
+    } catch { /* fall through to GITHUB_REF */ }
+  }
+  if (!pr && process.env.GITHUB_REF) {
+    const m = /refs\/pull\/(\d+)\//.exec(process.env.GITHUB_REF);
+    if (m) pr = m[1];
+  }
+  return { token, repo, pr: pr ? String(pr) : null };
+}
+
+async function runPrReview(args) {
+  const { token, repo, pr } = resolvePrContext(args);
+  const missing = [];
+  if (!repo) missing.push("--repo owner/name (or GITHUB_REPOSITORY)");
+  if (!pr) missing.push("--pr <number> (auto-detected in GitHub Actions)");
+  if (!token && !args.dryRun) missing.push("--token <ghp_…> (or GITHUB_TOKEN)");
+  if (missing.length) {
+    console.error(`  ${C.red()}pr-review is missing:${C.reset()}`);
+    for (const m of missing) console.error(`    ${m}`);
+    process.exit(1);
+  }
+  const [owner, name] = repo.split("/");
+
+  console.log(`\n  ${C.cyan()}${C.bold()}🔍 PR review${C.reset()}  ${dim(`· ${repo} #${pr}`)}`);
+  if (args.dryRun) console.log(`  ${C.yellow()}DRY RUN — nothing will be posted${C.reset()}`);
+  console.log(`  ${dim("─".repeat(64))}\n`);
+
+  // 1. changed files
+  let prFiles = [];
+  if (token) {
+    for (let page = 1; page <= 10; page++) {
+      const batch = await gh(`/repos/${owner}/${name}/pulls/${pr}/files?per_page=100&page=${page}`, token);
+      prFiles.push(...batch);
+      if (batch.length < 100) break;
+    }
+  } else {
+    console.error(`  ${C.red()}--dry-run still needs a token to read the PR diff.${C.reset()}\n`);
+    process.exit(1);
+  }
+  const live = prFiles.filter((f) => f.status !== "removed");
+  console.log(`  ${live.length} changed file(s) in the PR`);
+
+  // 2. audit each, preferring the local checkout
+  let stackId = args.stack;
+  if (!stackId) stackId = detectStack(live.map((f) => f.filename));
+  const runner = RUNNERS[stackId];
+  if (!runner) { console.error(`  Unknown stack: ${stackId}`); process.exit(1); }
+
+  let ruleSet = { rules: [], disabled: [], errors: [], path: null };
+  if (!args.noRules) {
+    const rp = args.rulesFile ? resolve(args.rulesFile) : discoverRulesFile(process.cwd());
+    if (rp) ruleSet = loadRulesFile(rp, stackId);
+  }
+  const disabledRuleIds = new Set(ruleSet.disabled);
+  const pattern = AUDIT_STACKS[stackId]?.filePattern;
+
+  const analysed = [];
+  const scores = [];
+  for (const f of live) {
+    if (pattern && !pattern.test(basename(f.filename))) continue;
+    let content = null;
+    const localPath = resolve(process.cwd(), f.filename);
+    if (existsSync(localPath)) {
+      content = readFileSync(localPath, "utf8");
+    } else if (f.raw_url) {
+      try {
+        const r = await fetch(f.raw_url, { headers: { authorization: `Bearer ${token}` } });
+        if (r.ok) content = await r.text();
+      } catch { /* skipped below */ }
+    }
+    if (content == null) { console.log(`  ${dim(`skipped (no content): ${f.filename}`)}`); continue; }
+
+    const result = runner(basename(f.filename), content, { disabledRuleIds });
+    const findings = [
+      ...(result.findings ?? []),
+      ...runFileRules(ruleSet.rules, basename(f.filename), content, { disabledRuleIds }),
+    ];
+    scores.push(result.overallScore ?? 0);
+    analysed.push({ filename: f.filename, patch: f.patch, findings });
+  }
+
+  if (analysed.length === 0) {
+    console.log(`  ${C.green()}No ${AUDIT_STACKS[stackId].fileAccept} files changed — nothing to review.${C.reset()}\n`);
+    return;
+  }
+
+  const all = analysed.flatMap((a) => a.findings);
+  const counts = {
+    critical: all.filter((f) => f.severity === "critical").length,
+    warning: all.filter((f) => f.severity === "warning").length,
+    info: all.filter((f) => f.severity === "info").length,
+  };
+  const score = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+
+  const review = buildReview(analysed, { onlyAdded: args.onlyAdded, maxComments: args.maxComments });
+  const body = reviewSummary({
+    files: analysed.length, counts, score,
+    threshold: args.threshold, comments: review.comments.length,
+    outside: review.outside, dropped: review.dropped,
+  });
+
+  console.log(`  ${AUDIT_STACKS[stackId].icon} ${AUDIT_STACKS[stackId].name} · score ${score}/100`);
+  console.log(`  ${counts.critical} critical · ${counts.warning} warning · ${counts.info} info`);
+  console.log(`  ${review.comments.length} inline comment(s), ${review.outside.length} outside the diff\n`);
+
+  if (args.dryRun) {
+    console.log(dim("  ── review body ──"));
+    for (const l of body.split("\n")) console.log(`  ${dim(l)}`);
+    console.log(dim("\n  ── inline comments ──"));
+    for (const c of review.comments) {
+      console.log(`  ${C.cyan()}${c.path}:${c.line}${C.reset()}`);
+      console.log(`    ${c.body.split("\n")[0]}`);
+    }
+    console.log();
+  } else {
+    const prInfo = await gh(`/repos/${owner}/${name}/pulls/${pr}`, token);
+    await gh(`/repos/${owner}/${name}/pulls/${pr}/reviews`, token, {
+      method: "POST",
+      body: JSON.stringify({
+        commit_id: prInfo.head.sha,
+        event: "COMMENT",
+        body,
+        comments: review.comments,
+      }),
+    });
+    console.log(`  ${C.green()}Posted review with ${review.comments.length} inline comment(s).${C.reset()}\n`);
+  }
+
+  if (args.threshold != null && score < args.threshold) {
+    console.error(`  ${C.red()}Quality gate failed: ${score} < ${args.threshold}${C.reset()}\n`);
+    process.exitCode = 1;
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
 
   if (args.help)       { printHelp();   process.exit(0); }
   if (args.command === "remediate") { await runRemediate(args); return; }
+  if (args.command === "pr-review") { await runPrReview(args); return; }
   if (args.listStacks) { printStacks(); process.exit(0); }
   if (args.readReport) {
     const report = printReportSummary(args.readReport);

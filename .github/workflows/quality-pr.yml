@@ -1,6 +1,5 @@
-# .github/workflows/quality-pr.yml
-# Runs qcBot on every pull request and posts an inline code review.
-name: Playwright Quality Gate
+# Runs cqs on the files changed in a pull request and posts an inline review.
+name: Quality gate
 
 on:
   pull_request:
@@ -8,47 +7,38 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write   # needed to post the review
+  pull-requests: write   # required to post the review
 
 jobs:
   quality-gate:
-    name: Quality Gate
+    name: cqs PR review
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
-      # Run analysis + post GitHub review in one command
-      - name: Run qcBot PR review
-        run: |
-          npx @cqs/qcbot pr-review \
-            --stack playwright \
-            --threshold 80
+      - name: Install cqs
+        run: npm install -g cqs-audit
+
+      # repo, PR number and token are read from the Actions environment.
+      # Exits non-zero when the score is below --threshold, failing the job.
+      - name: PR review
+        run: cqs pr-review --stack playwright --threshold 80
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # GITHUB_REPOSITORY and GITHUB_REF are set automatically by GitHub Actions
 
-      # Always upload the HTML report as an artifact (even if quality gate fails)
-      - name: Analyse all test files & upload report
+      - name: Full report artifact
         if: always()
-        run: |
-          npx @cqs/qcbot check ./functional-tests \
-            --stack playwright \
-            --threshold 80 \
-            --report \
-            --summary
+        run: cqs ./functional-tests --stack playwright --output json > cqs-report.json
         continue-on-error: true
 
-      - name: Upload quality report
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
         with:
-          name: quality-report
-          path: qcbot-report/report.html
+          name: cqs-report
+          path: cqs-report.json
           retention-days: 30
