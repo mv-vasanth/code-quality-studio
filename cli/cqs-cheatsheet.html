@@ -557,8 +557,105 @@
     </div>
   </div>
 </div>
+</div><!-- end page 4 -->
+
+<!-- ══════════ PAGE 5 — AGENTS ══════════ -->
+<div class="page">
+<div class="section-bar">
+  <h2>5 · Agents — automated fixing &amp; PR review</h2>
+  <span class="step">AI writes the fix, cqs decides whether to keep it</span>
+</div>
+<div class="grid">
+
+  <div class="card" style="border-top:3px solid #0f172a;">
+    <div class="card-head" style="background:#0f172a;color:#fff;">🛠 Remediation agent</div>
+    <div class="card-body">
+      <div style="font-size:10.5px;color:#475569;margin-bottom:5px">
+        Fixes findings in place. Every fix is re-audited before it is kept.
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">PREVIEW FIRST</div>
+      <div class="code-block" style="font-size:10px">
+        <span class="cmd">cqs remediate ./tests/ --ai anthropic \</span><br>
+        &nbsp;&nbsp;<span class="cmd">--dry-run</span><br>
+        <span class="cmt"># prints the diff, writes nothing</span>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">APPLY</div>
+      <div class="code-block" style="font-size:10px">
+        <span class="cmd">cqs remediate ./tests/ --ai anthropic</span><br><br>
+        <span class="cmt"># apply on a branch and commit</span><br>
+        <span class="cmd">cqs remediate ./tests/ --ai anthropic \</span><br>
+        &nbsp;&nbsp;<span class="cmd">--branch fix/cqs --commit</span>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">FLAGS</div>
+      <div style="font-size:10.5px;color:#475569;line-height:1.75">
+        <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">--severity</code> what to fix (default critical)<br>
+        <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">--max-files</code> cap per run (default 10)<br>
+        <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">--force</code> write even if git is dirty<br>
+        <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">--provider</code> alias for <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">--ai</code>
+      </div>
+    </div>
+  </div>
+
+  <div class="card theme-green">
+    <div class="card-head">🔍 PR review bot</div>
+    <div class="card-body">
+      <div style="font-size:10.5px;color:#475569;margin-bottom:5px">
+        Audits the files a PR changed and posts one review with inline comments.
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">IN GITHUB ACTIONS — NO FLAGS</div>
+      <div class="code-block" style="font-size:10px">
+        <span class="cmd">cqs pr-review --stack playwright \</span><br>
+        &nbsp;&nbsp;<span class="cmd">--threshold 80</span><br>
+        <span class="cmt"># repo, PR and token come from the env</span>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">MANUALLY, AGAINST ANY PR</div>
+      <div class="code-block" style="font-size:9.5px">
+        <span class="cmd">cqs pr-review --repo owner/name --pr 42 \</span><br>
+        &nbsp;&nbsp;<span class="cmd">--token ghp_xxx --dry-run</span>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">WORKFLOW PERMISSION</div>
+      <div class="code-block" style="font-size:9.5px">
+        <span class="kw">permissions:</span><br>
+        &nbsp;&nbsp;<span class="kw">contents:</span> <span class="str">read</span><br>
+        &nbsp;&nbsp;<span class="kw">pull-requests:</span> <span class="str">write</span>
+      </div>
+      <div style="font-size:10.5px;color:#475569;margin-top:5px;line-height:1.75">
+        <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">--threshold</code> exits non-zero below the score<br>
+        <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">--only-added</code> comment only on added lines<br>
+        <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">--max-comments</code> cap inline comments (30)
+      </div>
+    </div>
+  </div>
+
+  <div class="card theme-amber">
+    <div class="card-head">🛡 What stops a bad fix</div>
+    <div class="card-body">
+      <div style="font-size:10.5px;color:#475569;margin-bottom:6px">
+        Both agents re-audit before trusting AI output. A fix is <strong>rejected</strong> when it:
+      </div>
+      <div style="font-size:10.5px;color:#475569;line-height:1.85;margin-bottom:6px">
+        · introduces a new critical finding<br>
+        · leaves the file unchanged<br>
+        · returns no code block<br>
+        · drops more than half the file
+      </div>
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:6px 9px;margin-bottom:6px">
+        <div style="font-size:10px;font-weight:800;color:#b91c1c;margin-bottom:3px">THE CLASSIC CHEAT</div>
+        <div style="font-size:10px;color:#7f1d1d">
+          Deleting an assertion removes the finding but leaves a test that verifies nothing. Re-auditing catches it — the missing assertion is itself a critical.
+        </div>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">GIT SAFETY</div>
+      <div style="font-size:10.5px;color:#475569">
+        remediate refuses to write unless the tree is clean, so every applied fix is revertable with <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">git checkout</code>.
+      </div>
+    </div>
+  </div>
+
+</div>
+
 <div class="footer">
-  cqs v2.1.0 &nbsp;·&nbsp; <strong>npm install -g cqs-audit</strong> &nbsp;·&nbsp; AI: anthropic | openai | bedrock | vertex &nbsp;·&nbsp; MCP: cqs_audit | cqs_list_stacks | cqs_read_report &nbsp;·&nbsp; Skill: /cqs &nbsp;·&nbsp; Offline .tgz &amp; publishing → <strong>cqs-admin-cheatsheet.pdf</strong>
+  cqs v2.1.0 &nbsp;·&nbsp; <strong>npm install -g cqs-audit</strong> &nbsp;·&nbsp; AI: anthropic | openai | bedrock | vertex &nbsp;·&nbsp; MCP: cqs_audit | cqs_list_stacks | cqs_read_report &nbsp;·&nbsp; Skill: /cqs &nbsp;·&nbsp; Agents: remediate | pr-review &nbsp;·&nbsp; Packaging → <strong>cqs-admin-cheatsheet.pdf</strong>
 </div>
 </div>
 
