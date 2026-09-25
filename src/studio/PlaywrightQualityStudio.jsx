@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { isOfflineReport } from "../shared/offlineReport.js";
 import { grade } from "../shared/grade.js";
 import { STACK_LIST, DEFAULT_STACK_ID, getPersona } from "../stacks/definitions.js";
 import { getAuditStack } from "../stacks/registry.js";
@@ -90,6 +91,9 @@ export default function PlaywrightQualityStudio() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aiSetupFromToggle, setAiSetupFromToggle] = useState(false);
   const [settingsProvider, setSettingsProvider] = useState(null);
+  // Offline report: results without sources, so re-running and file
+  // management are impossible rather than merely pointless.
+  const offlineReport = isOfflineReport();
   const [files, setFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
@@ -712,7 +716,7 @@ export default function PlaywrightQualityStudio() {
           </div>
 
           <div style={{ flex: 1, overflow: "auto", padding: "0 8px 8px" }}>
-            {files.length > 0 && !isTablet && (
+            {files.length > 0 && !isTablet && !offlineReport && (
               <>
                 <WorkspaceSessionBar
                   folderHint={folderHint}
@@ -740,7 +744,7 @@ export default function PlaywrightQualityStudio() {
             )}
           </div>
 
-          {files.length > 0 && !isTablet && (
+          {files.length > 0 && !isTablet && !offlineReport && (
             <div style={{ padding: "8px 10px", borderTop: "1px solid #f3f4f6" }}>
               <RerunAllControls
                 fileCount={files.length}
@@ -940,14 +944,14 @@ export default function PlaywrightQualityStudio() {
                     <div style={{ padding: "10px 14px", borderBottom: "1px solid #f3f4f6", fontWeight: 700, fontSize: 13, color: "#111", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                       <span>Files</span>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <button type="button" disabled={rerunBusy} onClick={() => rerunAllFiles("local")}
+                        {!offlineReport && <button type="button" disabled={rerunBusy} onClick={() => rerunAllFiles("local")}
                           style={{ fontSize: 10.5, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "1px solid #99f6e4", background: "#f0fdfa", color: "#0f766e", cursor: rerunBusy ? "not-allowed" : "pointer" }}>
                           ↺ Re-run all (rules)
-                        </button>
-                        <button type="button" disabled={rerunBusy} onClick={() => (hasAiCredentials(aiSettings) ? rerunAllFiles("ai") : setSettingsOpen(true))}
+                        </button>}
+                        {!offlineReport && <button type="button" disabled={rerunBusy} onClick={() => (hasAiCredentials(aiSettings) ? rerunAllFiles("ai") : setSettingsOpen(true))}
                           style={{ fontSize: 10.5, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "1px solid #5eead4", background: "#0d9488", color: "#fff", cursor: rerunBusy ? "not-allowed" : "pointer" }}>
                           ↺ Re-run all (AI)
-                        </button>
+                        </button>}
                         <span style={{ fontWeight: 400, fontSize: 11, color: "#888" }}>Click a file for findings</span>
                       </div>
                     </div>
@@ -1016,7 +1020,7 @@ export default function PlaywrightQualityStudio() {
                   <div style={{ fontWeight: 700, fontSize: 15, color: "#111" }}>Loaded files</div>
                   <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{files.length} spec{files.length === 1 ? "" : "s"} · click for findings</div>
                 </div>
-                {files.length > 0 && (
+                {files.length > 0 && !offlineReport && (
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                     <AnalysisViewToggle
                       compact

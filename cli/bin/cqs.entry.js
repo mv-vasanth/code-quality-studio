@@ -87,7 +87,7 @@ const dim = (s) => `${C.dim()}${s}${C.reset()}`;
 function parseArgs(argv) {
   const args = {
     paths: [], stack: null, severity: "all", category: null, output: "pretty",
-    help: false, listStacks: false, readReport: null, open: false,
+    help: false, listStacks: false, readReport: null, open: false, noReport: false,
     rulesFile: null, noRules: false,
     command: null, dryRun: false, commit: false, branch: null, maxFiles: 10, force: false,
     repo: null, pr: null, token: null, threshold: null, maxComments: 30, onlyAdded: false,
@@ -110,6 +110,7 @@ function parseArgs(argv) {
     else if ((a === "--output" || a === "-o") && argv[i+1])   { args.output = argv[++i]; }
     else if ((a === "--read-report" || a === "-r") && argv[i+1]) { args.readReport = argv[++i]; }
     else if (a === "--open")                                      { args.open = true; }
+    else if (a === "--no-report" || a === "--no-open")            { args.noReport = true; }
     else if (a === "--rules")                                     { args.rulesFile = argv[++i]; }
     else if (a === "--no-rules")                                  { args.noRules = true; }
     else if (a === "--dry-run")                                   { args.dryRun = true; }
@@ -217,7 +218,8 @@ ${b("OPTIONS")}
   -c, --category <id>             Filter by category id
   -o, --output  <fmt>             Output format: pretty | json | summary
   -r, --read-report <file>        Read a saved JSON report and print summary
-      --open                      Open the HTML report in the browser after analysis
+      --open                      Force the report even when piped or in CI
+      --no-report                 Skip the report for this run (alias: --no-open)
       --rules <file>              Use this cqs-rules.json (default: discovered by walking up)
       --no-rules                  Ignore any cqs-rules.json found
       --no-color                  Disable ANSI colours
@@ -227,7 +229,8 @@ ${b("EXAMPLES")}
   cqs ./tests/
   cqs ./tests/ --stack cypress --severity critical
   cqs ./tests/ --output json > report.json
-  cqs ./tests/ --open                                    # run + open HTML in browser
+  cqs ./tests/                                           # report opens automatically
+  cqs ./tests/ --no-report                               # terminal output only
   cqs --read-report report.json --open                   # open saved report in browser
   cqs ./e2e/ -s selenium_java -S warning
   cqs . --list-stacks
@@ -291,13 +294,18 @@ function printStacks() {
   }
 }
 
+/** The --severity / --category filter. One definition, used by every output mode. */
+function matchesFilters(f, args) {
+  return (args.severity === "all" || f.severity === args.severity)
+      && (!args.category || f.category === args.category);
+}
+
 // ── Pretty output ─────────────────────────────────────────────────────────────
 function printPretty(stackId, results, args) {
   const stack = AUDIT_STACKS[stackId];
   const allFindings = results.flatMap(r => r.result.findings ?? []);
   const shown = allFindings.filter(f =>
-    (args.severity === "all" || f.severity === args.severity) &&
-    (!args.category || f.category === args.category)
+    matchesFilters(f, args)
   );
 
   const crit = allFindings.filter(f => f.severity === "critical").length;
@@ -384,24 +392,29 @@ function printPretty(stackId, results, args) {
 }
 
 // ── Summary output ────────────────────────────────────────────────────────────
-function printSummary(stackId, results) {
+function printSummary(stackId, results, args) {
   const stack = AUDIT_STACKS[stackId];
   const allFindings = results.flatMap(r => r.result.findings ?? []);
-  const crit = allFindings.filter(f => f.severity === "critical").length;
-  const warn = allFindings.filter(f => f.severity === "warning").length;
+  const shown = allFindings.filter(f => matchesFilters(f, args));
+  const crit = shown.filter(f => f.severity === "critical").length;
+  const warn = shown.filter(f => f.severity === "warning").length;
   const avgScore = results.length
     ? Math.round(results.reduce((s, r) => s + (r.result.overallScore ?? 0), 0) / results.length)
     : 0;
   console.log(`cqs ${stack.icon} ${stack.name} · ${results.length} files · score ${avgScore} · ${crit} critical · ${warn} warning`);
-  if (crit > 0) process.exitCode = 1;
+  // Filtering the display must not hide a failing build: count criticals across
+  // everything, matching printPretty's convention.
+  if (allFindings.some(f => f.severity === "critical")
+      && args.severity !== "info" && args.severity !== "warning") {
+    process.exitCode = 1;
+  }
 }
 
 // ── JSON output ───────────────────────────────────────────────────────────────
 function printJson(stackId, results, args) {
   const stack = AUDIT_STACKS[stackId];
   const allFindings = results.flatMap(r => r.result.findings ?? []).filter(f =>
-    (args.severity === "all" || f.severity === args.severity) &&
-    (!args.category || f.category === args.category)
+    matchesFilters(f, args)
   );
   console.log(JSON.stringify({
     stack: { id: stackId, name: stack.name },
@@ -418,10 +431,7 @@ function printJson(stackId, results, args) {
       file,
       overallScore: result.overallScore,
       categoryScores: result.categoryScores,
-      findings: result.findings.filter(f =>
-        (args.severity === "all" || f.severity === args.severity) &&
-        (!args.category || f.category === args.category)
-      ),
+      findings: result.findings.filter(f => matchesFilters(f, args)),
     })),
   }, null, 2));
 }
@@ -1210,7 +1220,7 @@ async function main() {
   if (args.output === "json") {
     printJson(stackId, results, args);
   } else if (args.output === "summary") {
-    printSummary(stackId, results);
+    printSummary(stackId, results, args);
   } else {
     printPretty(stackId, results, args);
   }
@@ -1222,8 +1232,13 @@ async function main() {
     aiResults = await runAiReview(results, fileContents, aiConfig);
   }
 
-  // Open HTML report in browser if --open flag set
-  if (args.open) {
+  // The report is the point of the tool, so produce it by default. Suppress it
+  // for machine-readable output and when stdout is not a terminal (CI, pipes),
+  // where popping a browser is wrong — unless --open asked for it explicitly.
+  const wantsReport = args.open || (
+    !args.noReport && args.output === "pretty" && process.stdout.isTTY
+  );
+  if (wantsReport) {
     const stack = AUDIT_STACKS[stackId];
     const allFindings = results.flatMap(r => r.result.findings ?? []);
     const report = {

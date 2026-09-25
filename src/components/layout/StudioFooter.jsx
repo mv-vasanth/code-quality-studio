@@ -1,3 +1,4 @@
+import { isOfflineReport } from "../../shared/offlineReport.js";
 import { useState } from "react";
 import { theme } from "../../shared/theme.js";
 import { ScoringExplainerContent } from "../analysis/ScoringExplainer.jsx";
@@ -46,7 +47,8 @@ export default function StudioFooter({ categoryCount = 10, modeLabel, files = []
       </span>
 
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      {/* Terminal */}
+      {/* Terminal — nothing to scan in an offline report */}
+      {!isOfflineReport() && (
       <div style={{ position: "relative" }}>
         <button
           type="button"
@@ -70,6 +72,7 @@ export default function StudioFooter({ categoryCount = 10, modeLabel, files = []
           </>
         )}
       </div>
+      )}
 
       {/* Scoring */}
       <div style={{ position: "relative" }}>

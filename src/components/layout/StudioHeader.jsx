@@ -4,6 +4,7 @@ import { getPersona } from "../../stacks/definitions.js";
 import AiProviderHeaderSliders from "../settings/AiProviderHeaderSliders.jsx";
 import DownloadReportButton from "../../DownloadReportButton.jsx";
 import { theme } from "../../shared/theme.js";
+import { isOfflineReport } from "../../shared/offlineReport.js";
 
 const btnPrimary = {
   background: "#0d9488",
@@ -51,6 +52,9 @@ export default function StudioHeader({
   rerunBusy = false,
   aiConfigured = false, // true when at least one AI provider has credentials
 }) {
+  // An offline report has results but no source files: running and opening
+  // cannot work there, so hide the controls rather than fail on click.
+  const offline = isOfflineReport();
   const [runOpen, setRunOpen] = useState(false);
   const [openOpen, setOpenOpen] = useState(false);
   const runRef = useRef(null);
@@ -130,23 +134,32 @@ export default function StudioHeader({
 
           <div style={{ width: 1, height: 22, background: "#0f766e", opacity: 0.5, flexShrink: 0 }} aria-hidden />
 
-          <StackSelector stacks={stackList} activeId={stackId} onChange={onStackChange} />
+          {offline ? (
+            // Offline: the results belong to one stack and nothing can be
+            // re-analysed, so show which stack produced them, not a picker.
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "#99f6e4", whiteSpace: "nowrap" }}>
+              <span aria-hidden>{stack?.icon}</span>
+              <span>{stack?.shortName || stack?.name}</span>
+            </div>
+          ) : (
+            <StackSelector stacks={stackList} activeId={stackId} onChange={onStackChange} />
+          )}
         </div>
 
         {/* right — AI toggles + actions */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <AiProviderHeaderSliders
+          {!offline && <AiProviderHeaderSliders
             onOpenSettings={onOpenAiSettings}
             variant="compact"
             resultsView={resultsView}
             onResultsViewChange={onResultsViewChange}
             providersWithResults={providersWithResults}
             hasLocalResults={hasLocalResults}
-          />
-          <div style={{ width: 1, height: 22, background: "#0f766e", opacity: 0.5, flexShrink: 0 }} aria-hidden />
+          />}
+          {!offline && <div style={{ width: 1, height: 22, background: "#0f766e", opacity: 0.5, flexShrink: 0 }} aria-hidden />}
 
           {/* ▶ Run button — single button, always opens the mode picker */}
-          {files.length > 0 && (
+          {files.length > 0 && !offline && (
             <div ref={runRef} style={{ position: "relative" }}>
               <button
                 type="button"
@@ -226,7 +239,7 @@ export default function StudioHeader({
           )}
 
           {/* "Open ▾" — single button, always opens the file-source picker */}
-          <div ref={openRef} style={{ position: "relative" }}>
+          {!offline && <div ref={openRef} style={{ position: "relative" }}>
             <button
               type="button"
               onClick={() => { setRunOpen(false); setOpenOpen(v => !v); }}
@@ -267,7 +280,7 @@ export default function StudioHeader({
                 ))}
               </div>
             )}
-          </div>
+          </div>}
         </div>
       </div>
 
@@ -285,8 +298,9 @@ export default function StudioHeader({
             flexWrap: "wrap",
           }}
         >
-          {/* Download lives here — only visible when results exist */}
-          <DownloadReportButton
+          {/* Download lives here — only visible when results exist.
+              Hidden offline: you are already looking at the report. */}
+          {!offline && <DownloadReportButton
             variant="compact"
             projectName={projectName}
             files={files}
@@ -295,7 +309,7 @@ export default function StudioHeader({
             auditStack={stack}
             resultsView={resultsView}
             disabled={!files.length}
-          />
+          />}
           <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, color: "#99f6e4" }}>
             <span>{fileCount} files</span>
             {critTotal > 0 && (
