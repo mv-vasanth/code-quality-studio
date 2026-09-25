@@ -7,13 +7,15 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node test/golden-master.mjs",
+    "test:update": "node test/golden-master.mjs --update"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1095.0",
+    "@google-cloud/vertexai": "^1.10.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "@google-cloud/vertexai": "^1.10.0"
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

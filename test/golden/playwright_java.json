@@ -1,0 +1,88 @@
+{
+  "overallScore": 88,
+  "categoryScores": {
+    "selectors": 86,
+    "reliability": 82,
+    "assertions": 90,
+    "structure": 96,
+    "security": 82,
+    "performance": 100,
+    "resource_mgmt": 70,
+    "coding_standards": 96,
+    "ci_config": 86
+  },
+  "findings": [
+    {
+      "ruleId": "PWJ-AST-001",
+      "severity": "warning",
+      "category": "assertions",
+      "line": null
+    },
+    {
+      "ruleId": "PWJ-CI-001",
+      "severity": "warning",
+      "category": "ci_config",
+      "line": 6
+    },
+    {
+      "ruleId": "PWJ-CI-003",
+      "severity": "info",
+      "category": "ci_config",
+      "line": 5
+    },
+    {
+      "ruleId": "PWJ-REL-001",
+      "severity": "critical",
+      "category": "reliability",
+      "line": 7
+    },
+    {
+      "ruleId": "PWJ-RES-001",
+      "severity": "warning",
+      "category": "resource_mgmt",
+      "line": 4
+    },
+    {
+      "ruleId": "PWJ-RES-002",
+      "severity": "warning",
+      "category": "resource_mgmt",
+      "line": 5
+    },
+    {
+      "ruleId": "PWJ-RES-003",
+      "severity": "warning",
+      "category": "resource_mgmt",
+      "line": 3
+    },
+    {
+      "ruleId": "PWJ-SEC-001",
+      "severity": "critical",
+      "category": "security",
+      "line": 9
+    },
+    {
+      "ruleId": "PWJ-SEL-003",
+      "severity": "info",
+      "category": "selectors",
+      "line": null
+    },
+    {
+      "ruleId": "PWJ-SEL-004",
+      "severity": "warning",
+      "category": "selectors",
+      "line": 8
+    },
+    {
+      "ruleId": "PWJ-STD-006",
+      "severity": "info",
+      "category": "coding_standards",
+      "line": 3
+    },
+    {
+      "ruleId": "PWJ-STR-001",
+      "severity": "info",
+      "category": "structure",
+      "line": null
+    }
+  ]
+}

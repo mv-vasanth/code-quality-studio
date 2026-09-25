@@ -1,0 +1,46 @@
+{
+  "overallScore": 82,
+  "categoryScores": {
+    "security": 70,
+    "accessibility": 80,
+    "standards": 96
+  },
+  "findings": [
+    {
+      "ruleId": "PYF-A11Y-001",
+      "severity": "warning",
+      "category": "accessibility",
+      "line": 3
+    },
+    {
+      "ruleId": "PYF-A11Y-002",
+      "severity": "warning",
+      "category": "accessibility",
+      "line": 2
+    },
+    {
+      "ruleId": "PYF-SEC-001",
+      "severity": "warning",
+      "category": "security",
+      "line": 6
+    },
+    {
+      "ruleId": "PYF-SEC-002",
+      "severity": "warning",
+      "category": "security",
+      "line": 1
+    },
+    {
+      "ruleId": "PYF-SEC-003",
+      "severity": "warning",
+      "category": "security",
+      "line": 4
+    },
+    {
+      "ruleId": "PYF-STD-001",
+      "severity": "info",
+      "category": "standards",
+      "line": 5
+    }
+  ]
+}

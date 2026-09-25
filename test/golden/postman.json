@@ -1,0 +1,29 @@
+{
+  "overallScore": 92,
+  "categoryScores": {
+    "assertions": 90,
+    "security": 78,
+    "ci_config": 100,
+    "coding_standards": 100
+  },
+  "findings": [
+    {
+      "ruleId": "PM-AST-001",
+      "severity": "warning",
+      "category": "assertions",
+      "line": 5
+    },
+    {
+      "ruleId": "PM-SEC-001",
+      "severity": "critical",
+      "category": "security",
+      "line": 8
+    },
+    {
+      "ruleId": "PM-SEC-005",
+      "severity": "info",
+      "category": "security",
+      "line": 5
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+<form method="post">
+  <input type="text" name="email">
+  <img src="/logo.png">
+  <a href="http://x.com" target="_blank">link</a>
+  <button onclick="doThing()">Go</button>
+  <div>{{ user_bio|safe }}</div>
+  {% autoescape off %}{{ raw }}{% endautoescape %}
+</form>

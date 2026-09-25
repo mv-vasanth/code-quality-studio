@@ -1,0 +1,73 @@
+{
+  "overallScore": 86,
+  "categoryScores": {
+    "assertions": 82,
+    "structure": 100,
+    "security": 72,
+    "reliability": 80,
+    "ci_config": 90,
+    "coding_standards": 92
+  },
+  "findings": [
+    {
+      "ruleId": "RA-AST-002",
+      "severity": "info",
+      "category": "assertions",
+      "line": 8
+    },
+    {
+      "ruleId": "RA-AST-003",
+      "severity": "warning",
+      "category": "assertions",
+      "line": 8
+    },
+    {
+      "ruleId": "RA-AST-005",
+      "severity": "info",
+      "category": "assertions",
+      "line": null
+    },
+    {
+      "ruleId": "RA-CFG-001",
+      "severity": "warning",
+      "category": "ci_config",
+      "line": 4
+    },
+    {
+      "ruleId": "RA-REL-001",
+      "severity": "warning",
+      "category": "reliability",
+      "line": 9
+    },
+    {
+      "ruleId": "RA-REL-002",
+      "severity": "warning",
+      "category": "reliability",
+      "line": null
+    },
+    {
+      "ruleId": "RA-SEC-001",
+      "severity": "critical",
+      "category": "security",
+      "line": 5
+    },
+    {
+      "ruleId": "RA-SEC-002",
+      "severity": "warning",
+      "category": "security",
+      "line": 6
+    },
+    {
+      "ruleId": "RA-STD-001",
+      "severity": "info",
+      "category": "coding_standards",
+      "line": 10
+    },
+    {
+      "ruleId": "RA-STD-004",
+      "severity": "info",
+      "category": "coding_standards",
+      "line": 3
+    }
+  ]
+}

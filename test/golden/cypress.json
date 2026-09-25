@@ -1,0 +1,75 @@
+{
+  "overallScore": 88,
+  "categoryScores": {
+    "selectors": 86,
+    "commands": 74,
+    "assertions": 90,
+    "network": 96,
+    "reliability": 78,
+    "security": 82,
+    "performance": 100,
+    "coding_standards": 100
+  },
+  "findings": [
+    {
+      "ruleId": "CY-ASS-002",
+      "severity": "warning",
+      "category": "assertions",
+      "line": null
+    },
+    {
+      "ruleId": "CY-CMD-001",
+      "severity": "critical",
+      "category": "commands",
+      "line": 4
+    },
+    {
+      "ruleId": "CY-CMD-004",
+      "severity": "info",
+      "category": "commands",
+      "line": null
+    },
+    {
+      "ruleId": "CY-CMD-006",
+      "severity": "info",
+      "category": "commands",
+      "line": 3
+    },
+    {
+      "ruleId": "CY-NET-003",
+      "severity": "info",
+      "category": "network",
+      "line": null
+    },
+    {
+      "ruleId": "CY-REL-001",
+      "severity": "critical",
+      "category": "reliability",
+      "line": 4
+    },
+    {
+      "ruleId": "CY-REL-004",
+      "severity": "info",
+      "category": "reliability",
+      "line": null
+    },
+    {
+      "ruleId": "CY-SEC-001",
+      "severity": "critical",
+      "category": "security",
+      "line": 7
+    },
+    {
+      "ruleId": "CY-SEL-003",
+      "severity": "warning",
+      "category": "selectors",
+      "line": 6
+    },
+    {
+      "ruleId": "CY-SEL-005",
+      "severity": "info",
+      "category": "selectors",
+      "line": null
+    }
+  ]
+}

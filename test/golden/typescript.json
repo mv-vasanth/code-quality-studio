@@ -1,0 +1,41 @@
+{
+  "overallScore": 96,
+  "categoryScores": {
+    "type_safety": 80,
+    "async_io": 100,
+    "http_clients": 90,
+    "validation": 100,
+    "security": 90,
+    "structure": 100,
+    "error_handling": 100,
+    "testing": 100,
+    "performance": 100,
+    "standards": 100
+  },
+  "findings": [
+    {
+      "ruleId": "TS-HTTP-001",
+      "severity": "warning",
+      "category": "http_clients",
+      "line": 2
+    },
+    {
+      "ruleId": "TS-SEC-002",
+      "severity": "warning",
+      "category": "security",
+      "line": 6
+    },
+    {
+      "ruleId": "TS-TYP-001",
+      "severity": "warning",
+      "category": "type_safety",
+      "line": 1
+    },
+    {
+      "ruleId": "TS-TYP-002",
+      "severity": "warning",
+      "category": "type_safety",
+      "line": 4
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "overallScore": 87,
+  "categoryScores": {
+    "structure": 82,
+    "test_data": 78,
+    "modules": 96,
+    "descriptions": 86,
+    "reliability": 86,
+    "maintenance": 100,
+    "config": 96,
+    "security": 68
+  },
+  "findings": [
+    {
+      "ruleId": "TCA-CFG-001",
+      "severity": "info",
+      "category": "config",
+      "line": 1
+    },
+    {
+      "ruleId": "TCA-DAT-001",
+      "severity": "critical",
+      "category": "test_data",
+      "line": 5
+    },
+    {
+      "ruleId": "TCA-DAT-005",
+      "severity": "info",
+      "category": "test_data",
+      "line": 5
+    },
+    {
+      "ruleId": "TCA-DOC-003",
+      "severity": "warning",
+      "category": "descriptions",
+      "line": 2
+    },
+    {
+      "ruleId": "TCA-DOC-004",
+      "severity": "info",
+      "category": "descriptions",
+      "line": 2
+    },
+    {
+      "ruleId": "TCA-MOD-002",
+      "severity": "info",
+      "category": "modules",
+      "line": 8
+    },
+    {
+      "ruleId": "TCA-REL-001",
+      "severity": "warning",
+      "category": "reliability",
+      "line": 3
+    },
+    {
+      "ruleId": "TCA-REL-003",
+      "severity": "info",
+      "category": "reliability",
+      "line": 2
+    },
+    {
+      "ruleId": "TCA-SEC-001",
+      "severity": "critical",
+      "category": "security",
+      "line": 5
+    },
+    {
+      "ruleId": "TCA-SEC-002",
+      "severity": "warning",
+      "category": "security",
+      "line": 5
+    },
+    {
+      "ruleId": "TCA-SEC-003",
+      "severity": "info",
+      "category": "security",
+      "line": 6
+    },
+    {
+      "ruleId": "TCA-STR-002",
+      "severity": "warning",
+      "category": "structure",
+      "line": 2
+    },
+    {
+      "ruleId": "TCA-STR-003",
+      "severity": "info",
+      "category": "structure",
+      "line": 2
+    },
+    {
+      "ruleId": "TCA-STR-006",
+      "severity": "info",
+      "category": "structure",
+      "line": 2
+    }
+  ]
+}

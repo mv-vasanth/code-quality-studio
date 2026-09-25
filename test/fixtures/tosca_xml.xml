@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<TestCase Name="Login">
+  <TestStep Name="Open" Disabled="true"/>
+  <TestStep Name="">
+    <Parameter Name="UserPassword"><Value>Passw0rd123</Value></Parameter>
+    <Parameter Name="Email"><Value>real.user@company.com</Value></Parameter>
+  </TestStep>
+  <Module Name=""/>
+</TestCase>

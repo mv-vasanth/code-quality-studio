@@ -1,0 +1,105 @@
+{
+  "overallScore": 78,
+  "categoryScores": {
+    "locators": 68,
+    "waits": 54,
+    "assertions": 80,
+    "page_objects": 100,
+    "browser_mgmt": 54,
+    "reliability": 74,
+    "security": 100,
+    "coding_standards": 96
+  },
+  "findings": [
+    {
+      "ruleId": "SEL-J-ASS-003",
+      "severity": "warning",
+      "category": "assertions",
+      "line": null
+    },
+    {
+      "ruleId": "SEL-J-ASS-005",
+      "severity": "warning",
+      "category": "assertions",
+      "line": 14
+    },
+    {
+      "ruleId": "SEL-J-BM-001",
+      "severity": "critical",
+      "category": "browser_mgmt",
+      "line": null
+    },
+    {
+      "ruleId": "SEL-J-CFG-001",
+      "severity": "warning",
+      "category": "browser_mgmt",
+      "line": 6
+    },
+    {
+      "ruleId": "SEL-J-CFG-002",
+      "severity": "critical",
+      "category": "browser_mgmt",
+      "line": 2
+    },
+    {
+      "ruleId": "SEL-J-LOC-001",
+      "severity": "warning",
+      "category": "locators",
+      "line": 11
+    },
+    {
+      "ruleId": "SEL-J-LOC-004",
+      "severity": "critical",
+      "category": "locators",
+      "line": 11
+    },
+    {
+      "ruleId": "SEL-J-LOC-005",
+      "severity": "info",
+      "category": "locators",
+      "line": null
+    },
+    {
+      "ruleId": "SEL-J-REL-002",
+      "severity": "info",
+      "category": "reliability",
+      "line": null
+    },
+    {
+      "ruleId": "SEL-J-REL-006",
+      "severity": "critical",
+      "category": "reliability",
+      "line": 12
+    },
+    {
+      "ruleId": "SEL-J-REL-008",
+      "severity": "info",
+      "category": "reliability",
+      "line": 11
+    },
+    {
+      "ruleId": "SEL-J-STD-005",
+      "severity": "info",
+      "category": "coding_standards",
+      "line": 5
+    },
+    {
+      "ruleId": "SEL-J-WAI-001",
+      "severity": "critical",
+      "category": "waits",
+      "line": 10
+    },
+    {
+      "ruleId": "SEL-J-WAI-002",
+      "severity": "warning",
+      "category": "waits",
+      "line": 8
+    },
+    {
+      "ruleId": "SEL-J-WAI-005",
+      "severity": "critical",
+      "category": "waits",
+      "line": 8
+    }
+  ]
+}

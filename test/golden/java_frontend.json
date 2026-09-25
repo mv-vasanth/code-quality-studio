@@ -1,0 +1,66 @@
+{
+  "overallScore": 86,
+  "categoryScores": {
+    "error_handling": 80,
+    "security": 90,
+    "performance": 86,
+    "maintainability": 90,
+    "coding_standards": 82
+  },
+  "findings": [
+    {
+      "ruleId": "JVF-ERR-002",
+      "severity": "warning",
+      "category": "error_handling",
+      "line": 9
+    },
+    {
+      "ruleId": "JVF-ERR-003",
+      "severity": "warning",
+      "category": "error_handling",
+      "line": 9
+    },
+    {
+      "ruleId": "JVF-MNT-003",
+      "severity": "warning",
+      "category": "maintainability",
+      "line": 3
+    },
+    {
+      "ruleId": "JVF-PER-002",
+      "severity": "info",
+      "category": "performance",
+      "line": 3
+    },
+    {
+      "ruleId": "JVF-PER-003",
+      "severity": "warning",
+      "category": "performance",
+      "line": 10
+    },
+    {
+      "ruleId": "JVF-SEC-002",
+      "severity": "warning",
+      "category": "security",
+      "line": 9
+    },
+    {
+      "ruleId": "JVF-STD-003",
+      "severity": "info",
+      "category": "coding_standards",
+      "line": 7
+    },
+    {
+      "ruleId": "JVF-STD-005",
+      "severity": "warning",
+      "category": "coding_standards",
+      "line": 4
+    },
+    {
+      "ruleId": "JVF-STD-006",
+      "severity": "info",
+      "category": "coding_standards",
+      "line": 13
+    }
+  ]
+}

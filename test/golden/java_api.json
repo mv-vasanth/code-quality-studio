@@ -1,0 +1,95 @@
+{
+  "overallScore": 84,
+  "categoryScores": {
+    "api_design": 100,
+    "security": 46,
+    "data_access": 78,
+    "error_handling": 76,
+    "concurrency": 72,
+    "performance": 82,
+    "testing": 96,
+    "observability": 90,
+    "maintainability": 100,
+    "java_standards": 100
+  },
+  "findings": [
+    {
+      "ruleId": "JV-CON-003",
+      "severity": "critical",
+      "category": "concurrency",
+      "line": 6
+    },
+    {
+      "ruleId": "JV-CON-004",
+      "severity": "warning",
+      "category": "concurrency",
+      "line": 7
+    },
+    {
+      "ruleId": "JV-DAT-001",
+      "severity": "info",
+      "category": "data_access",
+      "line": 11
+    },
+    {
+      "ruleId": "JV-DAT-002",
+      "severity": "critical",
+      "category": "data_access",
+      "line": 15
+    },
+    {
+      "ruleId": "JV-ERR-001",
+      "severity": "warning",
+      "category": "error_handling",
+      "line": 14
+    },
+    {
+      "ruleId": "JV-ERR-003",
+      "severity": "info",
+      "category": "error_handling",
+      "line": 14
+    },
+    {
+      "ruleId": "JV-ERR-005",
+      "severity": "warning",
+      "category": "error_handling",
+      "line": 13
+    },
+    {
+      "ruleId": "JV-OBS-001",
+      "severity": "warning",
+      "category": "observability",
+      "line": 17
+    },
+    {
+      "ruleId": "JV-PER-003",
+      "severity": "critical",
+      "category": "performance",
+      "line": 8
+    },
+    {
+      "ruleId": "JV-SEC-001",
+      "severity": "critical",
+      "category": "security",
+      "line": 10
+    },
+    {
+      "ruleId": "JV-SEC-005",
+      "severity": "critical",
+      "category": "security",
+      "line": 12
+    },
+    {
+      "ruleId": "JV-SEC-008",
+      "severity": "critical",
+      "category": "security",
+      "line": 16
+    },
+    {
+      "ruleId": "JV-TST-001",
+      "severity": "info",
+      "category": "testing",
+      "line": null
+    }
+  ]
+}

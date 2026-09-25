@@ -1,0 +1,93 @@
+{
+  "overallScore": 84,
+  "categoryScores": {
+    "locators": 68,
+    "waits": 68,
+    "assertions": 90,
+    "gestures": 96,
+    "driver_mgmt": 82,
+    "reliability": 86,
+    "security": 82,
+    "coding_standards": 96
+  },
+  "findings": [
+    {
+      "ruleId": "APM-J-ASS-001",
+      "severity": "warning",
+      "category": "assertions",
+      "line": null
+    },
+    {
+      "ruleId": "APM-J-DRV-001",
+      "severity": "critical",
+      "category": "driver_mgmt",
+      "line": null
+    },
+    {
+      "ruleId": "APM-J-GES-004",
+      "severity": "info",
+      "category": "gestures",
+      "line": null
+    },
+    {
+      "ruleId": "APM-J-LOC-001",
+      "severity": "warning",
+      "category": "locators",
+      "line": 6
+    },
+    {
+      "ruleId": "APM-J-LOC-002",
+      "severity": "critical",
+      "category": "locators",
+      "line": 6
+    },
+    {
+      "ruleId": "APM-J-LOC-004",
+      "severity": "info",
+      "category": "locators",
+      "line": null
+    },
+    {
+      "ruleId": "APM-J-REL-001",
+      "severity": "warning",
+      "category": "reliability",
+      "line": 6
+    },
+    {
+      "ruleId": "APM-J-REL-002",
+      "severity": "info",
+      "category": "reliability",
+      "line": null
+    },
+    {
+      "ruleId": "APM-J-SEC-001",
+      "severity": "critical",
+      "category": "security",
+      "line": 7
+    },
+    {
+      "ruleId": "APM-J-STD-005",
+      "severity": "info",
+      "category": "coding_standards",
+      "line": 4
+    },
+    {
+      "ruleId": "APM-J-WAI-001",
+      "severity": "critical",
+      "category": "waits",
+      "line": 5
+    },
+    {
+      "ruleId": "APM-J-WAI-002",
+      "severity": "warning",
+      "category": "waits",
+      "line": 8
+    },
+    {
+      "ruleId": "APM-J-WAI-003",
+      "severity": "info",
+      "category": "waits",
+      "line": null
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "info": { "name": "API tests", "schema": "v2.1.0" },
+  "item": [
+    { "name": "Get user",
+      "request": {
+        "method": "GET",
+        "url": "https://staging.api.example.com/users/1",
+        "header": [{ "key": "Authorization", "value": "Bearer abc123secrettoken" }]
+      },
+      "event": []
+    }
+  ]
+}

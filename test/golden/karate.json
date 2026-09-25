@@ -1,0 +1,61 @@
+{
+  "overallScore": 89,
+  "categoryScores": {
+    "assertions": 92,
+    "structure": 100,
+    "security": 72,
+    "reliability": 86,
+    "ci_config": 90,
+    "coding_standards": 96
+  },
+  "findings": [
+    {
+      "ruleId": "KA-AST-002",
+      "severity": "info",
+      "category": "assertions",
+      "line": 10
+    },
+    {
+      "ruleId": "KA-AST-003",
+      "severity": "info",
+      "category": "assertions",
+      "line": 10
+    },
+    {
+      "ruleId": "KA-CFG-001",
+      "severity": "warning",
+      "category": "ci_config",
+      "line": 6
+    },
+    {
+      "ruleId": "KA-REL-001",
+      "severity": "warning",
+      "category": "reliability",
+      "line": 11
+    },
+    {
+      "ruleId": "KA-REL-002",
+      "severity": "info",
+      "category": "reliability",
+      "line": 10
+    },
+    {
+      "ruleId": "KA-SEC-001",
+      "severity": "critical",
+      "category": "security",
+      "line": 4
+    },
+    {
+      "ruleId": "KA-SEC-002",
+      "severity": "warning",
+      "category": "security",
+      "line": 3
+    },
+    {
+      "ruleId": "KA-STD-003",
+      "severity": "info",
+      "category": "coding_standards",
+      "line": 1
+    }
+  ]
+}

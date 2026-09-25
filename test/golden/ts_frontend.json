@@ -1,0 +1,61 @@
+{
+  "overallScore": 91,
+  "categoryScores": {
+    "security": 90,
+    "hooks": 86,
+    "accessibility": 86,
+    "type_safety": 90,
+    "performance": 92,
+    "standards": 100
+  },
+  "findings": [
+    {
+      "ruleId": "TSF-A11Y-001",
+      "severity": "warning",
+      "category": "accessibility",
+      "line": 10
+    },
+    {
+      "ruleId": "TSF-A11Y-002",
+      "severity": "info",
+      "category": "accessibility",
+      "line": 9
+    },
+    {
+      "ruleId": "TSF-HOOK-002",
+      "severity": "info",
+      "category": "hooks",
+      "line": 8
+    },
+    {
+      "ruleId": "TSF-HOOK-003",
+      "severity": "warning",
+      "category": "hooks",
+      "line": 5
+    },
+    {
+      "ruleId": "TSF-PER-002",
+      "severity": "info",
+      "category": "performance",
+      "line": 8
+    },
+    {
+      "ruleId": "TSF-PER-003",
+      "severity": "info",
+      "category": "performance",
+      "line": 7
+    },
+    {
+      "ruleId": "TSF-SEC-001",
+      "severity": "warning",
+      "category": "security",
+      "line": 7
+    },
+    {
+      "ruleId": "TSF-TYP-001",
+      "severity": "warning",
+      "category": "type_safety",
+      "line": 2
+    }
+  ]
+}

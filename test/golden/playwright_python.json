@@ -1,0 +1,69 @@
+{
+  "overallScore": 88,
+  "categoryScores": {
+    "selectors": 86,
+    "reliability": 64,
+    "assertions": 90,
+    "structure": 96,
+    "security": 82,
+    "performance": 100,
+    "coding_standards": 96,
+    "ci_config": 90
+  },
+  "findings": [
+    {
+      "ruleId": "PWPY-AST-001",
+      "severity": "warning",
+      "category": "assertions",
+      "line": null
+    },
+    {
+      "ruleId": "PWPY-CI-001",
+      "severity": "warning",
+      "category": "ci_config",
+      "line": 4
+    },
+    {
+      "ruleId": "PWPY-REL-001",
+      "severity": "critical",
+      "category": "reliability",
+      "line": 5
+    },
+    {
+      "ruleId": "PWPY-REL-002",
+      "severity": "critical",
+      "category": "reliability",
+      "line": 6
+    },
+    {
+      "ruleId": "PWPY-SEC-001",
+      "severity": "critical",
+      "category": "security",
+      "line": 8
+    },
+    {
+      "ruleId": "PWPY-SEL-003",
+      "severity": "info",
+      "category": "selectors",
+      "line": null
+    },
+    {
+      "ruleId": "PWPY-SEL-004",
+      "severity": "warning",
+      "category": "selectors",
+      "line": 7
+    },
+    {
+      "ruleId": "PWPY-STD-005",
+      "severity": "info",
+      "category": "coding_standards",
+      "line": 3
+    },
+    {
+      "ruleId": "PWPY-STR-001",
+      "severity": "info",
+      "category": "structure",
+      "line": null
+    }
+  ]
+}

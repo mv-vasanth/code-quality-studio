@@ -1,0 +1,93 @@
+{
+  "overallScore": 82,
+  "categoryScores": {
+    "api_design": 100,
+    "security": 0,
+    "data_access": 90,
+    "error_handling": 90,
+    "validation": 100,
+    "async_io": 100,
+    "performance": 86,
+    "standards": 90
+  },
+  "findings": [
+    {
+      "ruleId": "PY-DAT-003",
+      "severity": "warning",
+      "category": "data_access",
+      "line": 14
+    },
+    {
+      "ruleId": "PY-ERR-001",
+      "severity": "warning",
+      "category": "error_handling",
+      "line": 13
+    },
+    {
+      "ruleId": "PY-PER-001",
+      "severity": "info",
+      "category": "performance",
+      "line": 10
+    },
+    {
+      "ruleId": "PY-PER-002",
+      "severity": "warning",
+      "category": "performance",
+      "line": 14
+    },
+    {
+      "ruleId": "PY-SEC-003",
+      "severity": "warning",
+      "category": "security",
+      "line": 8
+    },
+    {
+      "ruleId": "PY-SEC-004",
+      "severity": "warning",
+      "category": "security",
+      "line": 7
+    },
+    {
+      "ruleId": "PY-SEC-005",
+      "severity": "critical",
+      "category": "security",
+      "line": 6
+    },
+    {
+      "ruleId": "PY-SEC-006",
+      "severity": "critical",
+      "category": "security",
+      "line": 9
+    },
+    {
+      "ruleId": "PY-SEC-007",
+      "severity": "critical",
+      "category": "security",
+      "line": 10
+    },
+    {
+      "ruleId": "PY-SEC-008",
+      "severity": "critical",
+      "category": "security",
+      "line": 2
+    },
+    {
+      "ruleId": "PY-SEC-009",
+      "severity": "warning",
+      "category": "security",
+      "line": 3
+    },
+    {
+      "ruleId": "PY-SEC-010",
+      "severity": "warning",
+      "category": "security",
+      "line": 11
+    },
+    {
+      "ruleId": "PY-STD-002",
+      "severity": "warning",
+      "category": "standards",
+      "line": 5
+    }
+  ]
+}

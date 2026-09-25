@@ -1,0 +1,77 @@
+{
+  "overallScore": 91,
+  "categoryScores": {
+    "selectors": 86,
+    "reliability": 54,
+    "structure": 96,
+    "assertions": 96,
+    "mobile": 100,
+    "security": 100,
+    "performance": 100,
+    "accessibility": 96,
+    "coding_standards": 96,
+    "ci_config": 90
+  },
+  "findings": [
+    {
+      "ruleId": "PW-A11Y-002",
+      "severity": "info",
+      "category": "accessibility",
+      "line": null
+    },
+    {
+      "ruleId": "PW-AST-003",
+      "severity": "info",
+      "category": "assertions",
+      "line": 8
+    },
+    {
+      "ruleId": "PW-CI-001",
+      "severity": "warning",
+      "category": "ci_config",
+      "line": 3
+    },
+    {
+      "ruleId": "PW-NET-001",
+      "severity": "warning",
+      "category": "reliability",
+      "line": 3
+    },
+    {
+      "ruleId": "PW-REL-001",
+      "severity": "critical",
+      "category": "reliability",
+      "line": 4
+    },
+    {
+      "ruleId": "PW-REL-009",
+      "severity": "critical",
+      "category": "reliability",
+      "line": 6
+    },
+    {
+      "ruleId": "PW-SEL-001",
+      "severity": "warning",
+      "category": "selectors",
+      "line": 5
+    },
+    {
+      "ruleId": "PW-SEL-002",
+      "severity": "info",
+      "category": "selectors",
+      "line": 8
+    },
+    {
+      "ruleId": "PW-STD-007",
+      "severity": "info",
+      "category": "coding_standards",
+      "line": 2
+    },
+    {
+      "ruleId": "PW-STR-001",
+      "severity": "info",
+      "category": "structure",
+      "line": null
+    }
+  ]
+}
