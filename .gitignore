@@ -28,3 +28,8 @@ dist-ssr
 
 # generated audit output
 pw-quality-report/
+
+# local secrets — never commit
+.env
+.env.local
+.env.*.local
