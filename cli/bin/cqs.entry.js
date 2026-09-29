@@ -174,6 +174,51 @@ function collectFiles(inputPath, stackId) {
   return out;
 }
 
+
+/**
+ * Extensions present under the given paths that no stack claims.
+ *
+ * Silently ignoring a file is the same failure as silently ignoring a stack:
+ * the report looks complete and isn't. A Go service or a Ruby deploy script
+ * sitting beside the audited code gets no rules, and the user should be told
+ * that rather than left to assume 0 findings means 0 problems.
+ */
+function unsupportedExtensions(inputPaths, analysedFiles) {
+  const analysed = new Set(analysedFiles);
+  const counts = new Map();
+  const seen = new Set();
+
+  function walk(dir) {
+    let entries = [];
+    try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!entry.name.startsWith(".") && entry.name !== "node_modules") walk(full);
+      } else if (entry.isFile() && !analysed.has(full) && !seen.has(full)) {
+        seen.add(full);
+        const ext = extname(entry.name).toLowerCase();
+        // Only count things that look like source; skip lockfiles, images, docs.
+        if (!ext || IGNORED_EXTS.has(ext)) continue;
+        counts.set(ext, (counts.get(ext) ?? 0) + 1);
+      }
+    }
+  }
+  for (const p of inputPaths) {
+    const abs = resolve(p);
+    try { if (statSync(abs).isDirectory()) walk(abs); } catch { /* not a dir */ }
+  }
+  return counts;
+}
+
+// Not source, or not something a quality rule would have an opinion on.
+const IGNORED_EXTS = new Set([
+  ".md", ".txt", ".log", ".lock", ".map", ".snap", ".png", ".jpg", ".jpeg",
+  ".gif", ".svg", ".ico", ".webp", ".pdf", ".zip", ".gz", ".tgz", ".woff",
+  ".woff2", ".ttf", ".eot", ".mp4", ".mov", ".csv", ".env", ".gitignore",
+  ".editorconfig", ".npmrc", ".nvmrc", ".prettierrc", ".DS_Store",
+]);
+
 // ── Auto-detect stack ─────────────────────────────────────────────────────────
 
 /**
@@ -1288,9 +1333,24 @@ async function main() {
       console.log(dim(`  Auto-detected stack: ${ordered[0][0]}`));
     }
     let anyCritical = false;
+    const analysed = [];
     for (const [id, files] of ordered) {
+      analysed.push(...files);
       const res = await runStack(id, files, args, inputPaths, { label: ordered.length > 1 });
       if (res.some((r) => r.result.findings?.some((f) => f.severity === "critical"))) anyCritical = true;
+    }
+
+    // Say what was not looked at. A clean report over half a repo is worse
+    // than no report, because it reads as a clean bill of health.
+    if (args.output === "pretty") {
+      const skipped = unsupportedExtensions(inputPaths, analysed);
+      if (skipped.size) {
+        const total = [...skipped.values()].reduce((a, b) => a + b, 0);
+        const kinds = [...skipped.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)
+          .map(([ext, n]) => `${ext} (${n})`).join(", ");
+        console.log(`\n${dim(`  Not audited: ${total} file${total === 1 ? "" : "s"} with no matching stack \u2014 ${kinds}`)}`);
+        console.log(dim("  Run cqs --list-stacks to see what is supported."));
+      }
     }
     if (anyCritical && args.severity !== "info" && args.severity !== "warning") process.exitCode = 1;
     return;
