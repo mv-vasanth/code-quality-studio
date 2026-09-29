@@ -37,70 +37,55 @@ You should see help text with a version number. If you get
 
 ---
 
-## Step 2 — Find the two paths you need
+## Step 2 — Let cqs write the config for you
 
-Cursor needs to know **which Node to use** and **where the server file is**.
-Print both:
+```bash
+cqs mcp-config cursor
+```
+
+It prints a ready-to-paste block with the correct paths for *your* machine:
+
+```json
+{
+  "mcpServers": {
+    "cqs": {
+      "command": "/absolute/path/to/node",
+      "args": ["/absolute/path/to/cqs-mcp.js"]
+    }
+  }
+}
+```
+
+Copy that. Step 3 is where it goes.
+
+> **Why absolute paths, and not just `"cqs-mcp"` or `"npx"`?** An app launched
+> from the Dock or Finder does not inherit your terminal's `PATH` — on macOS it
+> gets roughly `/usr/bin:/bin:/usr/sbin:/sbin`. If you use `nvm`, everything
+> lives under `~/.nvm`, so `cqs-mcp`, `node` and `npx` are all invisible to
+> Cursor. Absolute paths are the only thing that reliably works, which is why
+> the tool prints them rather than asking you to find them.
+
+### If you prefer to find them yourself
 
 ```bash
 echo "command: $(which node)"
 echo "args:    $(npm root -g)/cqs-audit/dist/cqs-mcp.js"
 ```
 
-Example output — **yours will differ, use your own**:
+Take the second path from `npm root -g`, not from a folder you happen to
+remember. If npm has a `prefix` configured, or you use `nvm`, there may be more
+than one `cqs-audit` on disk and only one of them is the one npm updates.
 
-```
-command: /Users/you/.nvm/versions/node/v24.20.0/bin/node
-args:    /Users/you/.nvm/versions/node/v24.20.0/lib/node_modules/cqs-audit/dist/cqs-mcp.js
-```
-
-Copy both lines somewhere handy.
-
-> **Why full paths, not just `"node"`?** Cursor launched from the Dock or
-> Finder does not inherit your terminal's `PATH`. A bare `"node"` often cannot
-> be found, and if you use `nvm` it may pick a different Node version than
-> your terminal — which can silently give you an older cqs. Full paths remove
-> both problems.
-
-### Make sure you copied the path npm actually uses
-
-`npm root -g` is the reliable answer, but it is worth understanding why, because
-this trap costs people an hour.
-
-If npm has a **prefix** configured, every `npm install -g` goes to that one
-directory no matter which Node version you run it with:
+Check for stale copies if something looks wrong:
 
 ```bash
-npm config get prefix
-```
-
-If that prints a path containing a *specific* Node version — for example
-`.../node/v22.22.0` — then installs always land there, even when you are
-running Node 24. Any `cqs-audit` folder sitting in another Node version's tree
-is a leftover that npm no longer updates.
-
-Point Cursor at the managed location, never at a leftover:
-
-```bash
-echo "$(npm root -g)/cqs-audit/dist/cqs-mcp.js"
-```
-
-**How to tell you have a stale copy:** the version Cursor reports differs from
-`cqs --help` in your terminal, or a tool you expect is missing. Check directly:
-
-```bash
+npm config get prefix                                   # where installs land
 cat "$(npm root -g)/cqs-audit/package.json" | grep '"version"'
+cqs --help | head -2                                    # should agree
 ```
 
-Compare it with `cqs --help`. If they disagree, you have more than one copy and
-something is reading the wrong one. Delete the leftover:
-
-```bash
-# only the one NOT under `npm root -g`
-rm -rf /path/to/other/node/version/lib/node_modules/cqs-audit
-```
-
----
+If those two versions disagree, you have more than one copy and something is
+reading the wrong one. Delete the one that is *not* under `npm root -g`.
 
 ## Step 3 — Add it to Cursor's config
 

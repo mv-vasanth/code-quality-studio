@@ -3,7 +3,8 @@
  * Entry point bundled by build.mjs → dist/cqs.js
  */
 import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from "fs";
-import { resolve, extname, basename, relative, join } from "path";
+import { resolve, extname, basename, relative, join, dirname } from "path";
+import { fileURLToPath } from "url";
 import { tmpdir } from "os";
 import { execSync } from "child_process";
 import process from "process";
@@ -99,6 +100,7 @@ function parseArgs(argv) {
   let i = 0;
   if (argv[0] === "remediate") { args.command = "remediate"; args.severity = "critical"; i = 1; }
   if (argv[0] === "pr-review") { args.command = "pr-review"; i = 1; }
+  if (argv[0] === "mcp-config") { args.command = "mcp-config"; i = 1; }
   while (i < argv.length) {
     const a = argv[i];
     if (a === "--help" || a === "-h")        { args.help = true; }
@@ -173,6 +175,81 @@ function collectFiles(inputPath, stackId) {
 }
 
 // ── Auto-detect stack ─────────────────────────────────────────────────────────
+
+/**
+ * Which stack owns each file, when the user did not name one.
+ *
+ * detectStack picks a single winner for the whole run, which quietly discards
+ * everything else: a repo with Playwright specs, React components and a Java
+ * service reported one file of three, and missed a SQL injection. Route per
+ * file instead.
+ *
+ * Extensions overlap, so order matters. Test-framework stacks are checked
+ * first because their patterns are the narrow ones (`*.spec.ts` is a
+ * Playwright spec before it is a TypeScript file). Where an extension alone
+ * cannot decide — .java and .py are used by several stacks — sniff the file
+ * for the framework's own imports.
+ */
+const STACK_PRIORITY = [
+  "playwright", "cypress", "playwright_java", "playwright_python",
+  "selenium_java", "selenium_csharp", "appium_java", "restassured",
+  "karate", "pytest_api", "postman", "tosca_xml",
+  "ts_frontend", "typescript", "java_api", "java_frontend",
+  "python_api", "python_frontend",
+];
+
+// Markers that identify a test file whose extension is shared with other stacks.
+const STACK_MARKERS = {
+  playwright_java:   /com\.microsoft\.playwright/,
+  selenium_java:     /org\.openqa\.selenium/,
+  appium_java:       /io\.appium/,
+  restassured:       /io\.restassured/,
+  playwright_python: /playwright\.(sync|async)_api/,
+  pytest_api:        /\b(import\s+pytest|from\s+pytest)\b/,
+  cypress:           /\bcy\.[a-z]|from\s+["\x27]cypress["\x27]/,
+};
+
+function classifyFile(file) {
+  const name = basename(file);
+  const candidates = STACK_PRIORITY.filter((id) => AUDIT_STACKS[id]?.filePattern?.test(name));
+  if (candidates.length <= 1) return candidates[0] ?? null;
+
+  // Stacks listed in STACK_MARKERS claim a broad extension (.java, .py) that
+  // several stacks share, so they only win if the file actually imports their
+  // framework. Without that, a plain service class would be judged as a
+  // Selenium test. Stacks not listed have an intrinsically narrow pattern
+  // (`*.spec.ts`) and need no proof.
+  let head = "";
+  if (candidates.some((id) => STACK_MARKERS[id])) {
+    try { head = readFileSync(file, "utf8").slice(0, 4000); } catch { /* unreadable */ }
+  }
+  const viable = candidates.filter((id) => !STACK_MARKERS[id] || STACK_MARKERS[id].test(head));
+
+  // First viable candidate wins: STACK_PRIORITY runs most specific first.
+  return viable[0] ?? candidates[candidates.length - 1];
+}
+
+/** Map of stackId -> files, for every file under the given paths. */
+function routeFilesByStack(inputPaths) {
+  const seen = new Set();
+  const byStack = new Map();
+  for (const id of STACK_PRIORITY) {
+    let files = [];
+    for (const p of inputPaths) {
+      try { files.push(...collectFiles(p, id)); } catch { /* path handled elsewhere */ }
+    }
+    for (const f of files) {
+      if (seen.has(f)) continue;
+      const owner = classifyFile(f);
+      if (!owner) continue;
+      seen.add(f);
+      if (!byStack.has(owner)) byStack.set(owner, []);
+      byStack.get(owner).push(f);
+    }
+  }
+  return byStack;
+}
+
 function detectStack(files) {
   // Score each stack by how many files match its pattern
   const scores = {};
@@ -211,6 +288,8 @@ ${b("USAGE")}
   cqs --read-report <file>        Print summary of a saved JSON report
   cqs remediate [path...]         AI-fix findings, verifying each fix before keeping it
   cqs pr-review                   Review a pull request with inline GitHub comments
+  cqs mcp-config [client]         Print MCP client config with correct paths
+                                  (client: cursor | claude)
 
 ${b("OPTIONS")}
   -s, --stack  <id>               Force a stack (see --list-stacks for IDs)
@@ -434,6 +513,46 @@ function printJson(stackId, results, args) {
       findings: result.findings.filter(f => matchesFilters(f, args)),
     })),
   }, null, 2));
+}
+
+/**
+ * Print a ready-to-paste MCP client config.
+ *
+ * Every MCP client needs an absolute path to the server, because GUI-launched
+ * apps on macOS inherit a minimal PATH that contains neither nvm's node nor
+ * anything installed through it. Making each user work that out by hand is
+ * how people end up pointing at a stale copy in another Node version's tree.
+ * The tool knows both paths exactly — process.execPath is the node currently
+ * running it, and the server sits beside this bundle — so it emits them.
+ */
+function printMcpConfig(which) {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const server = join(here, "cqs-mcp.js");
+  const entry = { command: process.execPath, args: [server] };
+
+  if (!existsSync(server)) {
+    console.error(`\n  Cannot find the MCP server next to this CLI:\n    ${server}`);
+    console.error("  Reinstall with: npm install -g cqs-audit@latest\n");
+    process.exit(1);
+  }
+
+  const block = JSON.stringify({ mcpServers: { cqs: entry } }, null, 2);
+  const targets = {
+    cursor: "~/.cursor/mcp.json",
+    claude: "~/Library/Application Support/Claude/claude_desktop_config.json",
+  };
+  const file = targets[which] ?? "your MCP client's config file";
+
+  console.log(`\n  ${b("Add this to")} ${file}\n`);
+  console.log(block.split("\n").map((l) => "    " + l).join("\n"));
+  console.log(`\n  ${dim("If the file already has other servers, add only the \"cqs\" entry")}`);
+  console.log(`  ${dim("inside the existing \"mcpServers\" block \u2014 keep the commas valid.")}`);
+  console.log(`\n  ${dim("Then quit the app completely and reopen it.")}\n`);
+
+  if (which === "claude") {
+    console.log(`  ${dim("Claude Code users can skip the file entirely:")}`);
+    console.log(`    claude mcp add cqs ${process.execPath} ${server}\n`);
+  }
 }
 
 // ── HTML Report Generator ─────────────────────────────────────────────────────
@@ -1137,6 +1256,7 @@ async function main() {
   if (args.command === "remediate") { await runRemediate(args); return; }
   if (args.command === "pr-review") { await runPrReview(args); return; }
   if (args.listStacks) { printStacks(); process.exit(0); }
+  if (args.command === "mcp-config") { printMcpConfig(args.paths[0]); process.exit(0); }
   if (args.readReport) {
     const report = printReportSummary(args.readReport);
     if (args.open && report) {
@@ -1153,37 +1273,56 @@ async function main() {
 
   const inputPaths = args.paths.length ? args.paths : ["."];
 
-  // Collect all files first (for stack auto-detection)
-  let allFiles = inputPaths.flatMap(p => {
-    try { return collectFiles(p, args.stack ?? "playwright"); }
-    catch { return []; }
-  });
-
-  // Determine stack
-  let stackId = args.stack;
-  if (!stackId) {
-    stackId = detectStack(allFiles);
-    if (args.output === "pretty") {
-      console.log(`${dim(`  Auto-detected stack: ${stackId}`)}`);
+  // Route every file to the stack that owns it. A repo with specs, frontend
+  // code and a Java service is three stacks, not one.
+  if (!args.stack) {
+    const byStack = routeFilesByStack(inputPaths);
+    if (byStack.size === 0) {
+      console.error(`  No supported files found in: ${inputPaths.join(", ")}`);
+      process.exit(1);
     }
+    const ordered = [...byStack.entries()].sort((a, b) => b[1].length - a[1].length);
+    if (ordered.length > 1 && args.output === "pretty") {
+      console.log(dim(`  Detected ${ordered.length} stacks: ${ordered.map(([id, f]) => `${id} (${f.length})`).join(", ")}`));
+    } else if (args.output === "pretty") {
+      console.log(dim(`  Auto-detected stack: ${ordered[0][0]}`));
+    }
+    let anyCritical = false;
+    for (const [id, files] of ordered) {
+      const res = await runStack(id, files, args, inputPaths, { label: ordered.length > 1 });
+      if (res.some((r) => r.result.findings?.some((f) => f.severity === "critical"))) anyCritical = true;
+    }
+    if (anyCritical && args.severity !== "info" && args.severity !== "warning") process.exitCode = 1;
+    return;
   }
-  if (!RUNNERS[stackId]) {
-    console.error(`Unknown stack: "${stackId}". Run cqs --list-stacks for valid IDs.`);
+
+  if (!RUNNERS[args.stack]) {
+    console.error(`Unknown stack: "${args.stack}". Run cqs --list-stacks for valid IDs.`);
     process.exit(1);
   }
-
-  // Re-collect with the correct stack file pattern
-  allFiles = inputPaths.flatMap(p => {
-    try { return collectFiles(p, stackId); }
-    catch { return []; }
-  });
-
-  if (allFiles.length === 0) {
-    const stack = AUDIT_STACKS[stackId];
-    console.error(`  No ${stack.fileAccept} files found in: ${inputPaths.join(", ")}`);
+  const forcedFiles = inputPaths.flatMap((p) => { try { return collectFiles(p, args.stack); } catch { return []; } });
+  if (forcedFiles.length === 0) {
+    console.error(`  No ${AUDIT_STACKS[args.stack].fileAccept} files found in: ${inputPaths.join(", ")}`);
     process.exit(1);
   }
+  const res = await runStack(args.stack, forcedFiles, args, inputPaths);
+  if (res.some((r) => r.result.findings?.some((f) => f.severity === "critical"))
+      && args.severity !== "info" && args.severity !== "warning") {
+    process.exitCode = 1;
+  }
+}
 
+/**
+ * Analyse one stack's files and emit its output.
+ *
+ * Extracted from main so a polyglot repo can run it once per detected stack
+ * instead of silently reporting only the winner.
+ */
+async function runStack(stackId, allFiles, args, inputPaths, { label = false } = {}) {
+  if (label) {
+    const st = AUDIT_STACKS[stackId];
+    console.log(`\n${b(`\u2500\u2500 ${st.icon} ${st.name}`)} ${dim(`(${allFiles.length} file${allFiles.length === 1 ? "" : "s"})`)}`);
+  }
   // Project rules from cqs-rules.json (explicit --rules, or discovered by walking up)
   let ruleSet = { rules: [], disabled: [], errors: [], path: null };
   if (!args.noRules) {
@@ -1272,6 +1411,7 @@ async function main() {
   if (hasCritical && args.severity !== "info" && args.severity !== "warning") {
     process.exitCode = 1;
   }
+  return results;
 }
 
 main().catch(err => { console.error(err); process.exit(1); });

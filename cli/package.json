@@ -4,7 +4,8 @@
   "description": "Code Quality Studio \u2014 CLI for auditing test files (Playwright, Cypress, Selenium, Appium, TOSCA and more)",
   "type": "module",
   "bin": {
-    "cqs": "dist/cqs.js"
+    "cqs": "dist/cqs.js",
+    "cqs-mcp": "dist/cqs-mcp.js"
   },
   "scripts": {
     "build": "node build.mjs",
