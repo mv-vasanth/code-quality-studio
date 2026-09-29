@@ -1,6 +1,6 @@
 import { grade } from "../shared/grade.js";
 import { getGuideForStack } from "../guides/index.js";
-import { loadUncheckedPracticeTitles } from "../practiceChecklistState.js";
+import { loadUncheckedPracticeTitles } from "../practiceChecklistStorage.js";
 import { severityRank } from "./reportUtils.js";
 import { filesWithViewResults } from "../shared/fileResults.js";
 import { getPersona } from "../stacks/definitions.js";

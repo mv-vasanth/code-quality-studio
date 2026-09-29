@@ -1,23 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
+import { loadChecked, saveChecked, loadUncheckedPracticeTitles } from "./practiceChecklistStorage.js";
 
-function loadChecked(storageKey) {
-  try {
-    const raw = localStorage.getItem(storageKey);
-    if (!raw) return new Set();
-    const arr = JSON.parse(raw);
-    return new Set(Array.isArray(arr) ? arr : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function saveChecked(storageKey, set) {
-  try {
-    localStorage.setItem(storageKey, JSON.stringify([...set]));
-  } catch {
-    /* ignore */
-  }
-}
+// Re-exported for existing importers. Anything that runs outside the browser
+// (CLI, MCP, report builders) should import from practiceChecklistStorage.js
+// directly — importing from here pulls in React.
+export { loadUncheckedPracticeTitles };
 
 export function usePracticeChecklist(storageKey, practices) {
   const [checked, setChecked] = useState(() => loadChecked(storageKey));
@@ -50,14 +37,4 @@ export function usePracticeChecklist(storageKey, practices) {
     passedCount,
     totalCount: practices.length,
   };
-}
-
-export function loadUncheckedPracticeTitles(storageKey, practices) {
-  try {
-    const raw = localStorage.getItem(storageKey);
-    const passedIds = new Set(raw ? JSON.parse(raw) : []);
-    return practices.filter((p) => !passedIds.has(p.id)).map((p) => p.title);
-  } catch {
-    return practices.map((p) => p.title);
-  }
 }

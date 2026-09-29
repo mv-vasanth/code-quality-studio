@@ -5,7 +5,7 @@
  * Usage:  node build.mjs
  */
 import { build } from "esbuild";
-import { readBuiltApp, appDefines } from "./embedApp.mjs";
+import { readBuiltApp, appDefines, assertNoRuntimeImports } from "./embedApp.mjs";
 import { writeFileSync, chmodSync, mkdirSync, readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -47,6 +47,9 @@ const result = await build({
 // Make the output executable
 const outPath = join(__dirname, "dist/cqs.js");
 chmodSync(outPath, 0o755);
+
+// Guard: nothing outside Node's builtins may survive into the bundle.
+assertNoRuntimeImports(result.metafile);
 
 // Print bundle stats
 const outputs = Object.entries(result.metafile.outputs);

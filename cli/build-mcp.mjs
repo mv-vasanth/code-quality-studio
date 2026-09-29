@@ -5,7 +5,7 @@
  * Usage:  node build-mcp.mjs
  */
 import { build } from "esbuild";
-import { readBuiltApp, appDefines } from "./embedApp.mjs";
+import { readBuiltApp, appDefines, assertNoRuntimeImports } from "./embedApp.mjs";
 import { writeFileSync, chmodSync, mkdirSync, readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -65,6 +65,9 @@ const result = await build({
 
 const outPath = join(__dirname, "dist/cqs-mcp.js");
 chmodSync(outPath, 0o755);
+
+// Same guard as the CLI: a stray package import breaks startup.
+assertNoRuntimeImports(result.metafile, { allow: ["@modelcontextprotocol/sdk"] });
 
 const outputs = Object.entries(result.metafile.outputs);
 for (const [file, info] of outputs) {
