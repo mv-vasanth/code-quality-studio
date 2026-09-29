@@ -10,7 +10,14 @@ export function analysePythonApiLocally(filename, content, options = {}) {
   const lines = content.split(/\r?\n/);
   const add = (r) => pushFinding(findings, r, disabled);
 
-  const sqli = lineMatches(content, /(execute|executemany)\s*\(\s*f["']|(execute|executemany)\s*\([^)]*%[^)]*\)|(execute|executemany)\s*\([^)]*\+/);
+  // Only string *building* is injection. `cur.execute("... %s", (uid,))` is the
+  // parameterised form the fix recommends — matching a bare % inside execute()
+  // flagged that as the vulnerability and told people to fix correct code.
+  const sqli = lineMatches(content, new RegExp([
+    String.raw`(?:execute|executemany)\s*\(\s*f["']`,                          // f-string
+    String.raw`(?:execute|executemany)\s*\(\s*(["'])(?:(?!\1).)*\1\s*[%+]`,   // "..." % x  /  "..." + x
+    String.raw`(?:execute|executemany)\s*\([^)]*\.format\s*\(`,               // "...".format(x)
+  ].join("|")));
   if (sqli.length) add({ ruleId: "PY-SEC-001", category: "security", severity: "critical",
     title: "SQL injection risk", description: "String-built SQL (f-string / % / +) in a cursor execute.", impact: "Attacker can read or modify data.",
     fix: `cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))`, line: sqli[0], reference: "OWASP SQL Injection" });
