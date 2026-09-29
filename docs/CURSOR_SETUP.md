@@ -62,6 +62,44 @@ Copy both lines somewhere handy.
 > your terminal — which can silently give you an older cqs. Full paths remove
 > both problems.
 
+### Make sure you copied the path npm actually uses
+
+`npm root -g` is the reliable answer, but it is worth understanding why, because
+this trap costs people an hour.
+
+If npm has a **prefix** configured, every `npm install -g` goes to that one
+directory no matter which Node version you run it with:
+
+```bash
+npm config get prefix
+```
+
+If that prints a path containing a *specific* Node version — for example
+`.../node/v22.22.0` — then installs always land there, even when you are
+running Node 24. Any `cqs-audit` folder sitting in another Node version's tree
+is a leftover that npm no longer updates.
+
+Point Cursor at the managed location, never at a leftover:
+
+```bash
+echo "$(npm root -g)/cqs-audit/dist/cqs-mcp.js"
+```
+
+**How to tell you have a stale copy:** the version Cursor reports differs from
+`cqs --help` in your terminal, or a tool you expect is missing. Check directly:
+
+```bash
+cat "$(npm root -g)/cqs-audit/package.json" | grep '"version"'
+```
+
+Compare it with `cqs --help`. If they disagree, you have more than one copy and
+something is reading the wrong one. Delete the leftover:
+
+```bash
+# only the one NOT under `npm root -g`
+rm -rf /path/to/other/node/version/lib/node_modules/cqs-audit
+```
+
 ---
 
 ## Step 3 — Add it to Cursor's config
@@ -161,13 +199,25 @@ picks them.
 
 **`command not found: cqs` after installing**
 
-Global npm packages install per Node version. If you use `nvm` and switch
-versions, `cqs` may not be there. Check which Node you are on and reinstall:
+Global npm packages install per Node version *unless* npm has a prefix set. If
+you use `nvm` and switch versions, `cqs` may not be there. Check both:
 
 ```bash
 node --version
+npm config get prefix
 npm install -g cqs-audit@latest
 ```
+
+**Cursor reports a different version than my terminal**
+
+You have two copies and Cursor is reading the stale one. See
+[Make sure you copied the path npm actually uses](#make-sure-you-copied-the-path-npm-actually-uses).
+
+**`ERR_MODULE_NOT_FOUND` when running cqs**
+
+Upgrade: `npm install -g cqs-audit@latest`. Versions before 2.3.3 shipped a
+bundle with an unresolvable import and fail on every command, including
+`--help`.
 
 **Cursor shows `cqs` in red / "error"**
 
