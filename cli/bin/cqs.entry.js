@@ -43,6 +43,7 @@ import { buildReview, reviewSummary } from "../../src/rules/prReview.js";
 import { buildFindingsReportPayload } from "../../src/report/buildPayload.js";
 import { buildCompleteHtmlReport } from "../../src/report/buildCompleteReport.js";
 import { buildAppHtmlReport, workspaceFromResults } from "../../src/report/buildAppReport.js";
+import { detectStackFromContent } from "../../src/analyzers/detectStackFromContent.js";
 
 // ── Runner map ────────────────────────────────────────────────────────────────
 const RUNNERS = {
@@ -256,6 +257,14 @@ const STACK_MARKERS = {
 
 function classifyFile(file) {
   const name = basename(file);
+
+  // What a file imports beats what it is called. Shared with the web app so
+  // the two cannot disagree about which stack owns a file.
+  let head = "";
+  try { head = readFileSync(file, "utf8").slice(0, 4000); } catch { /* unreadable */ }
+  const byContent = detectStackFromContent(name, head);
+  if (byContent && AUDIT_STACKS[byContent]) return byContent;
+
   const candidates = STACK_PRIORITY.filter((id) => AUDIT_STACKS[id]?.filePattern?.test(name));
   if (candidates.length <= 1) return candidates[0] ?? null;
 
@@ -264,10 +273,6 @@ function classifyFile(file) {
   // framework. Without that, a plain service class would be judged as a
   // Selenium test. Stacks not listed have an intrinsically narrow pattern
   // (`*.spec.ts`) and need no proof.
-  let head = "";
-  if (candidates.some((id) => STACK_MARKERS[id])) {
-    try { head = readFileSync(file, "utf8").slice(0, 4000); } catch { /* unreadable */ }
-  }
   const viable = candidates.filter((id) => !STACK_MARKERS[id] || STACK_MARKERS[id].test(head));
 
   // First viable candidate wins: STACK_PRIORITY runs most specific first.

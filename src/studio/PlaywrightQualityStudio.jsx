@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { isOfflineReport } from "../shared/offlineReport.js";
+import { suggestStackForFiles } from "../analyzers/detectStackFromContent.js";
 import { grade } from "../shared/grade.js";
 import { STACK_LIST, DEFAULT_STACK_ID, getPersona } from "../stacks/definitions.js";
 import { getAuditStack } from "../stacks/registry.js";
@@ -153,6 +154,16 @@ export default function PlaywrightQualityStudio() {
   const skippedRuleIds = useMemo(
     () => new Set(files.flatMap(f => (f.resultLocal?.skippedRules ?? []).map(s => s.ruleId))),
     [files],
+  );
+
+  // Filenames lie: a Playwright suite keeps its locators in page objects that
+  // are not named *.spec.ts, so picking the wrong stack scores them clean.
+  // Detect it from the imports and offer the switch rather than silently
+  // mixing stacks — the category rows come from the selected stack, so a
+  // mixed view would render blank rows.
+  const stackMismatch = useMemo(
+    () => (files.length ? suggestStackForFiles(files, stackId) : null),
+    [files, stackId],
   );
 
   const changeStack = useCallback((nextId) => {
@@ -1015,6 +1026,31 @@ export default function PlaywrightQualityStudio() {
           {/* ── FILES TAB ── */}
           {activeTab === "files" && (
             <div>
+              {stackMismatch && !offlineReport && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+                  padding: "10px 14px", marginBottom: 12, borderRadius: 10,
+                  background: "#fffbeb", border: "1px solid #fcd34d",
+                }}>
+                  <span style={{ fontSize: 18 }} aria-hidden>⚠️</span>
+                  <div style={{ flex: 1, minWidth: 260, fontSize: 12.5, color: "#92400e" }}>
+                    <strong>{stackMismatch.matched} of {stackMismatch.total} files</strong> look like{" "}
+                    <strong>{getAuditStack(stackMismatch.stackId).name}</strong>, but they are being scored
+                    with <strong>{stack.name}</strong> rules. Scores here will look better than they are.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => changeStack(stackMismatch.stackId)}
+                    style={{
+                      fontSize: 12, fontWeight: 700, padding: "6px 12px", borderRadius: 7,
+                      border: "1px solid #d97706", background: "#d97706", color: "#fff", cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Switch to {getAuditStack(stackMismatch.stackId).shortName}
+                  </button>
+                </div>
+              )}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 15, color: "#111" }}>Loaded files</div>
