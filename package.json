@@ -8,8 +8,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node test/golden-master.mjs",
-    "test:update": "node test/golden-master.mjs --update"
+    "test": "node test/golden-master.mjs && node test/security-rules.mjs",
+    "test:update": "node test/golden-master.mjs --update",
+    "test:security": "node test/security-rules.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1095.0",

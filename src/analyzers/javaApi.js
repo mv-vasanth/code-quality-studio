@@ -311,6 +311,51 @@ export function analyseJavaApiLocally(filename, content, options = {}) {
     line: logSensitive[0], reference: "https://cwe.mitre.org/data/definitions/532.html",
   }, disabledRuleIds);
 
+  // Coverage parity: Python and the frontend stacks already flag these three,
+  // so a hardcoded credential was reported in .py and silently accepted in
+  // .java. Same class of bug should not depend on the language.
+
+  const hardcodedSecret = lineMatches(content,
+    /\b(?:password|passwd|pwd|pw|secret|token|api[_]?key|access[_]?key|private[_]?key|credential)\w*\s*=\s*"[^"]{6,}"/i)
+    .filter((ln) => {
+      const text = lines[ln - 1] || "";
+      // Reading from config or the environment is the fix, not the bug.
+      if (/System\.getenv|System\.getProperty|@Value|getProperty\(/.test(text)) return false;
+      // Obvious placeholders in examples and tests.
+      return !/"(?:\s*|changeme|xxx+|todo|placeholder|\$\{[^}]*\})"/i.test(text);
+    });
+  if (hardcodedSecret.length) pushFinding(findings, {
+    ruleId: "JV-SEC-009", category: "security", severity: "critical",
+    title: "Hardcoded credential in source",
+    description: `A credential is assigned a string literal at line ${hardcodedSecret[0]}.`,
+    impact: "The secret is in git history forever, readable by anyone with repository access, and cannot be rotated without a release (CWE-798).",
+    fix: `private final String password = System.getenv("DB_PASSWORD");`,
+    line: hardcodedSecret[0], reference: "https://cwe.mitre.org/data/definitions/798.html",
+  }, disabledRuleIds);
+
+  const cmdInjection = lineMatches(content,
+    /(?:Runtime\.getRuntime\(\)\.exec|ProcessBuilder)\s*\([^)]*(?:"[^"]*"\s*\+|\+\s*\w|String\.format|%s)/);
+  if (cmdInjection.length) pushFinding(findings, {
+    ruleId: "JV-SEC-010", category: "security", severity: "critical",
+    title: "Command built from concatenated input",
+    description: `A shell command at line ${cmdInjection[0]} is assembled by string concatenation.`,
+    impact: "Any value reaching this can inject extra commands via ; or && and run as the application user (CWE-78).",
+    fix: `// Pass arguments as a list \u2014 no shell, no concatenation
+new ProcessBuilder("git", "clone", repoUrl).start();`,
+    line: cmdInjection[0], reference: "https://cwe.mitre.org/data/definitions/78.html",
+  }, disabledRuleIds);
+
+  const weakRandom = lineMatches(content, /new\s+(?:java\.util\.)?Random\s*\(|Math\.random\s*\(/)
+    .filter((ln) => !/SecureRandom/.test(lines[ln - 1] || ""));
+  if (weakRandom.length) pushFinding(findings, {
+    ruleId: "JV-SEC-011", category: "security", severity: "warning",
+    title: "Predictable randomness",
+    description: `java.util.Random at line ${weakRandom[0]} is a linear congruential generator, not a cryptographic one.`,
+    impact: "Its output is predictable from a few samples, so tokens, session ids or passwords built from it can be guessed (CWE-338).",
+    fix: `private static final SecureRandom RANDOM = new SecureRandom();`,
+    line: weakRandom[0], reference: "https://cwe.mitre.org/data/definitions/338.html",
+  }, disabledRuleIds);
+
   // ── Concurrency ───────────────────────────────────────────────────────────
 
   const unsafeFormatter = lineMatches(content, /(?:private|public|protected|static)[\w\s]*\b(?:SimpleDateFormat|Calendar)\s+\w+\s*=/);

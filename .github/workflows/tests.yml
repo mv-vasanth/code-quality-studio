@@ -19,4 +19,9 @@ jobs:
       # Fails if any rule stops firing, changes severity, or starts firing
       # somewhere new. A silently broken rule produces no other signal.
       - name: Golden-master regression
-        run: npm test
+        run: node test/golden-master.mjs
+
+      # Proves security rules fire on the defect AND stay silent on the
+      # correct form. A rule that flags working code is the worse failure.
+      - name: Security rules, both directions
+        run: node test/security-rules.mjs

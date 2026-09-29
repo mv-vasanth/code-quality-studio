@@ -429,6 +429,53 @@ function matchesFilters(f, args) {
       && (!args.category || f.category === args.category);
 }
 
+
+/**
+ * One document covering several stacks.
+ *
+ * `stacks` carries the per-stack detail; the top level aggregates so a CI
+ * script can read a single score and finding count without knowing how many
+ * languages the repo happens to contain.
+ */
+function printJsonMulti(perStack, args) {
+  const stacks = perStack.map(([stackId, results]) => {
+    const stack = AUDIT_STACKS[stackId];
+    const shown = results.flatMap((r) => r.result.findings ?? []).filter((f) => matchesFilters(f, args));
+    return {
+      stack: { id: stackId, name: stack.name },
+      files: results.length,
+      avgScore: results.length
+        ? Math.round(results.reduce((s, r) => s + (r.result.overallScore ?? 0), 0) / results.length)
+        : 0,
+      summary: {
+        critical: shown.filter((f) => f.severity === "critical").length,
+        warning: shown.filter((f) => f.severity === "warning").length,
+        info: shown.filter((f) => f.severity === "info").length,
+      },
+      results: results.map(({ file, result }) => ({
+        file,
+        overallScore: result.overallScore,
+        categoryScores: result.categoryScores,
+        findings: (result.findings ?? []).filter((f) => matchesFilters(f, args)),
+      })),
+    };
+  });
+
+  const allFiles = stacks.reduce((n, s) => n + s.files, 0);
+  console.log(JSON.stringify({
+    stacks,
+    files: allFiles,
+    avgScore: allFiles
+      ? Math.round(stacks.reduce((sum, s) => sum + s.avgScore * s.files, 0) / allFiles)
+      : 0,
+    summary: {
+      critical: stacks.reduce((n, s) => n + s.summary.critical, 0),
+      warning: stacks.reduce((n, s) => n + s.summary.warning, 0),
+      info: stacks.reduce((n, s) => n + s.summary.info, 0),
+    },
+  }, null, 2));
+}
+
 // ── Pretty output ─────────────────────────────────────────────────────────────
 function printPretty(stackId, results, args) {
   const stack = AUDIT_STACKS[stackId];
@@ -1339,11 +1386,20 @@ async function main() {
     }
     let anyCritical = false;
     const analysed = [];
+    // json must stay one parseable document however many stacks were found,
+    // so aggregate instead of letting each stack print its own.
+    const aggregate = args.output === "json" && ordered.length > 1;
+    const perStack = [];
+
     for (const [id, files] of ordered) {
       analysed.push(...files);
-      const res = await runStack(id, files, args, inputPaths, { label: ordered.length > 1 });
+      const res = await runStack(id, files, args, inputPaths,
+        { label: ordered.length > 1, emit: !aggregate });
       if (res.some((r) => r.result.findings?.some((f) => f.severity === "critical"))) anyCritical = true;
+      if (aggregate) perStack.push([id, res]);
     }
+
+    if (aggregate) printJsonMulti(perStack, args);
 
     // Say what was not looked at. A clean report over half a repo is worse
     // than no report, because it reads as a clean bill of health.
@@ -1383,8 +1439,8 @@ async function main() {
  * Extracted from main so a polyglot repo can run it once per detected stack
  * instead of silently reporting only the winner.
  */
-async function runStack(stackId, allFiles, args, inputPaths, { label = false } = {}) {
-  if (label) {
+async function runStack(stackId, allFiles, args, inputPaths, { label = false, emit = true } = {}) {
+  if (label && args.output === "pretty") {
     const st = AUDIT_STACKS[stackId];
     console.log(`\n${b(`\u2500\u2500 ${st.icon} ${st.name}`)} ${dim(`(${allFiles.length} file${allFiles.length === 1 ? "" : "s"})`)}`);
   }
@@ -1420,13 +1476,17 @@ async function runStack(stackId, allFiles, args, inputPaths, { label = false } =
     results.push({ file, result });
   }
 
-  // Output
-  if (args.output === "json") {
-    printJson(stackId, results, args);
-  } else if (args.output === "summary") {
-    printSummary(stackId, results, args);
-  } else {
-    printPretty(stackId, results, args);
+  // Output. Suppressed when the caller is aggregating several stacks into one
+  // document — printing per stack there produced concatenated JSON that no
+  // parser accepts.
+  if (emit) {
+    if (args.output === "json") {
+      printJson(stackId, results, args);
+    } else if (args.output === "summary") {
+      printSummary(stackId, results, args);
+    } else {
+      printPretty(stackId, results, args);
+    }
   }
 
   // AI Review
