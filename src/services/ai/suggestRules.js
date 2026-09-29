@@ -30,8 +30,16 @@ Rules:
 - The "pattern" field must be a valid JavaScript regex string (no / / delimiters, escaped properly).`;
 
 function sampleFiles(files, maxFiles = 8, maxCharsPerFile = 1500) {
-  // Pick a representative sample: first 4 + random middle
-  const sample = files.slice(0, Math.min(maxFiles, files.length));
+  // Spread the sample across the whole list rather than taking the first N.
+  //
+  // Files arrive in path order, so the first 8 of 701 are usually 8 files from
+  // one folder — and the prompt then asks the model for patterns "across
+  // multiple files" while showing it one corner of the codebase. Walking at an
+  // even stride costs nothing and covers the tree.
+  const n = Math.min(maxFiles, files.length);
+  const stride = files.length / n;
+  const sample = Array.from({ length: n }, (_, i) => files[Math.floor(i * stride)]);
+
   return sample
     .map((f) => {
       const content = (f.content || "").slice(0, maxCharsPerFile);
