@@ -12,6 +12,21 @@ import { AUDIT_STACKS } from "../stacks/definitions.js";
 
 export const RULES_FILENAME = "cqs-rules.json";
 
+/**
+ * A quantifier inside a quantified group — (a+)+, (\d*)* , (?:x+)* — is the
+ * classic catastrophic-backtracking shape. Rules files are committed and
+ * shared, and this same code runs in the browser, so one careless pattern
+ * would freeze a teammate's tab with no error.
+ */
+const NESTED_QUANTIFIER = /\((?:\?:)?[^()]*[+*][^()]*\)\s*[+*]/;
+
+/**
+ * Lines longer than this are not read by humans — minified bundles, inlined
+ * fixtures, base64 blobs. They are also what turns a merely slow pattern into
+ * a hang, so skip them rather than risk it.
+ */
+const MAX_LINE_LENGTH = 2000;
+
 const SEVERITIES = new Set(["critical", "warning", "info"]);
 
 /** Walk up from `startPath` looking for cqs-rules.json. Stops at a .git boundary. */
@@ -63,6 +78,15 @@ export function validateRule(rule, stackId) {
       new RegExp(m.pattern, m.flags ?? "");
     } catch (e) {
       errors.push(`${where}: invalid regex — ${e.message}`);
+    }
+    if (NESTED_QUANTIFIER.test(m.pattern)) {
+      errors.push(
+        `${where}: pattern has a quantifier inside a quantified group ` +
+        `(like "(a+)+"), which can take exponential time on some inputs and ` +
+        `freeze the scan. JavaScript cannot interrupt a running regex, so ` +
+        `this is rejected rather than timed out. Rewrite it without the ` +
+        `inner quantifier — "(a)+" or "a+" usually says the same thing.`,
+      );
     }
   }
 
@@ -133,6 +157,7 @@ export function runFileRules(rules, filename, content, { disabledRuleIds } = {})
     try { test = matcherFor(rule); } catch { continue; }
 
     for (let i = 0; i < lines.length; i++) {
+      if (lines[i].length > MAX_LINE_LENGTH) continue;
       if (!test(lines[i])) continue;
       findings.push({
         ruleId: rule.id,
