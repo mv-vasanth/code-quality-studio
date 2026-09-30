@@ -89,7 +89,7 @@ const dim = (s) => `${C.dim()}${s}${C.reset()}`;
 function parseArgs(argv) {
   const args = {
     paths: [], stack: null, severity: "all", category: null, output: "pretty",
-    help: false, listStacks: false, readReport: null, open: false, noReport: false,
+    help: false, version: false, listStacks: false, readReport: null, open: false, noReport: false,
     rulesFile: null, noRules: false,
     command: null, dryRun: false, commit: false, branch: null, maxFiles: 10, force: false,
     repo: null, pr: null, token: null, threshold: null, maxComments: 30, onlyAdded: false,
@@ -105,6 +105,7 @@ function parseArgs(argv) {
   while (i < argv.length) {
     const a = argv[i];
     if (a === "--help" || a === "-h")        { args.help = true; }
+    else if (a === "--version" || a === "-v" || a === "-V") { args.version = true; }
     else if (a === "--list-stacks")          { args.listStacks = true; }
     else if (a === "--no-color")             { useColor = false; }
     else if ((a === "--stack" || a === "-s") && argv[i+1])  { args.stack = argv[++i]; }
@@ -353,6 +354,7 @@ ${b("OPTIONS")}
       --no-rules                  Ignore any cqs-rules.json found
       --no-color                  Disable ANSI colours
   -h, --help                      Show this help
+  -v, --version                   Print the version and exit
 
 ${b("EXAMPLES")}
   cqs ./tests/
@@ -1349,6 +1351,9 @@ async function runPrReview(args) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
 
+  // Before anything that touches the filesystem: `cqs --version` used to
+  // fall through as a path and start auditing the current directory.
+  if (args.version)    { console.log(CQS_VERSION); process.exit(0); }
   if (args.help)       { printHelp();   process.exit(0); }
   if (args.command === "remediate") { await runRemediate(args); return; }
   if (args.command === "pr-review") { await runPrReview(args); return; }
