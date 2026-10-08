@@ -37,24 +37,47 @@ function findingSection3Block(f) {
   return `<p><strong>3 — Your code vs recommended fix</strong><br><em>${escapeHtml(tie)}</em>${guidance ? `<br>${escapeHtml(guidance)}` : ""}</p>${code}`;
 }
 
+/**
+ * One finding.
+ *
+ * Criticals open; everything else collapsed behind its summary line. A real
+ * suite produces over a thousand findings, and a report where every one is
+ * expanded cannot be skimmed — you scroll past the three that matter looking
+ * for them. <details> does this with no JavaScript, so it still works from a
+ * file:// URL and prints sensibly.
+ *
+ * The teaching text — why it matters, how the fix helps — moves to a title
+ * attribute on the rule id. Valuable the first time you meet a rule, noise
+ * the twentieth.
+ */
 function findingCard(f, index) {
   const s = severityStyle(f.severity);
+  const open = f.severity === "critical" ? " open" : "";
+  const where = `${escapeHtml(f.fileName || "\u2014")}${f.line ? ":" + f.line : ""}`;
+
+  const tip = [f.whyUse, f.howHelps, f.impact].filter(Boolean).join(" \u2014 ");
+  const ruleChip = f.ruleId
+    ? `<code class="rule-chip"${tip ? ` title="${escapeHtml(tip)}"` : ""}>${escapeHtml(f.ruleId)}</code>`
+    : "";
+
   return `
-  <article class="finding" style="background:${s.bg};border-left:4px solid ${s.badge}">
-    <div class="finding-head">
+  <details class="finding"${open} style="background:${s.bg};border-left:4px solid ${s.badge}">
+    <summary>
       <span class="badge" style="background:${s.badge}">${escapeHtml(s.label)}</span>
-      <h3>${index}. ${escapeHtml(f.title)}</h3>
+      <span class="f-title">${index}. ${escapeHtml(f.title)}</span>
+      <span class="f-where">${where}</span>
+      ${ruleChip}
+    </summary>
+    <div class="finding-body">
+      <table class="meta">
+        <tr><th>Category</th><td>${escapeHtml(f.categoryLabel || f.category || "\u2014")}</td></tr>
+      </table>
+      ${f.description ? `<p><strong>Problem</strong><br>${escapeHtml(f.description)}</p>` : ""}
+      ${findingSection2Block(f)}
+      ${findingSection3Block(f)}
+      ${f.reference ? `<p class="ref">\u{1F4D6} ${escapeHtml(f.reference)}</p>` : ""}
     </div>
-    <table class="meta">
-      <tr><th>File</th><td><code>${escapeHtml(f.fileName || "—")}</code>${f.line ? ` · line ${f.line}` : ""}</td></tr>
-      <tr><th>Category</th><td>${escapeHtml(f.categoryLabel || f.category || "—")}</td></tr>
-      ${f.ruleId ? `<tr><th>Rule</th><td><code>${escapeHtml(f.ruleId)}</code></td></tr>` : ""}
-    </table>
-    ${f.description ? `<p><strong>1 — Problem</strong><br>${escapeHtml(f.description)}</p>` : ""}
-    ${findingSection2Block(f)}
-    ${findingSection3Block(f)}
-    ${f.reference ? `<p class="ref">📖 ${escapeHtml(f.reference)}</p>` : ""}
-  </article>`;
+  </details>`;
 }
 
 function sectionBlock(title, inner) {
@@ -197,6 +220,17 @@ export function buildHtmlReport(payload) {
     table.meta { width: 100%; font-size: 0.85rem; margin-bottom: 10px; }
     table.meta th { text-align: left; width: 90px; color: #64748b; font-weight: 600; vertical-align: top; padding: 2px 8px 2px 0; }
     table.meta td { padding: 2px 0; }
+    details.finding > summary { cursor: pointer; list-style: none; display: flex;
+      align-items: baseline; gap: 8px; flex-wrap: wrap; padding: 2px 0; }
+    details.finding > summary::-webkit-details-marker { display: none; }
+    details.finding > summary::before { content: "\u25B8"; color: #94a3b8; font-size: 0.8em; }
+    details.finding[open] > summary::before { content: "\u25BE"; }
+    .f-title { font-weight: 600; }
+    .f-where { color: #64748b; font-size: 0.82rem; font-family: ui-monospace, Menlo, monospace; }
+    .rule-chip { font-size: 0.72rem; color: #475569; background: #f1f5f9; padding: 1px 5px;
+      border-radius: 4px; cursor: help; }
+    .finding-body { padding-top: 6px; }
+    @media print { details.finding { break-inside: avoid; } details.finding > summary::before { content: ""; } }
     .fix-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
     @media (max-width: 640px) { .fix-cols { grid-template-columns: 1fr; } }
     .cat-cols { display: grid; grid-template-columns: 300px 1fr; gap: 18px; align-items: center; }

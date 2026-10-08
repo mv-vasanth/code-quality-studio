@@ -39,7 +39,10 @@ const metaDot = (color) => ({
 });
 
 export default function FindingCard({ f, categories = [], stackId = "playwright", onOpenPractices, onAiFix = null }) {
-  const [open, setOpen] = useState(false);
+  // Criticals open, everything else collapsed. A real suite produces over a
+  // thousand findings; a page where every card is expanded cannot be skimmed,
+  // and you scroll past the three that matter looking for them.
+  const [open, setOpen] = useState(f.severity === "critical");
   const [copied, setCopied] = useState(false);
   const [aiFix, setAiFix] = useState(null);
   const [aiFixLoading, setAiFixLoading] = useState(false);
@@ -63,6 +66,11 @@ export default function FindingCard({ f, categories = [], stackId = "playwright"
     simpleTerms,
     section3LeftHint,
   } = display;
+
+  const ruleTip = [f.whyUse, whyHelp, f.impact]
+    .filter(Boolean)
+    .map((t) => String(t).trim())
+    .join(" — ") || null;
 
   const practice = f.ruleId ? getPracticeByRuleId(stackId, f.ruleId) : null;
   const practiceDetails = practice ? getPracticeDetails(practice.id) : null;
@@ -202,7 +210,17 @@ export default function FindingCard({ f, categories = [], stackId = "playwright"
                 {cat.label}
               </span>
               {f.line != null && <span>· Line {f.line}</span>}
-              {f.ruleId && <span style={{ fontFamily: theme.fontMono }}>· {f.ruleId}</span>}
+              {f.ruleId && (
+                // Why it matters and how the fix helps are valuable the first
+                // time you meet a rule and noise the twentieth — available on
+                // hover rather than occupying the row.
+                <span
+                  style={{ fontFamily: theme.fontMono, cursor: ruleTip ? "help" : "inherit" }}
+                  title={ruleTip || undefined}
+                >
+                  · {f.ruleId}{ruleTip ? " ⓘ" : ""}
+                </span>
+              )}
             </div>
           </div>
 
