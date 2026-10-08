@@ -134,6 +134,24 @@ export function analysePytestApiLocally(filename, content, options = {}) {
       fix: `@pytest.mark.contract\ndef test_user_schema(client):\n    ...\n\n# then: pytest -m contract`,
       line: lineMatches(content, /def\s+test_/)[0] ?? null,
       reference: "https://docs.pytest.org/en/stable/example/markers.html" });
+  // Rule-book gap: a shared downstream makes a test non-hermetic. Fires only
+  // when the file reaches a shared environment and virtualises nothing.
+  {
+    const liveDownstream = lineMatches(content, /(?:jdbc:[a-z]+:\/\/|mongodb(?:\+srv)?:\/\/|amqp:\/\/|https?:\/\/)[^\s"'`]*\b(?:stage|staging|uat|preprod|pre-prod|qa\d?)\b/i);
+    const virtualised = /wiremock|testcontainers|mockserver|msw|nock|localstack|responses\.|requests_mock|cy\.intercept|\bmockttp\b/i.test(content);
+    if (liveDownstream.length && !virtualised) {
+      add({
+        ruleId: "PY-TDM-001", category: "reliability", severity: "warning",
+        title: "Test depends on a shared downstream environment",
+        description: `A staging or QA endpoint is referenced at line ${liveDownstream[0]} with no service virtualisation in the file.`,
+        impact: "Runs fail for reasons unrelated to the code under test \u2014 someone else's deploy or data edit \u2014 and look like real defects.",
+        fix: "Use a Testcontainers instance or a WireMock/MockServer stub, or intercept the call in-test.",
+        line: liveDownstream[0],
+        reference: "https://martinfowler.com/bliki/TestDouble.html",
+      });
+    }
+  }
+
 
   const crit = findings.filter((f) => f.severity === "critical").length;
   return buildAuditResult({

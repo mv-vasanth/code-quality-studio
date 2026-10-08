@@ -518,6 +518,24 @@ export function analyseSeleniumJavaLocally(filename, content, options = {}) {
     crit > 0
       ? `Selenium (Java) scan of ${filename}: ${findings.length} finding(s), ${crit} critical.`
       : `Selenium (Java) scan of ${filename}: ${findings.length} finding(s) from standard rules.`;
+  // Rule-book gap: a shared downstream makes a test non-hermetic. Fires only
+  // when the file reaches a shared environment and virtualises nothing.
+  {
+    const liveDownstream = lineMatches(content, /(?:jdbc:[a-z]+:\/\/|mongodb(?:\+srv)?:\/\/|amqp:\/\/|https?:\/\/)[^\s"'`]*\b(?:stage|staging|uat|preprod|pre-prod|qa\d?)\b/i);
+    const virtualised = /wiremock|testcontainers|mockserver|msw|nock|localstack|responses\.|requests_mock|cy\.intercept|\bmockttp\b/i.test(content);
+    if (liveDownstream.length && !virtualised) {
+      pushFinding(findings, {
+        ruleId: "SEL-J-DATA-001", category: "reliability", severity: "warning",
+        title: "Test depends on a shared downstream environment",
+        description: `A staging or QA endpoint is referenced at line ${liveDownstream[0]} with no service virtualisation in the file.`,
+        impact: "Runs fail for reasons unrelated to the code under test \u2014 someone else's deploy or data edit \u2014 and look like real defects.",
+        fix: "Use a Testcontainers instance or a WireMock/MockServer stub, or intercept the call in-test.",
+        line: liveDownstream[0],
+        reference: "https://martinfowler.com/bliki/TestDouble.html",
+      }, disabledRuleIds);
+    }
+  }
+
 
   return buildAuditResult({
     filename,

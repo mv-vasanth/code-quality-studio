@@ -1,15 +1,21 @@
 {
-  "overallScore": 86,
+  "overallScore": 84,
   "categoryScores": {
     "assertions": 86,
     "structure": 96,
     "security": 54,
-    "reliability": 90,
+    "reliability": 80,
     "validation": 100,
     "performance": 92,
     "coding_standards": 82
   },
   "findings": [
+    {
+      "ruleId": "PY-TDM-001",
+      "severity": "warning",
+      "category": "reliability",
+      "line": 5
+    },
     {
       "ruleId": "PYA-AST-002",
       "severity": "info",

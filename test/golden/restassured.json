@@ -1,10 +1,10 @@
 {
-  "overallScore": 86,
+  "overallScore": 84,
   "categoryScores": {
     "assertions": 82,
     "structure": 100,
     "security": 72,
-    "reliability": 80,
+    "reliability": 70,
     "ci_config": 90,
     "coding_standards": 92
   },
@@ -31,6 +31,12 @@
       "ruleId": "RA-CFG-001",
       "severity": "warning",
       "category": "ci_config",
+      "line": 4
+    },
+    {
+      "ruleId": "RA-DATA-001",
+      "severity": "warning",
+      "category": "reliability",
       "line": 4
     },
     {

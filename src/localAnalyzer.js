@@ -68,6 +68,57 @@ export function analysePlaywrightLocally(filename, content, options = {}) {
   // instead of silently counting as a passing score.
   const skippedRules = [];
 
+  // ── Rule-book gaps: service virtualisation and reporter configuration ────
+  //
+  // Both are config-level concerns, so each is gated on being sure what the
+  // file is. Detecting the *absence* of something is only safe when you know
+  // the file would contain it — a rule that fires on every file lacking a
+  // reporter would flag every spec in the suite.
+
+  const isPwConfig = /defineConfig\s*\(/.test(content) && /@playwright\/test/.test(content);
+
+  // A shared, mutable downstream makes tests non-hermetic. Fire only when the
+  // file reaches a remote environment and shows no sign of virtualising it.
+  const liveDownstream = lineMatches(content,
+    /(?:jdbc:[a-z]+:\/\/|mongodb(?:\+srv)?:\/\/|amqp:\/\/|https?:\/\/)[^\s"'`]*\b(?:stage|staging|uat|preprod|pre-prod|qa\d?)\b/i);
+  const virtualised = /wiremock|testcontainers|mockserver|msw|nock|localstack|page\.route\s*\(|\bmockttp\b/i.test(content);
+  if (liveDownstream.length && !virtualised) {
+    addFindingLocal(findings, {
+      ruleId: "PW-DATA-001", category: "reliability", severity: "warning",
+      title: "Test depends on a shared downstream environment",
+      description: `A staging or QA endpoint is referenced at line ${liveDownstream[0]} with no service virtualisation in the file.`,
+      impact: "Runs fail for reasons unrelated to the code under test \u2014 someone else's deploy, migration, or data edit \u2014 and the failures look like real defects.",
+      fix: `// Virtualise the dependency instead of sharing one\nawait page.route('**/api/orders', (route) =>\n  route.fulfill({ json: ordersFixture }));`,
+      line: liveDownstream[0],
+      reference: "https://playwright.dev/docs/mock",
+    }, disabled);
+  }
+
+  // Reporters: only meaningful in a config, and only if none is configured.
+  if (isPwConfig) {
+    const hasReporter = /reporter\s*:/.test(content);
+    const machineReadable = /\b(junit|json|allure|blob)\b/i.test(content);
+    if (!hasReporter) {
+      addFindingLocal(findings, {
+        ruleId: "PW-CI-004", category: "ci_config", severity: "warning",
+        title: "No reporter configured",
+        description: "This Playwright config sets no `reporter`, so CI gets the default list output and nothing machine-readable.",
+        impact: "No test history, no trend analysis, and no artefact for a CI dashboard to ingest.",
+        fix: `reporter: [['html'], ['junit', { outputFile: 'results.xml' }]],`,
+        reference: "https://playwright.dev/docs/test-reporters",
+      }, disabled);
+    } else if (!machineReadable) {
+      addFindingLocal(findings, {
+        ruleId: "PW-CI-005", category: "ci_config", severity: "info",
+        title: "No machine-readable reporter",
+        description: "A reporter is configured, but none of junit, json, allure or blob \u2014 so the results are readable by people and not by tooling.",
+        impact: "Nothing to feed a dashboard, flake tracker, or test-analytics service.",
+        fix: `reporter: [['html'], ['junit', { outputFile: 'results.xml' }]],`,
+        reference: "https://playwright.dev/docs/test-reporters",
+      }, disabled);
+    }
+  }
+
   const xpathLines = [
     ...lineMatches(content, /xpath\s*=/i),
     ...lineMatches(content, /locator\s*\(\s*['"`]\s*\//),

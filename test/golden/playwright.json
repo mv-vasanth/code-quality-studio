@@ -1,8 +1,8 @@
 {
-  "overallScore": 91,
+  "overallScore": 90,
   "categoryScores": {
     "selectors": 86,
-    "reliability": 54,
+    "reliability": 44,
     "structure": 96,
     "assertions": 96,
     "mobile": 100,
@@ -29,6 +29,12 @@
       "ruleId": "PW-CI-001",
       "severity": "warning",
       "category": "ci_config",
+      "line": 3
+    },
+    {
+      "ruleId": "PW-DATA-001",
+      "severity": "warning",
+      "category": "reliability",
       "line": 3
     },
     {

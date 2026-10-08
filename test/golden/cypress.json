@@ -1,11 +1,11 @@
 {
-  "overallScore": 88,
+  "overallScore": 87,
   "categoryScores": {
     "selectors": 86,
     "commands": 74,
     "assertions": 90,
     "network": 96,
-    "reliability": 78,
+    "reliability": 68,
     "security": 82,
     "performance": 100,
     "coding_standards": 100
@@ -33,6 +33,12 @@
       "ruleId": "CY-CMD-006",
       "severity": "info",
       "category": "commands",
+      "line": 3
+    },
+    {
+      "ruleId": "CY-DATA-001",
+      "severity": "warning",
+      "category": "reliability",
       "line": 3
     },
     {

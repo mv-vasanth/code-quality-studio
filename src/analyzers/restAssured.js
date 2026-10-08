@@ -131,6 +131,24 @@ export function analyseRestAssuredLocally(filename, content, options = {}) {
       reference: "https://junit.org/junit5/docs/current/user-guide/#writing-tests-tagging-and-filtering",
     });
   }
+  // Rule-book gap: a shared downstream makes a test non-hermetic. Fires only
+  // when the file reaches a shared environment and virtualises nothing.
+  {
+    const liveDownstream = lineMatches(content, /(?:jdbc:[a-z]+:\/\/|mongodb(?:\+srv)?:\/\/|amqp:\/\/|https?:\/\/)[^\s"'`]*\b(?:stage|staging|uat|preprod|pre-prod|qa\d?)\b/i);
+    const virtualised = /wiremock|testcontainers|mockserver|msw|nock|localstack|responses\.|requests_mock|cy\.intercept|\bmockttp\b/i.test(content);
+    if (liveDownstream.length && !virtualised) {
+      add({
+        ruleId: "RA-DATA-001", category: "reliability", severity: "warning",
+        title: "Test depends on a shared downstream environment",
+        description: `A staging or QA endpoint is referenced at line ${liveDownstream[0]} with no service virtualisation in the file.`,
+        impact: "Runs fail for reasons unrelated to the code under test \u2014 someone else's deploy or data edit \u2014 and look like real defects.",
+        fix: "Use a Testcontainers instance or a WireMock/MockServer stub, or intercept the call in-test.",
+        line: liveDownstream[0],
+        reference: "https://martinfowler.com/bliki/TestDouble.html",
+      });
+    }
+  }
+
 
   const crit = findings.filter((f) => f.severity === "critical").length;
   return buildAuditResult({
