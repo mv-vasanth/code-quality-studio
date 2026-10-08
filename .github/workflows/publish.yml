@@ -42,17 +42,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # No registry-url here, deliberately. setup-node's registry-url writes an
+      # .npmrc expecting NODE_AUTH_TOKEN, and npm then uses that empty token
+      # instead of the OIDC flow — which surfaces as a bare 404 from the
+      # registry with nothing to say auth was the problem.
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org
 
       # Trusted publishing needs npm >= 11.5.1. The version bundled with the
       # runner's Node is usually newer, but pin the floor rather than hope.
       - name: Ensure npm supports trusted publishing
         run: |
           npm install -g npm@latest
-          npm --version
+          echo "npm $(npm --version)  (trusted publishing needs >= 11.5.1)"
+          # If these are empty the runner cannot mint an OIDC token, and the
+          # publish will fail as a 404 that looks like a missing package.
+          echo "OIDC request URL present: ${ACTIONS_ID_TOKEN_REQUEST_URL:+yes}${ACTIONS_ID_TOKEN_REQUEST_URL:-NO}"
+          echo "NODE_AUTH_TOKEN set (should be empty): ${NODE_AUTH_TOKEN:+yes}${NODE_AUTH_TOKEN:-no}"
+          test -f ~/.npmrc && { echo "~/.npmrc exists:"; sed 's/=.*/=<redacted>/' ~/.npmrc; } || echo "~/.npmrc absent (expected for OIDC)"
 
       # The CLI inlines the built web app so `cqs --open` can emit it offline.
       # Without this the app is missing and reports degrade to a flat document,
