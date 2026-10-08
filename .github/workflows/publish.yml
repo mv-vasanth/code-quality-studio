@@ -113,7 +113,36 @@ jobs:
           npm pack
           tar -tzf "cqs-audit-$(node -p "require('./package.json').version").tgz"
 
+      # A prerelease version (2.7.0-rc.1) publishes under the `next` dist-tag,
+      # so `npm i -g cqs-audit` is untouched and only testers who ask for
+      # @next get it. The product is live; a bad release should not reach
+      # people who did not opt in.
+      - name: Decide the dist-tag
+        id: disttag
+        working-directory: cli
+        run: |
+          set -euo pipefail
+          V="$(node -p "require('./package.json').version")"
+          case "$V" in
+            *-*) TAG=next ;;   # 2.7.0-rc.1, 2.7.0-beta.2 …
+            *)   TAG=latest ;;
+          esac
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Publishing $V under dist-tag: $TAG"
+
       - name: Publish
         if: ${{ !inputs.dry_run }}
         working-directory: cli
-        run: npm publish
+        run: npm publish --tag ${{ steps.disttag.outputs.tag }}
+
+      - name: How to test this release
+        if: ${{ !inputs.dry_run }}
+        run: |
+          if [ "${{ steps.disttag.outputs.tag }}" = "next" ]; then
+            echo "Prerelease published. Test it with:"
+            echo "  npm install -g cqs-audit@next"
+            echo "Promote it to latest when happy:"
+            echo "  npm dist-tag add cqs-audit@$(node -p "require('./cli/package.json').version") latest"
+          else
+            echo "Published to latest: npm install -g cqs-audit@latest"
+          fi
