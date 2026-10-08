@@ -1,5 +1,34 @@
 # Releasing
 
+> **First release of `cqz-audit` — read this before anything else.**
+>
+> npm configures trusted publishing **per package**, and a package that does not
+> exist yet has no settings page to configure. So the very first `cqz-audit`
+> publish cannot use OIDC: pushing a tag will run the workflow and fail at the
+> publish step with a 404 that reads like a missing package.
+>
+> Do the first one by hand, from `cli/`, with a **granular access token** scoped
+> to publish `cqz-audit` (a granular token is not a 2FA bypass, so it works with
+> a security-key-only account):
+>
+> ```bash
+> cd cli && npm run build:all && npm publish --tag latest
+> ```
+>
+> Then add the Trusted Publisher on npmjs.com — `cqz-audit` → Settings →
+> Trusted Publisher → GitHub Actions, owner `mv-vasanth`, repository
+> `code-quality-studio`, workflow `publish.yml`, environment blank — and every
+> release after that is just a tag. Same again for `cqz-ai` with
+> `publish-ai.yml`.
+>
+> `cqs-audit` stays at 2.5.0 and is not published again. Deprecate it so people
+> arriving from old links are pointed at the new name, but **do not unpublish**:
+>
+> ```bash
+> npm deprecate cqs-audit "Renamed to cqz-audit (Code Quality Zone) — install that instead"
+> ```
+
+
 The package is live, so the default path puts changes in front of testers
 before they reach anyone running `npm install -g cqz-audit`.
 
@@ -22,8 +51,8 @@ Install it somewhere clean and use it like a stranger would:
 
 ```bash
 npm install --prefix /tmp/trycqz ./cqz-audit-X.Y.Z.tgz
-/tmp/trycqs/node_modules/cqz-audit/dist/cqz.js --version
-cd ~/your-suite && /tmp/trycqs/node_modules/cqz-audit/dist/cqz.js ./tests
+/tmp/trycqz/node_modules/cqz-audit/dist/cqz.js --version
+cd ~/your-suite && /tmp/trycqz/node_modules/cqz-audit/dist/cqz.js ./tests
 ```
 
 Hand that `.tgz` to a colleague and they can do the same — no registry
