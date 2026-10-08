@@ -32,6 +32,8 @@ import LabeledScoreChips from "../components/files/LabeledScoreChips.jsx";
 import FileCategoryScores from "../components/files/FileCategoryScores.jsx";
 import FilesTabGuide from "../components/files/FilesTabGuide.jsx";
 import WorkspaceSessionBar from "../components/files/WorkspaceSessionBar.jsx";
+import LocalServerPanel from "../components/files/LocalServerPanel.jsx";
+import { toWorkspaceFiles } from "../services/localServerClient.js";
 import RulesReviewTab from "../components/rules/RulesReviewTab.jsx";
 import {
   saveWorkspace,
@@ -166,6 +168,19 @@ export default function PlaywrightQualityStudio() {
     () => (files.length ? suggestStackForFiles(files, stackId) : null),
     [files, stackId],
   );
+
+  // Results from `cqs serve` arrive already analysed, so they slot straight
+  // into the same state the file pickers populate. No content comes back —
+  // the server read the files, the browser never saw them — so anything
+  // needing source stays disabled for these rather than failing later.
+  const handleServerResults = useCallback((res) => {
+    const incoming = toWorkspaceFiles(res);
+    if (!incoming.length) return;
+    setFiles(incoming);
+    setSelectedFile(null);
+    setFolderHint(incoming[0]?.name?.split("/").slice(0, -1).join("/") || "");
+    setActiveTab("files");
+  }, []);
 
   const changeStack = useCallback((nextId) => {
     if (nextId === stackId) return;
@@ -1015,6 +1030,12 @@ export default function PlaywrightQualityStudio() {
           {/* ── FILES TAB ── */}
           {activeTab === "files" && (
             <div>
+              <LocalServerPanel
+                stackId={stackId}
+                offline={offlineReport}
+                onResults={handleServerResults}
+              />
+
               {stackMismatch && !offlineReport && (
                 <div style={{
                   display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
