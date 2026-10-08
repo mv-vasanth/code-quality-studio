@@ -252,9 +252,30 @@ Validate and try rules before committing them with `cqs_validate_rules` and
 
 ---
 
-## Further reading
+## Documentation
 
-Shipped with the source:
+Shipped inside the package, so they are available offline after install — look
+in `node_modules/cqs-audit/docs/`, or read them on GitHub:
 
-- `docs/MCP_GUIDE.md` — using cqs from an AI assistant, from scratch
-- `docs/ARCHITECTURE_OVERVIEW.md` — how the analysis engine works
+| Guide | Covers |
+|---|---|
+| [MCP_GUIDE.md](https://github.com/mv-vasanth/code-quality-studio/blob/main/docs/MCP_GUIDE.md) | Driving cqs from an AI assistant, written from scratch |
+| [CURSOR_SETUP.md](https://github.com/mv-vasanth/code-quality-studio/blob/main/docs/CURSOR_SETUP.md) | Step-by-step Cursor setup, with the nvm and PATH traps |
+| [SCORING.md](https://github.com/mv-vasanth/code-quality-studio/blob/main/docs/SCORING.md) | How scores and category scores are calculated |
+| [MULTI_STACK.md](https://github.com/mv-vasanth/code-quality-studio/blob/main/docs/MULTI_STACK.md) | How files are routed to stacks in a polyglot repo |
+| [CUSTOM_RULES_PROPOSAL.md](https://github.com/mv-vasanth/code-quality-studio/blob/main/docs/CUSTOM_RULES_PROPOSAL.md) | Writing and testing your own rules |
+| [ARCHITECTURE_OVERVIEW.md](https://github.com/mv-vasanth/code-quality-studio/blob/main/docs/ARCHITECTURE_OVERVIEW.md) | How the analysis engine works, and its limits |
+
+A longer handbook (32 pages, PDF) lives in the repository under `docs/` — it is
+not shipped in the package to keep the install small.
+
+To find the docs after installing:
+
+```bash
+ls "$(npm root -g)/cqs-audit/docs"
+```
+
+## Links
+
+- [Repository](https://github.com/mv-vasanth/code-quality-studio)
+- [Issues](https://github.com/mv-vasanth/code-quality-studio/issues)

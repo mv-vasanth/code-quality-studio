@@ -1,6 +1,6 @@
 {
   "name": "cqs-audit",
-  "version": "2.3.3",
+  "version": "2.3.4",
   "description": "Code Quality Studio \u2014 CLI for auditing test files (Playwright, Cypress, Selenium, Appium, TOSCA and more)",
   "repository": {
     "type": "git",
@@ -35,8 +35,9 @@
   "files": [
     "LICENSE",
     "README.md",
-    "dist/cqs-mcp.js",
-    "dist/cqs.js"
+    "docs/",
+    "dist/cqs.js",
+    "dist/cqs-mcp.js"
   ],
   "author": "Code Quality Studio",
   "license": "SEE LICENSE IN LICENSE",
