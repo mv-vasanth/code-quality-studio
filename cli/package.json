@@ -1,6 +1,6 @@
 {
   "name": "cqs-audit",
-  "version": "2.6.0-rc.1",
+  "version": "2.6.0-rc.2",
   "description": "Code Quality Studio — CLI for auditing test files (Playwright, Cypress, Selenium, Appium, TOSCA and more)",
   "repository": {
     "type": "git",
