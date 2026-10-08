@@ -56,15 +56,14 @@ Everything below follows from that.
 
 This is the part no commit can do.
 
-**1. The first `cqz-audit` publish cannot use trusted publishing.** npm configures a Trusted
-Publisher per package, and a package that does not exist has no settings page. Options, best
-first:
+**1. The first publish of each package cannot use trusted publishing.** npm configures a
+Trusted Publisher per package, and a package that does not exist has no settings page. Both
+workflows carry a one-time, opt-in **bootstrap** path for this: add a granular access token as
+the `NPM_TOKEN` repository secret, run the workflow with `bootstrap` ticked, then delete the
+secret. Full click-path in [RELEASING.md](RELEASING.md).
 
-- `npm publish` from a machine logged in with a **granular access token** scoped to publish
-  `cqz-audit`. Works with a security-key-only account, because a granular token is not a 2FA
-  bypass.
-- Or publish a `0.0.0` placeholder by whatever means works, configure the Trusted Publisher,
-  then let CI take over.
+A local `npm publish` is the alternative, but it fails with `EOTP` on a security-key-only
+account unless you pass a granular token — which is the same token, handled in a riskier place.
 
 **2. Add the Trusted Publisher** — npmjs.com → `cqz-audit` → Settings → Trusted Publisher:
 

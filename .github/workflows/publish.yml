@@ -36,6 +36,10 @@ on:
         description: "Pack and verify without publishing"
         type: boolean
         default: false
+      bootstrap:
+        description: "FIRST PUBLISH ONLY — authenticate with the NPM_TOKEN secret instead of OIDC"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -135,10 +139,49 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Publishing $V under dist-tag: $TAG"
 
-      - name: Publish
-        if: ${{ !inputs.dry_run }}
+      # ── Publishing, two ways ────────────────────────────────────────────
+      #
+      # Normally OIDC: npm verifies the publish came from this repo and this
+      # workflow, with a short-lived token that is never stored.
+      #
+      # But trusted publishing cannot create a package that does not exist
+      # yet — there is no settings page to configure a publisher on. So the
+      # FIRST publish of cqz-audit needs a token, once. That path is opt-in
+      # via the `bootstrap` input so it can never be taken by accident, and
+      # the two steps are separate because NODE_AUTH_TOKEN being set at all
+      # stops npm from starting the OIDC exchange.
+      - name: Check the bootstrap secret is present
+        if: ${{ inputs.bootstrap && !inputs.dry_run }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "${NPM_TOKEN}" ]; then
+            echo "bootstrap was requested but the NPM_TOKEN secret is not set." >&2
+            echo "Add it under Settings -> Secrets and variables -> Actions," >&2
+            echo "run this once, then DELETE it and use trusted publishing." >&2
+            exit 1
+          fi
+          echo "NPM_TOKEN is present; publishing with it instead of OIDC."
+
+      - name: Publish (bootstrap, with token)
+        if: ${{ inputs.bootstrap && !inputs.dry_run }}
+        working-directory: cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --tag ${{ steps.disttag.outputs.tag }}
+
+      - name: Publish (trusted publishing)
+        if: ${{ !inputs.bootstrap && !inputs.dry_run }}
         working-directory: cli
         run: npm publish --tag ${{ steps.disttag.outputs.tag }}
+
+      - name: Remind me to turn the bootstrap off
+        if: ${{ inputs.bootstrap && !inputs.dry_run }}
+        run: |
+          echo "::warning::cqz-audit now exists. Add its Trusted Publisher"\
+               " (GitHub Actions / mv-vasanth / code-quality-studio / publish.yml),"\
+               " then DELETE the NPM_TOKEN secret. Every release after this"\
+               " one should go out over OIDC with no token anywhere."
 
       - name: How to test this release
         if: ${{ !inputs.dry_run }}
