@@ -1,7 +1,7 @@
 {
   "name": "cqz-ai",
   "version": "0.1.0",
-  "description": "Offline AI layer for Code Quality Zone \u2014 a ~100 MB local classifier that judges the fuzzy half of test quality. No API key, no network at run time.",
+  "description": "Offline AI layer for Code Quality Zone \u2014 a ~104 MB local classifier that judges the fuzzy half of test quality (fragile selectors, test scope, assertion strength). No API key, no network at run time.",
   "type": "module",
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
@@ -38,5 +38,14 @@
   ],
   "devDependencies": {
     "esbuild": "^0.25.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mv-vasanth/code-quality-studio.git",
+    "directory": "ai"
+  },
+  "homepage": "https://github.com/mv-vasanth/code-quality-studio/blob/main/ai/README.md",
+  "bugs": {
+    "url": "https://github.com/mv-vasanth/code-quality-studio/issues"
   }
 }

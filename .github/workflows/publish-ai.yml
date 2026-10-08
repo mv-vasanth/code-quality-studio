@@ -121,9 +121,11 @@ jobs:
           V="$(node -p "require('./package.json').version")"
           tar -tzf "${NAME}-${V}.tgz"
 
-      # 0.x is still a prerelease in spirit: publish under `next` until the
-      # version reaches 1.0.0, so nobody gets it by typing `npm i -g <name>`
-      # before it has been used in anger.
+      # Only genuine prereleases go to `next`. 0.x does NOT: the studio's
+      # add-on manager installs this by bare name, which resolves `latest`, so
+      # a package whose only tag is `next` makes the Install button fail with
+      # "no matching version". Being opt-in is already handled by this being a
+      # separate package you have to choose to install.
       - name: Decide the dist-tag
         id: disttag
         working-directory: ai
@@ -132,7 +134,6 @@ jobs:
           V="$(node -p "require('./package.json').version")"
           case "$V" in
             *-*)  TAG=next ;;      # 0.2.0-rc.1
-            0.*)  TAG=next ;;      # 0.x — opt-in only
             *)    TAG=latest ;;
           esac
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
