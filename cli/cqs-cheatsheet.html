@@ -216,7 +216,7 @@
     <div class="verify-box">
       ✅ Verify: <code>cqs --version</code>
     </div>
-    <div class="badge">v2.4.0</div>
+    <div class="badge">v2.6.0</div>
   </div>
 </div>
 <div class="section-bar">
@@ -455,6 +455,30 @@
     </div>
   </div>
 <div class="card theme-amber">
+<div class="card theme-slate">
+    <div class="card-head">🔍 Advanced checks — auditing against a rule book</div>
+    <div class="card-body" style="padding:0">
+      <table>
+        <thead><tr><th>What you want to check</th><th>Command</th></tr></thead>
+        <tbody>
+          <tr><td>No hard waits / deterministic waits</td><td><code>cqs ./tests/ --category reliability</code></td></tr>
+          <tr><td>Page Object separation, no shared state</td><td><code>cqs ./tests/ --category structure</code></td></tr>
+          <tr><td>Assertion quality (no bare truthy checks)</td><td><code>cqs ./tests/ --category assertions</code></td></tr>
+          <tr><td>Locator strategy</td><td><code>cqs ./tests/ --category selectors</code></td></tr>
+          <tr><td>Secrets, TLS, credentials</td><td><code>cqs ./tests/ --category security</code></td></tr>
+          <tr><td>baseURL, retries, tracing, <code>.only</code></td><td><code>cqs ./tests/ --category ci_config</code></td></tr>
+          <tr><td>Duplicated tests and setup blocks</td><td><code>cqs ./tests/</code> — reported as <code>DUP-*</code></td></tr>
+          <tr><td>Only what this branch changed</td><td><code>cqs --changed --baseline .cqs-baseline.json</code></td></tr>
+        </tbody>
+      </table>
+      <div style="padding:8px 12px;font-size:10px;color:#475569">
+        Team standards a built-in rule does not cover go in <strong>cqs-rules.json</strong> at the repo root —
+        for example retries capped at 1, quarantined tests needing a ticket, or no staging URLs in tests.
+        Validate one before committing it: ask your assistant <em>“would this rule catch anything in ./tests?”</em>
+      </div>
+    </div>
+  </div>
+
     <div class="card-head">🎯 Output Formats &amp; Advanced</div>
     <div class="card-body">
       <div style="margin-bottom:8px">
@@ -691,7 +715,7 @@
 </div>
 
 <div class="footer">
-  cqs v2.4.0 &nbsp;·&nbsp; <strong>npm install -g cqs-audit</strong> &nbsp;·&nbsp; AI: anthropic | openai | bedrock | vertex &nbsp;·&nbsp; MCP: cqs_audit | cqs_report | cqs_list_stacks | cqs_list_rules | cqs_validate_rules | cqs_test_rule | cqs_read_report &nbsp;·&nbsp; Skill: /cqs &nbsp;·&nbsp; Agents: remediate | pr-review &nbsp;·&nbsp; Packaging → <strong>cqs-admin-cheatsheet.pdf</strong>
+  cqs v2.6.0 &nbsp;·&nbsp; <strong>npm install -g cqs-audit</strong> &nbsp;·&nbsp; AI: anthropic | openai | bedrock | vertex &nbsp;·&nbsp; MCP: cqs_audit | cqs_report | cqs_list_stacks | cqs_list_rules | cqs_validate_rules | cqs_test_rule | cqs_read_report &nbsp;·&nbsp; Skill: /cqs &nbsp;·&nbsp; Agents: remediate | pr-review &nbsp;·&nbsp; Packaging → <strong>cqs-admin-cheatsheet.pdf</strong>
 </div>
 </div>
 

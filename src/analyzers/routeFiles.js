@@ -48,9 +48,11 @@ const STACK_MARKERS = {
 export function classifyFile(file, readHead) {
   const name = basename(file);
 
-  // A baseline records findings; it is not source. Left in, it is picked up
-  // as a Postman collection and reports findings about itself.
+  // cqs's own files describe findings and rules; they are not source. Left
+  // in, a baseline is picked up as a Postman collection and reports findings
+  // about itself, and a rules file gets flagged for not being a collection.
   if (/(^|[.-])cqs-baseline\.json$/i.test(name)) return null;
+  if (/^cqs-rules\.json$/i.test(name)) return null;
 
   // What a file imports beats what it is called.
   const head = readHead ? readHead(file) : "";

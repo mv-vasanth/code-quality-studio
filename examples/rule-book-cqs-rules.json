@@ -1,0 +1,47 @@
+{
+  "rules": [
+    {
+      "id": "RB-DATA-001",
+      "stacks": "*",
+      "category": "reliability",
+      "severity": "warning",
+      "title": "Live downstream dependency without virtualisation",
+      "match": {
+        "type": "regex",
+        "pattern": "(jdbc:|https?://)[^\"'\\s]*(stage|staging|uat|preprod)",
+        "flags": "i"
+      },
+      "message": "Rule book \u00a72: tests must use WireMock or Testcontainers, not shared staging.",
+      "fix": "Point at a Testcontainers instance or a WireMock stub.",
+      "reportAll": true
+    },
+    {
+      "id": "RB-FLAKE-001",
+      "stacks": "*",
+      "category": "ci_config",
+      "severity": "warning",
+      "title": "Retries above the agreed cap of 1",
+      "match": {
+        "type": "regex",
+        "pattern": "retries\\s*[:=]\\s*([2-9]|[1-9][0-9])"
+      },
+      "message": "Rule book \u00a73: retries are capped at 1; more hides real flakiness.",
+      "fix": "retries: 1 \u2014 quarantine anything that still fails."
+    },
+    {
+      "id": "RB-QUAR-001",
+      "stacks": "*",
+      "category": "coding_standards",
+      "severity": "critical",
+      "title": "Quarantined test without a ticket reference",
+      "match": {
+        "type": "regex",
+        "pattern": "(@Quarantine|@Ignore|test\\.skip|it\\.skip|\\.fixme)(?![^\\n]*(JIRA|[A-Z]{2,}-\\d+|https?://))",
+        "flags": "i"
+      },
+      "message": "Rule book \u00a74: a quarantined test needs a tracking ticket, or it is never coming back.",
+      "fix": "test.skip('...', ...) // PROJ-1234 \u2014 flaky under load",
+      "reportAll": true
+    }
+  ]
+}
