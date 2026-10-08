@@ -4,8 +4,16 @@
     {
       "name": "cqs-web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 5173
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 4001
+    },
+    {
+      "name": "cqs-serve",
+      "port": 4000,
+      "url": "http://localhost:4000"
     }
   ]
 }

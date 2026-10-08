@@ -11,6 +11,15 @@ const c = {
   dangerBorder: "#fca5a5",
 };
 
+/**
+ * The restored-session strip.
+ *
+ * Previously five lines of prose plus a wrapped absolute path plus four
+ * full-width buttons — the tallest thing in the sidebar, for something you
+ * read once. The storage explanation is now on hover, the path is truncated
+ * from the left (the tail is the part you recognise), and the actions are
+ * icons on one row.
+ */
 export default function WorkspaceSessionBar({
   folderHint,
   fileCount,
@@ -31,37 +40,63 @@ export default function WorkspaceSessionBar({
     <div
       style={{
         marginBottom: 10,
-        padding: "10px 12px",
-        borderRadius: 8,
+        padding: "9px 10px",
+        borderRadius: 10,
         background: c.primaryMuted,
         border: `1px solid ${c.primaryBorder}`,
         fontSize: 11.5,
         color: c.textSecondary,
-        lineHeight: 1.45,
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,.6)",
       }}
     >
-      <div style={{ fontWeight: 700, color: c.primaryHover, marginBottom: 4 }}>
-        Saved workspace — re-run anytime (no re-upload)
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#14b8a6", flexShrink: 0 }} />
+        <strong style={{ fontSize: 11.5, color: c.primaryHover }}>
+          {fileCount} file{fileCount === 1 ? "" : "s"} restored
+        </strong>
+        <span
+          title={`Files and results are stored in this browser (IndexedDB), so refreshing restores them and nothing is re-uploaded.${
+            savedLabel ? `\n\nLast saved ${savedLabel}.` : ""
+          }\n\nTo pick up edits made on disk, use "Add folder" again.`}
+          style={{ marginLeft: "auto", cursor: "help", color: c.textMuted, fontSize: 11 }}
+        >
+          ⓘ
+        </span>
       </div>
-      <div>
-        <strong>{fileCount}</strong> file{fileCount === 1 ? "" : "s"}
-        {folderHint ? (
-          <>
-            {" "}
-            · <code style={{ fontSize: 10.5 }}>{folderHint}</code>
-          </>
-        ) : null}
-        {savedLabel ? <span style={{ color: c.textMuted }}> · last saved {savedLabel}</span> : null}
-      </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+
+      {folderHint && (
+        // direction:rtl truncates at the *start*, keeping the folder you
+        // actually recognise instead of a long common prefix.
+        <div
+          title={folderHint}
+          style={{
+            fontFamily: "ui-monospace, Menlo, monospace",
+            fontSize: 10,
+            color: c.textMuted,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            direction: "rtl",
+            textAlign: "left",
+            marginBottom: 7,
+          }}
+        >
+          {folderHint}
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 5 }}>
         <button
           type="button"
           disabled={busy}
           onClick={onRerunRules}
+          title="Re-run the standard rules over every restored file"
+          className="cqs-card cqs-lift cqs-press"
           style={{
+            flex: 1,
             fontSize: 11,
-            fontWeight: 600,
-            padding: "5px 10px",
+            fontWeight: 700,
+            padding: "5px 8px",
             borderRadius: 6,
             border: `1px solid ${c.primaryBorder}`,
             background: c.surface,
@@ -69,36 +104,32 @@ export default function WorkspaceSessionBar({
             cursor: busy ? "not-allowed" : "pointer",
           }}
         >
-          ↺ Re-run rules
+          ↺ Re-run
         </button>
-        <button type="button" onClick={onAddFiles} style={ghostBtn}>
-          + Add files
-        </button>
-        <button type="button" onClick={onAddFolder} style={ghostBtn}>
-          + Add folder
-        </button>
+        <button type="button" onClick={onAddFiles} title="Add individual files" style={iconBtn}>+ Files</button>
+        <button type="button" onClick={onAddFolder} title="Add a folder (also refreshes edits on disk)" style={iconBtn}>+ Folder</button>
         <button
           type="button"
           onClick={onClear}
-          style={{ ...ghostBtn, color: c.danger, borderColor: c.dangerBorder }}
+          title="Forget this saved workspace"
+          style={{ ...iconBtn, color: c.danger, borderColor: c.dangerBorder, flex: "0 0 auto", padding: "5px 7px" }}
         >
-          Clear saved workspace
+          🗑
         </button>
-      </div>
-      <div style={{ marginTop: 6, fontSize: 10.5, color: c.textMuted }}>
-        Files and results are stored in this browser (IndexedDB). Refreshing the page restores them. To pick up edits on disk, use Add folder again.
       </div>
     </div>
   );
 }
 
-const ghostBtn = {
+const iconBtn = {
+  flex: 1,
   fontSize: 11,
   fontWeight: 600,
-  padding: "5px 10px",
+  padding: "5px 6px",
   borderRadius: 6,
   border: `1px solid ${c.border}`,
   background: c.surface,
   color: c.textSecondary,
   cursor: "pointer",
+  whiteSpace: "nowrap",
 };

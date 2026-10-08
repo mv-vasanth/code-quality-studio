@@ -59,7 +59,13 @@
   .col-span-2 { grid-column: span 2; }
 
   /* ── PAGE FLOW ── */
-  .page { height: 186mm; display: flex; flex-direction: column; page-break-after: always; break-after: page; }
+  /* min-height, not height: a section taller than one page used to overflow
+     its box and print *on top of* the next section rather than flowing onto
+     a new page. The break-after still starts each section on a fresh page. */
+  /* display:block, not flex. Chrome will not paginate inside a flex
+     container, so the whole grid jumped to the next page and left the
+     section bar alone on an otherwise empty one. */
+  .page { page-break-after: always; break-after: page; }
   .page:last-of-type { page-break-after: auto; break-after: auto; }
   .section-bar {
     display: flex;
@@ -258,6 +264,7 @@
     </div>
   </div>
 
+
 <div class="card theme-blue">
     <div class="card-head">⚡ Core Commands</div>
     <div class="card-body" style="padding:0">
@@ -281,6 +288,9 @@
           <tr><td><code>cqs --changed</code></td><td class="desc">Audit only files changed vs <code>origin/main</code></td></tr>
           <tr><td><code>cqs --changed --since develop</code></td><td class="desc">Choose the base ref to compare against</td></tr>
           <tr><td><code>cqs --version</code></td><td class="desc">Print the installed version (also <code>-v</code>)</td></tr>
+          <tr><td><code>cqs serve --open</code></td><td class="desc">Start the local server <strong>and</strong> open the studio, already signed in</td></tr>
+          <tr><td><code>cqs serve --port 4005</code></td><td class="desc">Use another port when 4000 is taken</td></tr>
+          <tr><td><code>cqs serve --allow-write</code></td><td class="desc">Permit the agents to edit files — off by default</td></tr>
           <tr><td><code>cqs mcp-config cursor</code></td><td class="desc">Print ready-to-paste MCP config (or <code>claude</code>)</td></tr>
           <tr><td><code>cqs --help</code></td><td class="desc">Show help text and version number</td></tr>
         </tbody>
@@ -322,6 +332,7 @@
       </div>
     </div>
   </div>
+
 </div>
 </div>
 
@@ -714,8 +725,93 @@
 
 </div>
 
+<!-- ══════════ PAGE 6 — LOCAL SERVER & OFFLINE AI ══════════ -->
+<div class="page">
+<div class="section-bar">
+  <h2>6 · Local server &amp; offline AI</h2>
+  <span class="step">Run the studio on your machine · add an AI that needs no key</span>
+</div>
+<div class="grid">
+<div class="card" style="border-top:3px solid #0d9488;background:#f8fffe;">
+    <div class="card-head" style="background:#0d9488;color:#fff;">🖥️ cqs serve — the studio on your machine</div>
+    <div class="card-body">
+      <div style="font-size:10px;color:#475569;margin-bottom:5px">
+        One command starts a local server <em>and</em> the full web studio it serves. The page arrives
+        already signed in — no token to copy, no second port.
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:3px">START · STOP</div>
+      <div class="code-block" style="font-size:9.5px">
+        <span class="cmt"># start it in the suite you want to scan</span><br>
+        <span class="cmd">cd ~/my-project &amp;&amp; cqs serve --open</span><br>
+        <span class="cmt"># → Open  http://127.0.0.1:4000</span><br>
+        <br>
+        <span class="cmt"># stop: Ctrl-C. still busy? an older one is up:</span><br>
+        <span class="cmd">pkill -f "cqs serve"</span>
+      </div>
+      <div style="font-size:9.5px;color:#475569;margin:3px 0 5px">
+        Omit <code style="background:#f1f5f9;padding:0 3px;border-radius:3px">--open</code> for the API alone (SSH, <code style="background:#f1f5f9;padding:0 3px;border-radius:3px">curl</code>).
+        A second one on a taken port exits with <code style="background:#f1f5f9;padding:0 3px;border-radius:3px">EADDRINUSE</code> instead of
+        stealing it — so a stale-looking banner means you are talking to the <em>old</em> one.
+        <code style="background:#f1f5f9;padding:0 3px;border-radius:3px">--port 4005</code> runs two at once.
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:0 0 3px">WHICH PATHS CAN IT SCAN?</div>
+      <table style="font-size:9.5px">
+        <tbody>
+          <tr><td style="white-space:nowrap"><code>./tests</code></td><td class="desc">Relative to <strong>where you started serve</strong> — not the repo, not the browser. Wrong folder → <code>Path not found</code>, which prints the folder it resolved from.</td></tr>
+          <tr><td style="white-space:nowrap"><code>/abs/path</code></td><td class="desc"><strong>Any directory on the machine.</strong> No confinement to the start folder, so one server can audit several repos.</td></tr>
+          <tr><td style="white-space:nowrap"><code>~/tests</code></td><td class="desc"><strong>Will not work</strong> — your shell expands <code>~</code>, the API never sees a shell. Type the full path.</td></tr>
+        </tbody>
+      </table>
+
+      <div style="font-size:9.5px;color:#475569;margin-top:5px">
+        <strong>Safe by default:</strong> bound to 127.0.0.1 only · random token per run on every request
+        except <code style="background:#f1f5f9;padding:0 3px;border-radius:3px">/health</code> · origin allowlist ·
+        cannot write without <code style="background:#f1f5f9;padding:0 3px;border-radius:3px">--allow-write</code>.
+      </div>
+    </div>
+  </div>
+<div class="card" style="border-top:3px solid #7c3aed;background:#faf5ff;">
+    <div class="card-head" style="background:#7c3aed;color:#fff;">🧩 Offline AI — the cqs-ai add-on</div>
+    <div class="card-body">
+      <div style="font-size:10px;color:#475569;margin-bottom:5px">
+        A ~104 MB classifier that runs on your machine. <strong>No API key, no network.</strong>
+        A separate package on purpose — if it fails to install, <code style="background:#f1f5f9;padding:0 3px;border-radius:3px">cqs</code> is unaffected.
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:3px">FROM THE STUDIO (EASIEST)</div>
+      <div class="code-block" style="font-size:9.5px">
+        <span class="cmd">cqs serve --open</span><br>
+        <span class="cmt"># Files → Add-ons → Local AI → Install</span><br>
+        <span class="cmt"># then ▶ Run on N files</span>
+      </div>
+      <div style="font-size:9.5px;color:#475569;margin:3px 0 5px">
+        Installs to <code style="background:#f1f5f9;padding:0 3px;border-radius:3px">~/.cqs/addons</code> — no sudo.
+        <strong>Stop</strong> frees its ~500 MB; <strong>Remove</strong> uninstalls it.
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:0 0 3px">OR THE TERMINAL</div>
+      <div class="code-block" style="font-size:9.5px">
+        <span class="cmd">npm install -g cqs-ai</span><br>
+        <span class="cmd">cqs-ai ./tests/login.spec.ts</span><br>
+        <span class="cmd">cqs-ai warm</span> <span class="cmt"># fetch model now</span><br>
+        <span class="cmd">cqs-ai serve</span> <span class="cmt"># port 4100</span>
+      </div>
+
+      <div style="font-size:9.5px;color:#475569;margin-top:5px;line-height:1.5">
+        <strong>It only runs where the rules found nothing.</strong> A hard wait in plain sight should be
+        reported by a rule, not guessed at — so a suite full of them reports
+        <em>"skipped, fix those first"</em>. What it judges: fragile selectors, test scope, page-object
+        adherence, assertion strength — each a label and a probability, reported above 65%. Never prose.
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
 <div class="footer">
-  cqs v2.6.0 &nbsp;·&nbsp; <strong>npm install -g cqs-audit</strong> &nbsp;·&nbsp; AI: anthropic | openai | bedrock | vertex &nbsp;·&nbsp; MCP: cqs_audit | cqs_report | cqs_list_stacks | cqs_list_rules | cqs_validate_rules | cqs_test_rule | cqs_read_report &nbsp;·&nbsp; Skill: /cqs &nbsp;·&nbsp; Agents: remediate | pr-review &nbsp;·&nbsp; Packaging → <strong>cqs-admin-cheatsheet.pdf</strong>
+  cqs v2.6.0 &nbsp;·&nbsp; <strong>npm install -g cqs-audit</strong> &nbsp;·&nbsp; AI: anthropic | openai | bedrock | vertex &nbsp;·&nbsp; MCP: cqs_audit | cqs_report | cqs_list_stacks | cqs_list_rules | cqs_validate_rules | cqs_test_rule | cqs_read_report &nbsp;·&nbsp; Skill: /cqs &nbsp;·&nbsp; Offline AI: <strong>npm i -g cqs-ai</strong> &nbsp;·&nbsp; Agents: remediate | pr-review &nbsp;·&nbsp; Packaging → <strong>cqs-admin-cheatsheet.pdf</strong>
 </div>
 </div>
 

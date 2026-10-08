@@ -1,0 +1,42 @@
+{
+  "name": "cqs-ai",
+  "version": "0.1.0",
+  "description": "Offline AI layer for Code Quality Studio \u2014 a ~100 MB local classifier that judges the fuzzy half of test quality. No API key, no network at run time.",
+  "type": "module",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "cqs-ai": "dist/cqs-ai.js"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./audit": "./src/auditTestCode.js",
+    "./questions": "./src/questions.js"
+  },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist/",
+    "src/"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test/smoke.mjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.3.1"
+  },
+  "keywords": [
+    "test-automation",
+    "code-quality",
+    "offline-ai",
+    "onnx",
+    "playwright"
+  ],
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

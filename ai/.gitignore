@@ -1,0 +1,4 @@
+node_modules/
+
+# Build artefacts — `npm pack` output, used for local install testing
+*.tgz

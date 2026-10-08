@@ -63,10 +63,32 @@ flowchart TB
   ROUTER -->|google api_key| GEN[generativelanguage.googleapis.com]
   ROUTER -->|google vertex| VITE[Vite dev middleware<br/>POST /api/vertex/audit]
   VITE --> GCP[Google Cloud Vertex AI]
+
+  UI -.->|same-origin, token injected| SERVE
+  subgraph Machine["This machine — only when `cqs serve` is running"]
+    SERVE[cqs serve<br/>cli/bin/localServer.js<br/>127.0.0.1:4000]
+    ADDONS[Add-on manager<br/>cli/bin/addons.js]
+    AI[cqs-ai serve<br/>127.0.0.1:4100]
+    WORKER[model worker<br/>ONNX, ~500 MB]
+    DISK[(Working tree<br/>read, and written only<br/>with --allow-write)]
+
+    SERVE --> ADDONS
+    SERVE --> DISK
+    ADDONS -->|spawns, proxies| AI
+    AI -->|forks| WORKER
+  end
 ```
 
 Key property: **local rules and browser-key AI providers need no server at all** — a static
 `vite build` is fully functional for them. Only Vertex requires `npm run dev`.
+
+Three processes, deliberately. `cqs serve` holds no model; `cqs-ai` is a *separate npm package*
+so that a native ONNX dependency cannot break the audit CLI; and the model sits in a child of
+that, because killing a process is the only way to reliably return its memory (measured:
+`dispose()` in-process returns 119 MB of 470 MB; killing the worker returns all of it).
+
+The browser only ever talks to **one origin with one token** — `cqs serve` proxies `/ai-audit`
+to the add-on, so the add-on's port and token never reach the page.
 
 ---
 
@@ -152,10 +174,45 @@ src/
 server/
   vertexAudit.mjs              Vite dev middleware for POST /api/vertex/audit
 
-vite.config.js                 Wires react() + the Vertex middleware plugin
+vite.config.js                 Wires react() + the Vertex middleware plugin (port 4001;
+                               4000 is `cqs serve`, and the pair being adjacent makes
+                               it obvious they belong together)
+
+cli/
+  bin/cqs.entry.js             ★ The CLI. Bundled by esbuild into one file with no
+                               runtime dependencies; the built web app is inlined.
+  bin/localServer.js           `cqs serve` — HTTP API + serves the embedded app
+  bin/addons.js                Install / start / stop / proxy optional add-ons
+  bin/cqs-mcp.entry.js         MCP server (7 tools)
+  embedApp.mjs                 Reads dist/assets into the bundle; fails the build on
+                               any import that will not exist at runtime
+  build.mjs / build-mcp.mjs
+
+ai/                            ★ cqs-ai — a SEPARATE npm package, not a subfolder of the
+                               CLI's build. Nothing in cli/ imports it.
+  src/auditTestCode.js         The hybrid: static gate, then the model
+  src/staticChecks.js          The fast gate — only rules with an unambiguous signature
+  src/questions.js             What the model is asked (boolean / choice / score)
+  src/backend.js               Model loading, cache dir, idle unload
+  src/isolated.js              Child-process manager — the memory story
+  src/worker.mjs               The child's message loop
+  bin/cqs-ai.entry.js          Its own CLI + its own server on 4100
 ```
 
 ★ = the load-bearing modules. Start here when onboarding.
+
+**Shared by every entry point.** The engine has five front doors — CLI, MCP server, two agents
+and the web app — and the recurring failure mode is an improvement landing in one of them. These
+modules exist so it cannot:
+
+| Module | What it owns |
+|---|---|
+| `src/analyzers/routeFiles.js` | Which stack owns each file (content beats filename) |
+| `src/analyzers/applyCrossFile.js` | Duplicate detection across a file set |
+| `src/shared/groupFindings.js` | One card per rule per file, with occurrence counts |
+| `src/shared/findingEvidence.js` | The few lines a finding is about, captured at scan time |
+| `src/report/buildAppReport.js` | The app inlined into one HTML file |
+| `src/shared/motion.js` + `index.css` | Depth and motion tokens (inline styles cannot do `:hover`) |
 
 ---
 
@@ -396,6 +453,35 @@ Honest assessment — this is a **local developer tool**, and the trust model re
   leaking raw credentials or internal details into the UI.
 - `.env` is git-ignored (`VITE_ANTHROPIC_API_KEY`, `VITE_ANALYSIS_MODE` are read by
   `localAnalyzer.shouldUseLocalAnalysis`, a legacy path).
+
+### 11.1 The local server (`cqs serve`)
+
+This process can read the working tree, and with `--allow-write` edit it. Any page you visit can
+issue requests to `127.0.0.1` — the same-origin policy stops it *reading* the response without
+CORS, but it does not stop the request arriving. So a naive local server is a remote code
+execution hole that any site could poke. Four defences, all required:
+
+1. **Bound to `127.0.0.1`**, never `0.0.0.0` — unreachable from the network.
+2. **A random token per run**, required on every request except `/health`. Printed once, and
+   injected into the page the server itself serves, so the user never handles it.
+3. **An Origin allowlist**, including the server's own origin (browsers send `Origin` on
+   same-origin POSTs too — omitting it broke the app the server was serving).
+4. **Writes are opt-in** at startup. `cqs serve` with no flags can audit and nothing else.
+
+The served page carries the token, so it is sent with `nosniff`, `X-Frame-Options: DENY` and
+`Cross-Origin-Resource-Policy: same-origin` — a remote page can neither frame it to probe for a
+live server nor load it as a script.
+
+### 11.2 Add-ons
+
+`POST /addons/<id>/install` takes **no package name** — the id is part of the path and the set of
+installable add-ons is a constant in `cli/bin/addons.js`. A local server that installs whatever a
+web page names is a remote code execution hole wearing a friendly label, and no amount of token
+checking makes that design safe.
+
+Add-ons install into `~/.cqs/addons` (no sudo, no collision with the user's global packages) and
+run as child processes that cannot outlive the server: `detached: false`, SIGTERM then SIGKILL on
+shutdown. Verified: killing `cqs serve` leaves zero orphans holding the model's ~500 MB.
 
 ---
 

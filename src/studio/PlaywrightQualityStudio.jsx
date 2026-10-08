@@ -20,6 +20,31 @@ import ScoreRing from "../components/charts/ScoreRing.jsx";
 import MiniBar from "../components/charts/MiniBar.jsx";
 import RadarChart from "../components/charts/RadarChart.jsx";
 import FindingCard from "../components/findings/FindingCard.jsx";
+import { groupFindings } from "../shared/groupFindings.js";
+
+/**
+ * "4 issues · 23 occurrences".
+ *
+ * Needed the moment findings were grouped: the severity chip says Critical
+ * (23) and the list below it renders one card, which reads as a broken
+ * filter until the page admits that 23 of them are the same problem.
+ */
+function FindingsCountLabel({ findings, groups }) {
+  const total = findings.length;
+  const shown = groups.length;
+  const collapsed = total > shown;
+  return (
+    <span style={{ fontSize: 12, color: "#64748b", whiteSpace: "nowrap" }}>
+      <strong style={{ color: "#334155", fontWeight: 700 }}>{shown}</strong>
+      {" "}issue{shown === 1 ? "" : "s"}
+      {collapsed && (
+        <span title={`${total} occurrences, grouped into ${shown} card${shown === 1 ? "" : "s"} — one per rule per file`}>
+          {" · "}{total} occurrence{total === 1 ? "" : "s"}
+        </span>
+      )}
+    </span>
+  );
+}
 import { enrichFindingWithFileContext, resolveFileForFinding } from "../shared/findingActualCode.js";
 import FileTree from "../components/files/FileTree.jsx";
 import BestPracticesPanel from "../BestPracticesPanelWithChecklist.jsx";
@@ -33,7 +58,7 @@ import FileCategoryScores from "../components/files/FileCategoryScores.jsx";
 import FilesTabGuide from "../components/files/FilesTabGuide.jsx";
 import WorkspaceSessionBar from "../components/files/WorkspaceSessionBar.jsx";
 import LocalServerPanel from "../components/files/LocalServerPanel.jsx";
-import { toWorkspaceFiles } from "../services/localServerClient.js";
+import { toWorkspaceFiles, aiAudit } from "../services/localServerClient.js";
 import RulesReviewTab from "../components/rules/RulesReviewTab.jsx";
 import {
   saveWorkspace,
@@ -181,6 +206,53 @@ export default function PlaywrightQualityStudio() {
     setFolderHint(incoming[0]?.name?.split("/").slice(0, -1).join("/") || "");
     setActiveTab("files");
   }, []);
+
+  /**
+   * Run the offline model over the loaded files.
+   *
+   * Stored under the `local-ai` provider so it shows up as its own column
+   * beside Claude/Bedrock/Gemini — same shape, same views, no special case
+   * anywhere downstream. Sequential on purpose: the model is one process and
+   * firing twenty requests at it just queues them with extra memory.
+   */
+  const runLocalAi = useCallback(async ({ token, port, onProgress, force } = {}) => {
+    const targets = files.filter((f) => f.content || f.name);
+    let done = 0, analysed = 0, skipped = 0, found = 0, failed = 0;
+    for (const f of targets) {
+      try {
+        const res = await aiAudit(
+          f.content ? { code: f.content } : { path: f.name },
+          { token, port, alwaysRunModel: force },
+        );
+        if (res.model?.ran) analysed++; else skipped++;
+        const findings = (res.findings ?? []).filter((x) => x.source === "local-model");
+        found += findings.length;
+        setFiles((prev) => prev.map((x) => x.name === f.name ? {
+          ...x,
+          resultsAi: {
+            ...x.resultsAi,
+            "local-ai": {
+              findings,
+              // The model judges four things; it does not produce category
+              // scores, so none are invented here.
+              overallScore: null,
+              categoryScores: null,
+            },
+          },
+        } : x));
+      } catch (e) {
+        failed++;
+        setFiles((prev) => prev.map((x) => x.name === f.name ? {
+          ...x, errorsAi: { ...x.errorsAi, "local-ai": e.message },
+        } : x));
+      }
+      onProgress?.(++done, targets.length);
+    }
+    // The caller shows this. A run that analysed nothing because the static
+    // rules had already condemned every file is working exactly as designed,
+    // but saying nothing about it looks identical to a run that failed.
+    return { files: targets.length, analysed, skipped, found, failed };
+  }, [files]);
 
   const changeStack = useCallback((nextId) => {
     if (nextId === stackId) return;
@@ -584,6 +656,14 @@ export default function PlaywrightQualityStudio() {
     !disabledRuleIds.has(f.ruleId) &&
     (catFilter === "all" || f.category === catFilter) &&
     (sevFilter === "all" || f.severity === sevFilter)
+  );
+
+  // One card per rule per file. Enrichment happens before grouping so every
+  // occurrence carries its own snippet — the line chips switch between them.
+  const groupedFindings = useMemo(
+    () => groupFindings(filteredFindings.map((f) => enrichFindingWithFileContext(f, fileForFinding(f)))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filteredFindings, files],
   );
 
   // For the selected-file findings view: its per-category scores + finding counts,
@@ -1034,6 +1114,8 @@ export default function PlaywrightQualityStudio() {
                 stackId={stackId}
                 offline={offlineReport}
                 onResults={handleServerResults}
+                fileCount={files.length}
+                onRunLocalAi={runLocalAi}
               />
 
               {stackMismatch && !offlineReport && (
@@ -1168,9 +1250,35 @@ export default function PlaywrightQualityStudio() {
           {activeTab === "findings" && (
             <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-                <div style={{ fontWeight: 700, fontSize: 15, color: "#111" }}>
-                  {displayFile ? <>Findings — <span style={{ color: "#14b8a6" }}>{displayFile.name.split("/").pop()}</span></> : "All findings"}
-                  <span style={{ fontWeight: 400, fontSize: 12, color: "#888", marginLeft: 8 }}>({filteredFindings.length} shown)</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flexWrap: "wrap" }}>
+                  {displayFile ? (
+                    // The file is the subject of this screen, so it is the
+                    // heading — not a tinted word inside one. Full path on
+                    // hover, because two specs often share a basename.
+                    <span
+                      title={displayFile.name}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 7,
+                        padding: "5px 12px", borderRadius: 999,
+                        background: "linear-gradient(180deg,#f0fdfa,#ccfbf1)",
+                        border: "1px solid #5eead4",
+                        boxShadow: "inset 0 1px 0 rgba(255,255,255,.7), 0 1px 2px rgba(15,23,42,.06), 0 6px 14px -6px rgba(13,148,136,.35)",
+                        maxWidth: "min(46vw, 460px)",
+                      }}
+                    >
+                      <span aria-hidden style={{ fontSize: 13 }}>📄</span>
+                      <span style={{
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                        fontWeight: 700, fontSize: 13.5, color: "#0f766e",
+                        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                      }}>
+                        {displayFile.name.split("/").pop()}
+                      </span>
+                    </span>
+                  ) : (
+                    <span style={{ fontWeight: 700, fontSize: 15, color: "#111" }}>All findings</span>
+                  )}
+                  <FindingsCountLabel findings={filteredFindings} groups={groupedFindings} />
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
                   <AnalysisViewToggle compact value={resultsView} onChange={setResultsView} hasLocal={hasLocalResults} providersWithResults={providersWithResults} />
@@ -1312,13 +1420,14 @@ export default function PlaywrightQualityStudio() {
                   {allFindings.length === 0 ? "No files analysed yet. Load files from the sidebar." : "No findings match this filter."}
                 </div>
               ) : (
-                filteredFindings.map((f, i) => (
-                  <div key={i}>
-                    {!displayFile && f.fileName && (i === 0 || filteredFindings[i-1]?.fileName !== f.fileName) && (
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#888", padding: "8px 4px 4px", letterSpacing: "0.05em" }}>📄 {f.fileName}</div>
+                groupedFindings.map((g, i) => (
+                  <div key={`${g.lead.fileName ?? ""}-${g.lead.ruleId ?? ""}-${i}`}>
+                    {!displayFile && g.lead.fileName && (i === 0 || groupedFindings[i-1]?.lead.fileName !== g.lead.fileName) && (
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#888", padding: "8px 4px 4px", letterSpacing: "0.05em" }}>📄 {g.lead.fileName}</div>
                     )}
                     <FindingCard
-                      f={enrichFindingWithFileContext(f, fileForFinding(f))}
+                      f={g.lead}
+                      group={g}
                       categories={CATEGORIES}
                       stackId={stackId}
                       onOpenPractices={() => { setSelectedFile(null); setActiveTab("guide"); }}

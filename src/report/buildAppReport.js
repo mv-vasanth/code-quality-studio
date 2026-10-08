@@ -24,14 +24,25 @@ function safeJson(value) {
 }
 
 /**
+ * The app, inlined into one HTML document, with arbitrary globals injected.
+ *
+ * Two callers want this with different payloads: the report writer injects a
+ * finished workspace and marks the page offline, while `cqs serve` injects a
+ * session token and leaves the app live. The only difference is what lands on
+ * `window`, so the template lives here once.
+ *
  * @param {object}  opts
- * @param {string}  opts.appJs      The built application bundle (ESM).
- * @param {string}  opts.appCss     The built stylesheet.
- * @param {object}  opts.workspace  Same shape saveWorkspace persists.
+ * @param {string}  opts.appJs     The built application bundle (ESM).
+ * @param {string}  opts.appCss    The built stylesheet.
+ * @param {object} [opts.globals]  Injected onto `window` before the app boots.
  * @param {string} [opts.title]
  */
-export function buildAppHtmlReport({ appJs, appCss, workspace, title = "Code Quality Studio" }) {
-  if (!appJs) throw new Error("buildAppHtmlReport: appJs is required");
+export function buildAppShellHtml({ appJs, appCss, globals = {}, title = "Code Quality Studio" }) {
+  if (!appJs) throw new Error("buildAppShellHtml: appJs is required");
+
+  const injected = Object.entries(globals)
+    .map(([k, v]) => `  window.${k} = ${safeJson(v)};`)
+    .join("\n");
 
   return `<!doctype html>
 <html lang="en">
@@ -44,16 +55,35 @@ export function buildAppHtmlReport({ appJs, appCss, workspace, title = "Code Qua
 <body>
 <div id="root"></div>
 <script>
-  // Picked up by loadWorkspace() before it reaches IndexedDB.
-  window.__CQS_WORKSPACE__ = ${safeJson(workspace)};
-  // Offline copy: no dev server, so nothing should try to reach one.
-  window.__CQS_OFFLINE__ = true;
+${injected}
 </script>
 <script type="module">
 ${appJs}
 </script>
 </body>
 </html>`;
+}
+
+/**
+ * @param {object}  opts
+ * @param {string}  opts.appJs      The built application bundle (ESM).
+ * @param {string}  opts.appCss     The built stylesheet.
+ * @param {object}  opts.workspace  Same shape saveWorkspace persists.
+ * @param {string} [opts.title]
+ */
+export function buildAppHtmlReport({ appJs, appCss, workspace, title = "Code Quality Studio" }) {
+  if (!appJs) throw new Error("buildAppHtmlReport: appJs is required");
+  return buildAppShellHtml({
+    appJs,
+    appCss,
+    title,
+    globals: {
+      // Picked up by loadWorkspace() before it reaches IndexedDB.
+      __CQS_WORKSPACE__: workspace,
+      // Offline copy: no dev server, so nothing should try to reach one.
+      __CQS_OFFLINE__: true,
+    },
+  });
 }
 
 /**

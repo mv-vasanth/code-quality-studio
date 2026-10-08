@@ -1,4 +1,4 @@
-import { AI_PROVIDERS } from "../../settings/aiSettingsDefaults.js";
+import { ALL_RESULT_PROVIDERS } from "../../settings/aiSettingsDefaults.js";
 import { providerShortLabel } from "../../shared/fileResults.js";
 
 const pill = (active, onDark) => ({
@@ -30,10 +30,12 @@ export default function AnalysisViewToggle({
   const hasAi = providersWithResults.length > 0;
   const options = [
     { id: "local", label: compact ? "Local" : "Standard rules", disabled: !hasLocal },
-    ...AI_PROVIDERS.map((p) => ({
+    ...ALL_RESULT_PROVIDERS.map((p) => ({
       id: p.id,
       label: p.shortLabel,
+      // Offline results are still results; the pill lights up the same way.
       disabled: !providersWithResults.some((x) => x.id === p.id),
+      title: p.description,
     })),
     {
       id: "compare-all",

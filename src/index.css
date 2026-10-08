@@ -20,3 +20,69 @@ body { -webkit-font-smoothing: antialiased; }
   0%, 100% { opacity: 0.6; }
   50% { opacity: 1; }
 }
+
+/* ── Depth & motion ───────────────────────────────────────────────────────
+   Inline styles cannot express :hover, :active or keyframes, so the stateful
+   half of the design system lives here. Tokens: src/shared/motion.js         */
+
+.cqs-card {
+  transition: transform .18s cubic-bezier(.16,.84,.44,1),
+              box-shadow .18s cubic-bezier(.16,.84,.44,1),
+              border-color .18s ease;
+  will-change: transform;
+}
+.cqs-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(15,23,42,.07), 0 12px 28px -6px rgba(15,23,42,.14);
+}
+.cqs-press:active { transform: translateY(1px) scale(.994); }
+
+.cqs-fade-up { animation: cqs-fade-up .32s cubic-bezier(.16,.84,.44,1) both; }
+@keyframes cqs-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Halo for a control that is working. Drawn on ::after so it never affects
+   layout and cannot push the button around while it pulses. */
+.cqs-ring { position: relative; }
+.cqs-ring::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 2px solid currentColor;
+  opacity: .45;
+  animation: cqs-ring 1.4s cubic-bezier(.16,.84,.44,1) infinite;
+  pointer-events: none;
+}
+@keyframes cqs-ring {
+  0%   { transform: scale(.92); opacity: .5; }
+  70%  { transform: scale(1.18); opacity: 0; }
+  100% { transform: scale(1.18); opacity: 0; }
+}
+
+.cqs-shimmer {
+  background-image: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+  background-size: 200% 100%;
+  animation: cqs-shimmer 1.3s linear infinite;
+}
+@keyframes cqs-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+.cqs-spin { animation: spin .7s linear infinite; }
+
+.cqs-blink { animation: cqs-blink 3.2s steps(1, end) infinite; }
+@keyframes cqs-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95%           { transform: scaleY(.1); }
+}
+
+/* Respect the OS setting. Everything above is decoration; none of it carries
+   meaning that is lost when it stops moving. */
+@media (prefers-reduced-motion: reduce) {
+  .cqs-card, .cqs-lift:hover, .cqs-press:active { transition: none; transform: none; }
+  .cqs-fade-up, .cqs-ring::after, .cqs-shimmer, .cqs-spin, .cqs-blink { animation: none; }
+}

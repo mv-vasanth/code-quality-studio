@@ -3,9 +3,10 @@ import {
   AI_PROVIDERS,
   getRunnableAiProviders,
   providerShortLabel,
+  ALL_RESULT_PROVIDERS,
 } from "../settings/aiSettingsDefaults.js";
 
-/** @typedef {'local' | 'compare-all' | 'anthropic' | 'bedrock' | 'google'} ResultsView */
+/** @typedef {'local' | 'compare-all' | 'anthropic' | 'bedrock' | 'google' | 'local-ai'} ResultsView */
 
 function migrateLegacyAi(file, providerId) {
   if (file.resultsAi?.[providerId]) return file.resultsAi[providerId];
@@ -45,7 +46,9 @@ export function fileHasResult(file, view) {
 }
 
 export function listProvidersWithResults(files) {
-  return AI_PROVIDERS.filter((p) => files.some((f) => getAiResult(f, p.id)));
+  // ALL_RESULT_PROVIDERS, not AI_PROVIDERS: the offline model has no API key
+  // and so no settings card, but it does produce a column of results.
+  return ALL_RESULT_PROVIDERS.filter((p) => files.some((f) => getAiResult(f, p.id)));
 }
 
 export function resolveSlotForMode(mode, aiSettings) {
@@ -83,7 +86,7 @@ export function collectFindings(files, view) {
           ...(f.resultLocal.findings || []).map((fi) => tag(fi, "local", base, f.name)),
         );
       }
-      for (const p of AI_PROVIDERS) {
+      for (const p of ALL_RESULT_PROVIDERS) {
         const r = getAiResult(f, p.id);
         if (r) {
           chunks.push(

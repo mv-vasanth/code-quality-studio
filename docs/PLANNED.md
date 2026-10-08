@@ -105,3 +105,56 @@ ever open a polyglot workspace.
 
 Not urgent. It only affects repos with more than one stack, and the per-stack
 reports are each complete and correct.
+
+---
+
+## Suppressing a finding from the code
+
+Every linter eventually needs an escape hatch, because every rule eventually
+meets the case it was wrong about. The usual shape, and the one people will
+expect here:
+
+```ts
+// cqs-ignore-next-line PW-REL-001 — third-party widget animates on a timer
+await page.waitForTimeout(500);
+
+// cqs-ignore-file PW-A11Y-002 — covered by the separate axe suite
+```
+
+Three things make this more than a regex:
+
+- **It must be a rule id, never a bare `cqs-ignore`.** A blanket suppression
+  silences rules written after it was added, which is how a file quietly
+  stops being audited at all.
+- **The reason should be required.** A suppression without one is
+  indistinguishable from a suppression nobody remembers the reason for, and
+  the second kind is permanent.
+- **Suppressions belong in the report**, counted and listed. A score that
+  improves because findings were suppressed is not an improvement, and the
+  baseline (`cqs-baseline.json`) already makes the honest version of that
+  trade-off available.
+
+Worth pairing with a `--no-suppressions` flag so CI can see the unsuppressed
+truth, and an age or count report so a growing pile is visible.
+
+Blocked on the same work as the item below: the matcher has to understand
+where comments are before it can read directives out of them.
+
+## Comments are matched as if they were code
+
+`lineMatches` and `countMatches` run regexes over the raw file, so a rule
+cannot tell live code from code someone commented out. A spec whose only
+`waitForTimeout` calls are commented out reports two criticals today —
+verified, not theoretical.
+
+The fix is a comment mask: rewrite the source with comment bodies replaced by
+spaces, keeping every line and column so reported line numbers stay correct,
+then match against the mask. It cannot be a naive `//` strip — `'//div[@id]'`
+is an XPath and `https://…` is a URL, so the mask has to know when it is
+inside a string literal.
+
+About fourteen rules match comments deliberately (TODO/FIXME, commented-out
+Tosca steps); those keep the raw text through a `lineMatchesRaw` variant.
+
+This changes almost every number the tool reports, so it needs the golden
+master re-baselined in the same change.

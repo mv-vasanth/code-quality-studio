@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { detect, auditPath, recall, forget } from "../../services/localServerClient.js";
+import AddonsPanel from "./AddonsPanel.jsx";
 
 /**
  * Scan a directory through `cqs serve`.
@@ -8,9 +9,13 @@ import { detect, auditPath, recall, forget } from "../../services/localServerCli
  * that cannot work is worse than not offering it. Everything stays available
  * without it; this is a shortcut past the file picker, not a requirement.
  */
-export default function LocalServerPanel({ stackId, onResults, offline }) {
+export default function LocalServerPanel({ stackId, onResults, offline, fileCount = 0, onRunLocalAi }) {
   const [server, setServer] = useState(null);
   const [token, setToken] = useState(() => recall()?.token ?? "");
+  // Served by `cqs serve`: the token came with the page, so there is nothing
+  // to ask for. Showing an empty field the user cannot usefully fill is worse
+  // than showing no field at all.
+  const injected = Boolean(server?.injected);
   const [path, setPath] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -19,7 +24,11 @@ export default function LocalServerPanel({ stackId, onResults, offline }) {
   useEffect(() => {
     if (offline) return;                 // no server behind a static report
     let cancelled = false;
-    detect().then((s) => { if (!cancelled) setServer(s); });
+    detect().then((s) => {
+      if (cancelled) return;
+      setServer(s);
+      if (s?.injected && s.token) setToken(s.token);
+    });
     return () => { cancelled = true; };
   }, [offline]);
 
@@ -52,7 +61,9 @@ export default function LocalServerPanel({ stackId, onResults, offline }) {
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
         <span aria-hidden>🖥️</span>
-        <strong style={{ fontSize: 12.5, color: "#075985" }}>Local server connected</strong>
+        <strong style={{ fontSize: 12.5, color: "#075985" }}>
+          {injected ? "Connected to this machine" : "Local server connected"}
+        </strong>
         <span style={{ fontSize: 11, color: "#0369a1" }}>
           cqs {server.version} · port {server.port}
           {server.allowWrite ? " · writes enabled" : ""}
@@ -70,12 +81,14 @@ export default function LocalServerPanel({ stackId, onResults, offline }) {
           style={{ flex: "1 1 180px", minWidth: 140, fontSize: 12, padding: "6px 8px",
                    border: "1px solid #7dd3fc", borderRadius: 6 }}
         />
-        <input
-          value={token} onChange={(e) => setToken(e.target.value)}
-          placeholder="token from `cqs serve`" type="password"
-          style={{ flex: "1 1 180px", minWidth: 140, fontSize: 12, padding: "6px 8px",
-                   border: "1px solid #7dd3fc", borderRadius: 6 }}
-        />
+        {!injected && (
+          <input
+            value={token} onChange={(e) => setToken(e.target.value)}
+            placeholder="token from `cqs serve`" type="password"
+            style={{ flex: "1 1 180px", minWidth: 140, fontSize: 12, padding: "6px 8px",
+                     border: "1px solid #7dd3fc", borderRadius: 6 }}
+          />
+        )}
         <button
           type="button" onClick={run} disabled={busy || !token.trim()}
           style={{ fontSize: 12, fontWeight: 700, padding: "6px 14px", borderRadius: 7,
@@ -95,6 +108,16 @@ export default function LocalServerPanel({ stackId, onResults, offline }) {
           Scanned {lastRun.total} file(s) — {lastRun.stacks.join(", ")}
         </div>
       )}
+
+      {/* Optional extras this server can install. Shares the detected server
+          and its token rather than probing again. */}
+      <div style={{ marginTop: 10 }}>
+        <AddonsPanel
+          server={{ ...server, token: token.trim() || server?.token }}
+          fileCount={fileCount}
+          onRun={onRunLocalAi}
+        />
+      </div>
     </div>
   );
 }

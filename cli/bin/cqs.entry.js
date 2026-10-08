@@ -47,9 +47,14 @@ import { formatVerification } from "../../src/rules/verifyFix.js";
 import { buildReview, reviewSummary } from "../../src/rules/prReview.js";
 import { buildFindingsReportPayload } from "../../src/report/buildPayload.js";
 import { buildCompleteHtmlReport } from "../../src/report/buildCompleteReport.js";
-import { buildAppHtmlReport, workspaceFromResults } from "../../src/report/buildAppReport.js";
+import { buildAppHtmlReport, buildAppShellHtml, workspaceFromResults } from "../../src/report/buildAppReport.js";
+import { withEvidence } from "../../src/shared/findingEvidence.js";
 import { applyCrossFileAnalysis } from "../../src/analyzers/applyCrossFile.js";
 import { startLocalServer } from "./localServer.js";
+import {
+  allAddonStatus, installAddon, removeAddon, startAddon, stopAddon,
+  stopAllAddons, callAddon,
+} from "./addons.js";
 import { classifyFile, routeFileList, routeFilesByStack as routeByStack, detectDominantStack }
   from "../../src/analyzers/routeFiles.js";
 import { countFindings, mergeCounts, buildBaseline, diffAgainstBaseline } from "../../src/rules/baseline.js";
@@ -291,7 +296,8 @@ ${b("USAGE")}
   cqs --read-report <file>        Print summary of a saved JSON report
   cqs remediate [path...]         AI-fix findings, verifying each fix before keeping it
   cqs pr-review                   Review a pull request with inline GitHub comments
-  cqs serve [--port 4000]         Local API so the web app can run the agents
+  cqs serve --open                Open the full studio in your browser
+  cqs serve [--port 4000]         ...or just the local API, for scripts
                                   (add --allow-write to let it edit files)
   cqs mcp-config [client]         Print MCP client config with correct paths
                                   (client: cursor | claude)
@@ -659,6 +665,46 @@ async function runServe(args) {
       return { stacks: out };
     },
 
+    // Optional extras — today just cqs-ai. The audit engine never imports
+    // any of them; it installs them into ~/.cqs/addons, runs them as child
+    // processes and proxies HTTP. An add-on that is broken, missing or
+    // uninstallable leaves everything else working.
+    addons: {
+      list: () => allAddonStatus(),
+
+      // Drop the model but keep the add-on listening. It reloads on the next
+      // request, so this is "give the RAM back now", not "turn the feature off".
+      async unload(id) {
+        const out = await callAddon(id, "/unload", {});
+        return out.ok === false ? out : { ok: true, ...out.body };
+      },
+
+      async install(id) {
+        const log = [];
+        const out = await installAddon(id, { onLine: (l) => log.push(l) });
+        if (!out.ok) return out;
+        // Installing and then not being able to use it until you find the
+        // right button is a pointless extra step.
+        const started = await startAddon(id).catch((e) => ({ ok: false, error: e.message }));
+        return { ...out, started, log: log.slice(-20) };
+      },
+
+      async remove(id, body) {
+        return removeAddon(id, { purgeModels: Boolean(body?.purgeModels) });
+      },
+
+      async enable(id) {
+        try { return await startAddon(id); }
+        catch (e) { return { ok: false, error: e.message }; }
+      },
+
+      async disable(id) {
+        return stopAddon(id);
+      },
+
+      proxy: callAddon,
+    },
+
     async remediate({ path, dryRun }) {
       // Deliberately not implemented yet: the fix loop needs an AI provider
       // and a verified-edit cycle, and shipping a half-wired write path to a
@@ -672,23 +718,68 @@ async function runServe(args) {
     },
   };
 
+  // The app is already inside this bundle, so serve it rather than asking the
+  // user to run a second thing on a second port and paste a token between the
+  // two. Served from the same origin as the API, it needs neither.
+  const renderApp = CQS_APP_JS
+    ? (token) => buildAppShellHtml({
+        appJs: CQS_APP_JS,
+        appCss: CQS_APP_CSS,
+        title: "Code Quality Studio",
+        globals: {
+          __CQS_SERVER__: {
+            token,
+            version: CQS_VERSION,
+            cwd: process.cwd(),
+            allowWrite: Boolean(args.allowWrite),
+            // Same-origin, the app trusts this instead of calling /health —
+            // so anything /health advertises has to be advertised here too,
+            // or the UI silently decides the feature does not exist.
+            addons: true,
+          },
+        },
+      })
+    : null;
+
   const { port, token } = await startLocalServer(handlers, {
     port: args.port ?? undefined,
     allowWrite: args.allowWrite,
     version: CQS_VERSION,
     cwd: process.cwd(),
+    renderApp,
+    // Add-ons run as our children; they must not outlive us.
+    onClose: stopAllAddons,
   });
 
+  const url = `http://127.0.0.1:${port}`;
+
+  for (const sig of ["SIGINT", "SIGTERM"]) {
+    process.once(sig, () => {
+      stopAllAddons().finally(() => process.exit(0));
+    });
+  }
+
   console.log(`\n  ${b("cqs serve")} ${dim(`v${CQS_VERSION}`)}`);
-  console.log(`  ${dim("listening on")} http://127.0.0.1:${port} ${dim("(this machine only)")}`);
+  if (renderApp) {
+    console.log(`\n  ${C.cyan()}${C.bold()}Open${C.reset()}  ${url}`);
+    console.log(`  ${dim("The page signs itself in \u2014 no token to copy.")}`);
+  } else {
+    console.log(`  ${dim("listening on")} ${url} ${dim("(this machine only)")}`);
+    console.log(`  ${dim("no app embedded in this build \u2014 API only")}`);
+  }
   console.log(`  ${dim("writes:")} ${args.allowWrite ? C.yellow() + "enabled" + C.reset() : "disabled " + dim("(--allow-write to enable)")}`);
-  console.log(`\n  ${dim("Token for this run \u2014 required on every request:")}`);
-  console.log(`    ${token}\n`);
-  console.log(`  ${dim("Try it:")}`);
-  console.log(`    curl -s http://127.0.0.1:${port}/health`);
-  console.log(`    curl -s -X POST http://127.0.0.1:${port}/audit \\`);
-  console.log(`      -H "x-cqs-token: ${token}" -H "content-type: application/json" \\`);
-  console.log(`      -d '{"path":"./tests"}'\n`);
+
+  if (args.open) {
+    const cmd = process.platform === "win32" ? `start "" "${url}"` :
+                process.platform === "darwin" ? `open "${url}"` : `xdg-open "${url}"`;
+    try { execSync(cmd); } catch { /* the URL is printed above either way */ }
+  }
+
+  // Still printed, because the API is usable on its own \u2014 from curl, from a
+  // script, or from an app you are running on another port yourself.
+  console.log(`\n  ${dim("Token for this run, if you call the API directly:")}`);
+  console.log(`    ${dim(token)}`);
+  console.log(`    ${dim(`curl -s ${url}/health`)}\n`);
   console.log(dim("  Ctrl-C to stop.\n"));
 }
 
@@ -1603,6 +1694,10 @@ async function runStack(stackId, allFiles, args, inputPaths, { label = false, em
     const result = runner(basename(file), content, { disabledRuleIds });
     const custom = runFileRules(ruleSet.rules, basename(file), content, { disabledRuleIds });
     if (custom.length) result.findings = [...(result.findings ?? []), ...custom];
+    // The exported report has no source to look things up in later, so the
+    // few lines each finding is about are captured now, while we hold the
+    // file. Without this a report can only show the fix, never what was wrong.
+    result.findings = withEvidence(result.findings ?? [], content);
     // Tag each finding with its source file for later grouping
     for (const f of result.findings ?? []) f._file = file;
     results.push({ file, result });

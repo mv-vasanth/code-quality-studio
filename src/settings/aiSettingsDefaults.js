@@ -78,8 +78,28 @@ export const MODEL_PLACEHOLDERS = {
   google: ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash", "gemini-1.5-flash-002"],
 };
 
+/**
+ * The offline model, as a result provider.
+ *
+ * Deliberately not in AI_PROVIDERS: that list drives the settings screen,
+ * where every entry gets a card asking for an API key. This one has no key to
+ * ask for — it is installed as an add-on and either running or not. It still
+ * produces results per file, so anything that *displays* results has to know
+ * about it.
+ */
+export const LOCAL_AI_PROVIDER = {
+  id: "local-ai",
+  label: "Local AI (offline)",
+  shortLabel: "Local AI",
+  description: "Runs on this machine via the cqs-ai add-on. No key, no network.",
+  offline: true,
+};
+
+/** Everything that can own a column of results. */
+export const ALL_RESULT_PROVIDERS = [...AI_PROVIDERS, LOCAL_AI_PROVIDER];
+
 export function providerShortLabel(providerId) {
-  return AI_PROVIDERS.find((p) => p.id === providerId)?.shortLabel ?? providerId;
+  return ALL_RESULT_PROVIDERS.find((p) => p.id === providerId)?.shortLabel ?? providerId;
 }
 
 export function hasProviderCredentials(settings, providerId) {
