@@ -204,7 +204,7 @@
 <div class="page-header">
   <div>
     <h1>⚡ cqs — Code Quality Studio CLI</h1>
-    <div class="sub">18 stacks · 530 rules · offline · CI-ready · Node 18+</div>
+    <div class="sub">18 stacks · 533 rules · offline · CI-ready · Node 18+</div>
   </div>
   
   <div style="background:#0d9488;border-radius:8px;padding:8px 18px;text-align:center">
@@ -214,9 +214,9 @@
   </div>
   <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
     <div class="verify-box">
-      ✅ Verify: <code>cqs --list-stacks</code>
+      ✅ Verify: <code>cqs --version</code>
     </div>
-    <div class="badge">v2.1.0</div>
+    <div class="badge">v2.3.3</div>
   </div>
 </div>
 <div class="section-bar">
@@ -230,10 +230,29 @@
       <div class="code-block">
         <span class="cmt"># Install globally from npm registry</span><br>
         <span class="cmd">npm install -g cqs-audit</span><br><br>
-        <span class="cmt"># Verify</span><br>
-        <span class="cmd">cqs --help</span>
+        <span class="cmt"># Verify what you actually got</span><br>
+        <span class="cmd">cqs --version</span><br><br>
+        <span class="cmt"># Upgrade later</span><br>
+        <span class="cmd">npm install -g cqs-audit@latest</span><br><br>
+        <span class="cmt"># nvm users: globals are per Node version</span><br>
+        <span class="cmd">node --version &amp;&amp; cqs --version</span>
       </div>
       <div style="font-size:10.5px;color:#475569;margin-top:6px">📦 Package: <strong>cqs-audit</strong> on <a href="https://www.npmjs.com/package/cqs-audit" style="color:#0d9488">npmjs.com/package/cqs-audit</a></div>
+    </div>
+  </div>
+
+<div class="card theme-amber">
+    <div class="card-head">🆕 New in 2.3.3 — behaviour changes</div>
+    <div class="card-body" style="padding:0">
+      <table>
+        <tbody>
+          <tr><td><strong>Report opens by default</strong></td><td class="desc">No <code>--open</code> needed. Skipped automatically for <code>--output json</code>/<code>summary</code> and when piped, so CI stays clean. <code>--no-report</code> opts out.</td></tr>
+          <tr><td><strong>Every stack is audited</strong></td><td class="desc"><code>cqs .</code> used to pick one stack and silently ignore the rest. A repo with specs, frontend and Java code now reports all three.</td></tr>
+          <tr><td><strong>Files routed by import</strong></td><td class="desc">A <code>.ts</code> file importing <code>@playwright/test</code> gets Playwright rules whatever it is named — so page objects are no longer scored as plain TypeScript.</td></tr>
+          <tr><td><strong>Unaudited files are reported</strong></td><td class="desc">Anything with no matching stack is listed at the end instead of vanishing.</td></tr>
+          <tr><td><strong><code>cqs-mcp</code> is a real command</strong></td><td class="desc">The MCP server ships as its own binary; <code>cqs mcp-config</code> prints the client config for you.</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -243,16 +262,20 @@
       <table>
         <thead><tr><th>Command</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>cqs .</code></td><td class="desc">Analyse current folder — auto-detects stack</td></tr>
+          <tr><td><code>cqs .</code></td><td class="desc">Analyse current folder — routes <strong>every</strong> stack it finds</td></tr>
           <tr><td><code>cqs ./tests/</code></td><td class="desc">Analyse a specific folder</td></tr>
           <tr><td><code>cqs ./tests/ --stack playwright</code></td><td class="desc">Force a specific stack</td></tr>
           <tr><td><code>cqs ./tests/ --severity critical</code></td><td class="desc">Show only critical findings</td></tr>
           <tr><td><code>cqs ./tests/ --output json > report.json</code></td><td class="desc">Save JSON report for CI or sharing</td></tr>
           <tr><td><code>cqs ./tests/ --output summary</code></td><td class="desc">One-line status — great for CI logs</td></tr>
-          <tr><td><code>cqs ./tests/ --open</code></td><td class="desc">Run analysis + open HTML report in browser</td></tr>
+          <tr><td><code>cqs ./tests/ --open</code></td><td class="desc">Force the report even when piped or in CI</td></tr>
+          <tr><td><code>cqs ./tests/ --no-report</code></td><td class="desc">Terminal output only — skip the browser report</td></tr>
+          <tr><td><code>cqs ./tests/ --category reliability</code></td><td class="desc">Filter to one category</td></tr>
           <tr><td><code>cqs --read-report report.json</code></td><td class="desc">Print summary of a saved JSON report</td></tr>
           <tr><td><code>cqs --read-report report.json --open</code></td><td class="desc">Open saved report as HTML in browser</td></tr>
           <tr><td><code>cqs --list-stacks</code></td><td class="desc">Show all 18 available stacks + IDs</td></tr>
+          <tr><td><code>cqs --version</code></td><td class="desc">Print the installed version (also <code>-v</code>)</td></tr>
+          <tr><td><code>cqs mcp-config cursor</code></td><td class="desc">Print ready-to-paste MCP config (or <code>claude</code>)</td></tr>
           <tr><td><code>cqs --help</code></td><td class="desc">Show help text and version number</td></tr>
         </tbody>
       </table>
@@ -528,7 +551,7 @@
         <span class="cmt"># Copy SKILL.md from the cqs repo</span><br>
         <span class="cmd">cp cli/bin/cqs-skill.md ~/.claude/skills/cqs/SKILL.md</span><br><br>
         <span class="cmt"># Or download directly (if cqs-audit is installed globally)</span><br>
-        <span class="cmd">cqs --list-stacks  # verify cqs is working</span>
+        <span class="cmd">cqs --version  # verify cqs is working</span>
       </div>
 
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">USE IN CLAUDE CODE SESSION</div>
@@ -655,7 +678,7 @@
 </div>
 
 <div class="footer">
-  cqs v2.1.0 &nbsp;·&nbsp; <strong>npm install -g cqs-audit</strong> &nbsp;·&nbsp; AI: anthropic | openai | bedrock | vertex &nbsp;·&nbsp; MCP: cqs_audit | cqs_list_stacks | cqs_read_report &nbsp;·&nbsp; Skill: /cqs &nbsp;·&nbsp; Agents: remediate | pr-review &nbsp;·&nbsp; Packaging → <strong>cqs-admin-cheatsheet.pdf</strong>
+  cqs v2.3.3 &nbsp;·&nbsp; <strong>npm install -g cqs-audit</strong> &nbsp;·&nbsp; AI: anthropic | openai | bedrock | vertex &nbsp;·&nbsp; MCP: cqs_audit | cqs_report | cqs_list_stacks | cqs_list_rules | cqs_validate_rules | cqs_test_rule | cqs_read_report &nbsp;·&nbsp; Skill: /cqs &nbsp;·&nbsp; Agents: remediate | pr-review &nbsp;·&nbsp; Packaging → <strong>cqs-admin-cheatsheet.pdf</strong>
 </div>
 </div>
 
