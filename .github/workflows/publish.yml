@@ -1,0 +1,109 @@
+name: Publish to npm
+
+# Trusted publishing (OIDC) — no npm token, no one-time password.
+#
+# npm verifies the publish came from this repository and this workflow file,
+# using a short-lived token minted per run and never stored. That matters here
+# for two reasons: an account whose only second factor is a security key cannot
+# complete a CLI publish at all, and npm is withdrawing 2FA-bypass tokens for
+# direct publishing around January 2027.
+#
+# One-time setup on npmjs.com — Package settings -> Trusted Publisher:
+#   Provider:   GitHub Actions
+#   Owner:      mv-vasanth
+#   Repository: code-quality-studio
+#   Workflow:   publish.yml
+#   Environment: (leave blank)
+#
+# Release after that (no workspaces here, so bump inside cli/):
+#   cd cli && npm version patch --no-git-tag-version && cd ..
+#   git commit -am "Release 2.3.4"
+#   git tag v2.3.4 && git push && git push --tags
+#
+# The tag must match cli/package.json — the workflow checks and fails if not.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Pack and verify without publishing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write # required to mint the OIDC token
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm >= 11.5.1. The version bundled with the
+      # runner's Node is usually newer, but pin the floor rather than hope.
+      - name: Ensure npm supports trusted publishing
+        run: |
+          npm install -g npm@latest
+          npm --version
+
+      # The CLI inlines the built web app so `cqs --open` can emit it offline.
+      # Without this the app is missing and reports degrade to a flat document,
+      # which is easy to ship by accident and hard to notice.
+      - name: Build web app
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build CLI and MCP server
+        working-directory: cli
+        run: |
+          npm ci
+          npm run build:all
+
+      - name: Test
+        run: npm test
+
+      # Catches the failure that shipped broken for three releases: a stray
+      # package import surviving into the bundle, which kills every command
+      # with ERR_MODULE_NOT_FOUND. Run it against the artifact, not the source.
+      - name: Smoke test the built artifacts
+        working-directory: cli
+        run: |
+          set -euo pipefail
+          test "$(node dist/cqs.js --version)" = "$(node -p "require('./package.json').version")"
+          printf '%s\n' \
+            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+            | node dist/cqs-mcp.js | grep -q cqs_report
+          echo "CLI and MCP server both start from the built bundles"
+
+      - name: Verify the tag matches the version being published
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: cli
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match cli/package.json version $PKG" >&2
+            exit 1
+          fi
+
+      - name: Pack and inspect
+        working-directory: cli
+        run: |
+          npm pack
+          tar -tzf "cqs-audit-$(node -p "require('./package.json').version").tgz"
+
+      - name: Publish
+        if: ${{ !inputs.dry_run }}
+        working-directory: cli
+        run: npm publish
