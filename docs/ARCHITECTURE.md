@@ -82,13 +82,16 @@ flowchart TB
 Key property: **local rules and browser-key AI providers need no server at all** — a static
 `vite build` is fully functional for them. Only Vertex requires `npm run dev`.
 
-Three processes, deliberately. `cqz serve` holds no model; `cqz-ai` is a *separate npm package*
-so that a native ONNX dependency cannot break the audit CLI; and the model sits in a child of
-that, because killing a process is the only way to reliably return its memory (measured:
-`dispose()` in-process returns 119 MB of 470 MB; killing the worker returns all of it).
+Two processes today. The add-on manager and its child-process machinery are real and tested,
+but **no add-on is currently registered**: `cqz-ai` was withdrawn after measurement (see
+[ai/README.md](../ai/README.md)), so the dashed boxes below are the shape an add-on takes, not
+something that ships.
 
-The browser only ever talks to **one origin with one token** — `cqz serve` proxies `/ai-audit`
-to the add-on, so the add-on's port and token never reach the page.
+That shape is worth keeping. An add-on runs as a child process rather than in-process because
+killing a process is the only way to reliably return its memory — measured on the classifier,
+`dispose()` in-process returned 119 MB of 470 MB, while killing the worker returned all of it.
+And the browser only ever talks to **one origin with one token**, because `cqz serve` proxies to
+the add-on rather than exposing its port.
 
 ---
 
@@ -188,8 +191,9 @@ cli/
                                any import that will not exist at runtime
   build.mjs / build-mcp.mjs
 
-ai/                            ★ cqz-ai — a SEPARATE npm package, not a subfolder of the
-                               CLI's build. Nothing in cli/ imports it.
+ai/                            cqz-ai — a SEPARATE npm package, withdrawn after its
+                               model was measured. Kept for the plumbing, not the
+                               model. Nothing in cli/ imports it.
   src/auditTestCode.js         The hybrid: static gate, then the model
   src/staticChecks.js          The fast gate — only rules with an unambiguous signature
   src/questions.js             What the model is asked (boolean / choice / score)

@@ -1,5 +1,36 @@
 # cqz-ai
 
+> ## ⚠️ Not recommended. The model does not work for this.
+>
+> Published as 0.1.0, then measured. It is a natural-language entailment model
+> and source code is out of distribution for it:
+>
+> | Test | Result |
+> |---|---|
+> | Clear selector contrast: `div:nth-child(3) > button.btn-x7f` vs `getByRole`/`getByTestId` | rated the **robust** version *more* fragile — 79% vs 76% |
+> | Per-file scores, file head as input | identical for all 10 files — the 4000-char window was imports and interfaces, zero lines containing a locator or assertion |
+> | Per-file scores, distilled excerpt | scores vary, but the ranking is not trustworthy |
+> | Hand-written English test names, one-vs-several behaviours | 6/6 — the one thing it did well |
+> | **Real test names from a production suite** | noise — `CustUpdatePCMCPCMA` classified as "several behaviours" |
+>
+> The one case it handled needs well-formed English sentences. Real test names
+> are identifiers like `External_PCMA_Scheduled_Transfer`, which are not prose,
+> so the signal disappears.
+>
+> It costs ~104 MB of weights and ~500 MB resident to produce that. The studio
+> no longer offers it, and everything it was meant to judge — fragile
+> selectors, vague test names, compound tests — turned out to be detectable by
+> deterministic rules that are *right*, in an engine that already has 544 of
+> them.
+>
+> The plumbing here is sound and stays: the child-process isolation, the
+> memory accounting, the static gate and the excerpt extraction are all
+> reusable. What is wrong is the choice of model. Anyone revisiting this
+> should start by building a labelled fixture set and measuring accuracy
+> **before** building anything on top.
+
+---
+
 An offline AI layer for [Code Quality Zone](https://npmjs.com/package/cqz-audit).
 A ~100 MB classifier that runs on your machine, needs no API key, and answers a
 fixed list of questions about a test file.

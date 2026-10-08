@@ -227,12 +227,19 @@ export default function PlaywrightQualityStudio() {
         if (res.model?.ran) analysed++; else skipped++;
         const findings = (res.findings ?? []).filter((x) => x.source === "local-model");
         found += findings.length;
+        // The answers matter even when nothing crossed the threshold: "72%
+        // confident your selectors are fine" is information, and throwing it
+        // away is why the feature looked like it did nothing.
+        const answers = res.model?.answers ?? null;
         setFiles((prev) => prev.map((x) => x.name === f.name ? {
           ...x,
           resultsAi: {
             ...x.resultsAi,
             "local-ai": {
               findings,
+              answers,
+              skipped: !res.model?.ran,
+              note: res.model?.note ?? null,
               // The model judges four things; it does not produce category
               // scores, so none are invented here.
               overallScore: null,

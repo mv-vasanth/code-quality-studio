@@ -6,6 +6,7 @@
  */
 import { build } from "esbuild";
 import { readBuiltApp, appDefines, assertNoRuntimeImports } from "./embedApp.mjs";
+import { countRules } from "../src/rules/countRules.js";
 import { writeFileSync, chmodSync, mkdirSync, readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -14,6 +15,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Read version from package.json — injected into the bundle at build time
 const { version } = JSON.parse(readFileSync(join(__dirname, "package.json"), "utf8"));
+
+// Counted, not typed: the hardcoded figure had drifted to "530" while the
+// real number moved past it.
+const ruleCount = countRules(join(__dirname, "..", "src"));
+console.log(`\n  rules: ${ruleCount}`);
 
 const app = readBuiltApp();
 if (app.js) {
@@ -30,7 +36,11 @@ const result = await build({
   format: "esm",
   outfile: join(__dirname, "dist/cqz.js"),
   // Inject version and the built app from package.json / dist at build time
-  define: { __CQZ_VERSION__: JSON.stringify(version), ...appDefines(app) },
+  define: {
+    __CQZ_VERSION__: JSON.stringify(version),
+    __CQZ_RULE_COUNT__: JSON.stringify(ruleCount),
+    ...appDefines(app),
+  },
   // Exclude Node.js built-ins (they're always available)
   external: ["fs", "path", "process", "url", "os", "crypto", "stream", "util", "events"],
   // Mark AWS/Google SDKs as external — CLI doesn't need AI providers

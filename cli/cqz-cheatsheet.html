@@ -210,7 +210,7 @@
 <div class="page-header">
   <div>
     <h1>⚡ cqz — Code Quality Zone CLI</h1>
-    <div class="sub">18 stacks · 533 rules · offline · CI-ready · Node 18+</div>
+    <div class="sub">18 stacks · 544 rules · offline · CI-ready · Node 18+</div>
   </div>
   
   <div style="background:#0d9488;border-radius:8px;padding:8px 18px;text-align:center">
@@ -729,8 +729,8 @@
 <!-- ══════════ PAGE 6 — LOCAL SERVER & OFFLINE AI ══════════ -->
 <div class="page">
 <div class="section-bar">
-  <h2>6 · Local server &amp; offline AI</h2>
-  <span class="step">Run the studio on your machine · add an AI that needs no key</span>
+  <h2>6 · The studio on your machine</h2>
+  <span class="step">One command for the server and the full web studio</span>
 </div>
 <div class="grid">
 <div class="card" style="border-top:3px solid #0d9488;background:#f8fffe;">
@@ -773,46 +773,11 @@
       </div>
     </div>
   </div>
-<div class="card" style="border-top:3px solid #7c3aed;background:#faf5ff;">
-    <div class="card-head" style="background:#7c3aed;color:#fff;">🧩 Offline AI — the cqz-ai add-on</div>
-    <div class="card-body">
-      <div style="font-size:10px;color:#475569;margin-bottom:5px">
-        A ~104 MB classifier that runs on your machine. <strong>No API key, no network.</strong>
-        A separate package on purpose — if it fails to install, <code style="background:#f1f5f9;padding:0 3px;border-radius:3px">cqz</code> is unaffected.
-      </div>
-
-      <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:3px">FROM THE STUDIO (EASIEST)</div>
-      <div class="code-block" style="font-size:9.5px">
-        <span class="cmd">cqz serve --open</span><br>
-        <span class="cmt"># Files → Add-ons → Local AI → Install</span><br>
-        <span class="cmt"># then ▶ Run on N files</span>
-      </div>
-      <div style="font-size:9.5px;color:#475569;margin:3px 0 5px">
-        Installs to <code style="background:#f1f5f9;padding:0 3px;border-radius:3px">~/.cqz/addons</code> — no sudo.
-        <strong>Stop</strong> frees its ~500 MB; <strong>Remove</strong> uninstalls it.
-      </div>
-
-      <div style="font-size:10px;font-weight:700;color:#64748b;margin:0 0 3px">OR THE TERMINAL</div>
-      <div class="code-block" style="font-size:9.5px">
-        <span class="cmd">npm install -g cqz-ai</span><br>
-        <span class="cmd">cqz-ai ./tests/login.spec.ts</span><br>
-        <span class="cmd">cqz-ai warm</span> <span class="cmt"># fetch model now</span><br>
-        <span class="cmd">cqz-ai serve</span> <span class="cmt"># port 4100</span>
-      </div>
-
-      <div style="font-size:9.5px;color:#475569;margin-top:5px;line-height:1.5">
-        <strong>It only runs where the rules found nothing.</strong> A hard wait in plain sight should be
-        reported by a rule, not guessed at — so a suite full of them reports
-        <em>"skipped, fix those first"</em>. What it judges: fragile selectors, test scope, page-object
-        adherence, assertion strength — each a label and a probability, reported above 65%. Never prose.
-      </div>
-    </div>
-  </div>
 </div>
 </div>
 
 <div class="footer">
-  cqz v2.6.0 &nbsp;·&nbsp; <strong>npm install -g cqz-audit</strong> &nbsp;·&nbsp; AI: anthropic | openai | bedrock | vertex &nbsp;·&nbsp; MCP: cqz_audit | cqz_report | cqz_list_stacks | cqz_list_rules | cqz_validate_rules | cqz_test_rule | cqz_read_report &nbsp;·&nbsp; Skill: /cqz &nbsp;·&nbsp; Offline AI: <strong>npm i -g cqz-ai</strong> &nbsp;·&nbsp; Agents: remediate | pr-review &nbsp;·&nbsp; Packaging → <strong>cqz-admin-cheatsheet.pdf</strong>
+  cqz v2.6.0 &nbsp;·&nbsp; <strong>npm install -g cqz-audit</strong> &nbsp;·&nbsp; AI: anthropic | openai | bedrock | vertex &nbsp;·&nbsp; MCP: cqz_audit | cqz_report | cqz_list_stacks | cqz_list_rules | cqz_validate_rules | cqz_test_rule | cqz_read_report &nbsp;·&nbsp; Skill: /cqz &nbsp;·&nbsp; Agents: remediate | pr-review &nbsp;·&nbsp; Packaging → <strong>cqz-admin-cheatsheet.pdf</strong>
 </div>
 </div>
 

@@ -158,3 +158,41 @@ Tosca steps); those keep the raw text through a `lineMatchesRaw` variant.
 
 This changes almost every number the tool reports, so it needs the golden
 master re-baselined in the same change.
+
+---
+
+## A local model for review — measured, and parked
+
+Twice asked, twice measured, both times negative. Recording the numbers so the
+next person does not pay for them again.
+
+**A classifier (`Xenova/nli-deberta-v3-xsmall`, 104 MB, ~500 MB resident).**
+Shipped as `cqz-ai` 0.1.0, then withdrawn. On the clearest possible contrast it
+rated `getByRole`/`getByTestId` as *more* fragile than
+`div:nth-child(3) > button.btn-x7f` — 79% against 76%. It is a natural-language
+entailment model; source code is out of distribution. The one thing it did well
+was separating "one behaviour" from "several" in **well-formed English** test
+names, 6/6 — which evaporated on real test names, because real test names are
+identifiers like `External_PCMA_Scheduled_Transfer`, not prose.
+
+**A small code model (`Qwen2.5-Coder-0.5B-Instruct` q4, 571 MB, 1.8 GB
+resident, 151 s to load).** Asked to review a spec with `nth-child` selectors
+and a three-second hard wait, it reported three invented runtime failures and
+mentioned neither real problem. Asked to review a clean spec using a page
+object and `getByTestId`, it invented a missing parameter and claimed an
+assertion was absent that was present. Confidently wrong in both directions.
+
+**The shape of the result.** The models small enough to make "local, free, no
+key" attractive are not good enough to be trusted; the ones good enough are not
+small. The product already has the good option — Anthropic, Bedrock and Gemini
+behind a key, which is exactly the right tool for prose and conversation.
+
+**What this is not.** It is not an argument against the idea. It is an argument
+for measuring first: a labelled fixture set with known-good and known-bad
+examples, scored before anything is built on top. Every failure above would
+have been caught by twenty examples and an afternoon.
+
+**And the useful realisation:** everything the model was meant to judge —
+fragile selectors, vague test names, compound tests, page-object adherence —
+turned out to be detectable by deterministic rules that are *right*, in an
+engine that already has 544 of them.

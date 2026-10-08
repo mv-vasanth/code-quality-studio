@@ -1,6 +1,6 @@
 # Releasing
 
-> **First release of `cqz-audit` and `cqz-ai` — read this before anything else.**
+> **First release of `cqz-audit` — read this before anything else.**
 >
 > npm configures trusted publishing **per package**, and a package that does not
 > exist yet has no settings page to configure. So the very first publish of each
@@ -11,26 +11,25 @@
 > it can never be taken by accident, and it exists to be deleted.
 >
 > 1. **Create a granular access token** on npmjs.com — Access Tokens →
->    Generate New Token → Granular. Give it *Read and write* on packages
->    `cqz-audit` and `cqz-ai`. A granular token is not a 2FA bypass, so it works
+>    Generate New Token → Granular. Give it *Read and write* on `cqz-audit`.
+>    A granular token is not a 2FA bypass, so it works
 >    with a security-key-only account.
 > 2. **Add it as a repository secret** — Settings → Secrets and variables →
 >    Actions → New repository secret, named exactly `NPM_TOKEN`.
-> 3. **Run each workflow once with bootstrap ticked** — Actions →
->    *Publish to npm* → Run workflow → tick **bootstrap** → Run. Then the same
->    for *Publish cqz-ai to npm*. The run fails early with a clear message if the
->    secret is missing, rather than halfway through.
+> 3. **Run the workflow once with bootstrap ticked** — Actions →
+>    *Publish to npm* → Run workflow → tick **bootstrap** → Run. It fails early
+>    with a clear message if the secret is missing, rather than halfway through.
+>    (`cqz-ai` is already published and is **not** being released again — see
+>    [ai/README.md](../ai/README.md).)
 > 4. **Add the Trusted Publisher for each package** now that they exist —
 >    npmjs.com → package → Settings → Trusted Publisher → GitHub Actions,
 >    owner `mv-vasanth`, repository `code-quality-studio`, workflow
->    `publish.yml` for `cqz-audit` and `publish-ai.yml` for `cqz-ai`,
->    environment blank.
+>    `publish.yml`, environment blank.
 > 5. **Delete the `NPM_TOKEN` secret.** Every release after this goes out over
 >    OIDC with no token stored anywhere. The bootstrap run prints a warning
 >    reminding you to do exactly this.
 >
-> After that, releasing is a tag — `v2.6.1` for the CLI, `ai-v0.1.1` for the
-> add-on — and nothing else.
+> After that, releasing is a tag — `v2.6.1` — and nothing else.
 >
 > `cqs-audit` stays at 2.5.0 and is never published again. Deprecate it so
 > people arriving from old links are pointed at the new name, but **do not

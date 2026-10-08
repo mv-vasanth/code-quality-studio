@@ -9,7 +9,7 @@ import { tmpdir } from "os";
 import { execSync } from "child_process";
 import process from "process";
 
-/* global __CQZ_VERSION__, __CQZ_APP_JS__, __CQZ_APP_CSS__ */
+/* global __CQZ_VERSION__, __CQZ_RULE_COUNT__, __CQZ_APP_JS__, __CQZ_APP_CSS__ */
 const CQZ_VERSION = typeof __CQZ_VERSION__ !== "undefined" ? __CQZ_VERSION__ : "1.0.0";
 // The built web app, inlined at bundle time. Empty when the CLI was built
 // without `npm run build` having produced dist/assets — see build.mjs.
@@ -17,6 +17,7 @@ const CQZ_VERSION = typeof __CQZ_VERSION__ !== "undefined" ? __CQZ_VERSION__ : "
 // beyond the baseline, not every finding in the repo.
 let baselineNewCriticals = 0;
 
+const CQZ_RULES   = typeof __CQZ_RULE_COUNT__ !== "undefined" ? __CQZ_RULE_COUNT__ : 0;
 const CQZ_APP_JS  = typeof __CQZ_APP_JS__  !== "undefined" ? __CQZ_APP_JS__  : "";
 const CQZ_APP_CSS = typeof __CQZ_APP_CSS__ !== "undefined" ? __CQZ_APP_CSS__ : "";
 
@@ -332,7 +333,7 @@ ${b("EXAMPLES")}
   cqz ./e2e/ -s selenium_java -S warning
   cqz . --list-stacks
 
-${b("AI REVIEW")}  ${dim("(adds second-eye review on top of 530 rules)")}
+${b("AI REVIEW")}  ${dim(`(adds second-eye review on top of ${CQZ_RULES} rules)`)}
   cqz ./tests/ --ai anthropic --api-key sk-ant-xxx
   cqz ./tests/ --ai bedrock --aws-region us-east-1 --aws-access-key KEY --aws-secret-key SECRET
   cqz ./tests/ --ai vertex --vertex-project my-proj --vertex-location us-central1 --vertex-key-file sa.json

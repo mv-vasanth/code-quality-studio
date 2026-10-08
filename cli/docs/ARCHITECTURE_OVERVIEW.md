@@ -8,7 +8,7 @@ what is genuinely unfinished.
 
 ## 1. What it is
 
-A static quality analyser for test and application code. **530 rules across 18
+A static quality analyser for test and application code. **544 rules across 18
 stacks** (Playwright, Cypress, Selenium, Appium, TOSCA, REST Assured, Karate,
 pytest, Postman, TypeScript, Java, Python).
 
@@ -142,7 +142,7 @@ bad severities, empty fields and runtime crashes.
 ## 6. Current state — be honest with reviewers
 
 ### Working
-530 rules · CLI · MCP server (6 tools) · web app · standalone binary ·
+544 rules · CLI · MCP server (7 tools) · web app · standalone binary ·
 `cqs-rules.json` project rules · AI review across 4 providers · per-finding AI
 fix · rule-suggestion agent · cross-file duplicate detection.
 
@@ -160,7 +160,7 @@ fix · rule-suggestion agent · cross-file duplicate detection.
 
 The missing test suite is the most significant gap for anyone taking this
 further. The rule-integrity harness covers structural faults but not behaviour;
-there is no regression net for the 530 rules.
+there is no regression net for the 544 rules.
 
 ### Known risks
 

@@ -204,15 +204,6 @@ export function startLocalServer(handlers, opts = {}) {
         return send(res, 405, { error: `${req.method} not allowed here` }, corsOrigin);
       }
 
-      // Proxied to whichever add-on provides it, so the page needs one origin
-      // and one token no matter how many add-ons are running.
-      if (url.pathname === "/ai-audit" && req.method === "POST") {
-        if (!handlers.addons) return send(res, 404, { error: "Add-ons are not available in this build." }, corsOrigin);
-        const out = await handlers.addons.proxy("cqz-ai", "/ai-audit", body);
-        if (out.ok === false && out.error) return send(res, out.status ?? 500, { error: out.error }, corsOrigin);
-        return send(res, out.status ?? 200, out.body, corsOrigin);
-      }
-
       if (url.pathname === "/remediate" && req.method === "POST") {
         // Writing is opt-in at startup, and a dry run is the default even then.
         const dryRun = body.dryRun !== false;

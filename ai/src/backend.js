@@ -32,7 +32,7 @@ export const TINY_MODEL = "Xenova/mobilebert-uncased-mnli";
 const IDLE_UNLOAD_MS = 5 * 60 * 1000;
 
 /** Code longer than this is truncated — these models see 512 tokens anyway. */
-const MAX_CHARS = 4000;
+const MAX_CHARS = 1600;   // ~400 tokens, inside the model's 512-token window
 
 /**
  * Where weights live.
@@ -185,8 +185,44 @@ function hookExit() {
   process.once("beforeExit", () => { void shutdown("beforeExit"); });
 }
 
-/** Trim code to something the model can actually read. */
+/**
+ * Reduce a file to the lines the model is actually being asked about.
+ *
+ * The first version sent the head of the file, which was wrong in a way that
+ * was invisible until the per-file view showed every spec scoring identically.
+ * A real spec opens with imports, interfaces, type aliases and constants — on
+ * one measured suite the first 4000 characters contained *zero* lines
+ * containing a locator, an assertion or a click. The classifier sees 512
+ * tokens, so it was judging "are these selectors fragile?" by reading import
+ * statements, and every file looked the same because every file's boilerplate
+ * looks the same.
+ *
+ * So: drop what cannot answer the question, keep what can, and keep it in
+ * source order so the structure still reads like a test.
+ */
+const SIGNAL = /(\b(test|it|describe|context)\s*[.(]|locator\(|getBy[A-Z]|findElement|\$\(|\bcy\.|page\.|driver\.|expect\(|assert|should\b|click\(|fill\(|type\(|press\(|select|waitFor|\.then\()/;
+const NOISE = /^\s*(import\b|export\s+(type|interface)\b|interface\b|type\s+\w+\s*=|\/\/|\/\*|\*|@\w+\s*$|\}?\s*from\s)/;
+
 export function clip(code) {
   const text = String(code ?? "");
-  return text.length > MAX_CHARS ? text.slice(0, MAX_CHARS) : text;
+  const lines = text.split(/\r?\n/);
+
+  const kept = [];
+  let budget = MAX_CHARS;
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    if (NOISE.test(line)) continue;
+    if (!SIGNAL.test(line)) continue;
+    const trimmed = line.length > 200 ? line.slice(0, 200) : line;   // minified or data blobs
+    if (budget - trimmed.length < 0) break;
+    budget -= trimmed.length + 1;
+    kept.push(trimmed);
+  }
+
+  // Nothing matched — a config file, a page object of pure getters, something
+  // we did not anticipate. Fall back to the head rather than sending nothing,
+  // which would make the model answer about an empty string.
+  if (kept.length < 3) return text.length > MAX_CHARS ? text.slice(0, MAX_CHARS) : text;
+
+  return kept.join("\n");
 }

@@ -281,7 +281,7 @@ Not for any of this. Keys are only for the optional AI second-opinion review,
 which is a separate feature.
 
 **Is this different from the `cqs` command?**
-Same engine, same 530 rules, same report. MCP just means your assistant can
+Same engine, same 544 rules, same report. MCP just means your assistant can
 run it for you instead of you typing commands.
 
 **How do I remove it?**

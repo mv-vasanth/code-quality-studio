@@ -1,6 +1,6 @@
 # cqz — Code Quality Zone CLI
 
-Audit your test and application code from the terminal. **530 rules across 18
+Audit your test and application code from the terminal. **544 rules across 18
 stacks** — Playwright, Cypress, Selenium, Appium, TOSCA, REST Assured, Karate,
 pytest, Postman, TypeScript, Java and Python.
 
@@ -79,6 +79,39 @@ Reports are skipped automatically for `--output json` / `--output summary` and
 when output isn't a terminal, so pipelines stay clean.
 
 ---
+
+## The studio, on your machine
+
+The CLI carries the full web app inside it, so one command runs both:
+
+```bash
+cd ~/my-project
+cqz serve --open
+```
+
+That starts a local server on `http://127.0.0.1:4000` and opens the studio it
+serves. The page arrives already signed in — there is no token to copy and no
+second port, because the app and the API share an origin.
+
+From there you can scan a folder straight off disk instead of picking files
+through the browser, and read findings grouped by rule with the offending lines
+shown in context.
+
+| | |
+|---|---|
+| `cqz serve --open` | server **and** studio |
+| `cqz serve` | just the API, for scripts and `curl` |
+| `cqz serve --port 4005` | when 4000 is taken |
+| `cqz serve --allow-write` | let the agents edit files — off by default |
+
+**Which paths it can scan.** Relative paths resolve from *where you started
+`serve`*, not from the repo or the browser; absolute paths reach anywhere on the
+machine. `~/tests` will not work — your shell expands `~`, and the API never
+sees a shell.
+
+**Safe by default:** bound to `127.0.0.1` only, a random token per run required
+on every request except `/health`, an origin allowlist, and no writes unless you
+ask for them.
 
 ## Usage
 

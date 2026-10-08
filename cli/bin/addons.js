@@ -24,19 +24,21 @@ import { existsSync, rmSync, readFileSync, mkdirSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 
-/** The complete set. Adding to it is a code change, by design. */
-export const ADDONS = {
-  "cqz-ai": {
-    name: "cqz-ai",
-    label: "Local AI",
-    blurb: "An offline classifier that judges the fuzzy half of test quality — fragile selectors, test scope, assertion strength. No API key.",
-    // What it costs, stated up front rather than discovered afterwards.
-    installSize: "~90 MB (package + ONNX runtime)",
-    modelSize: "~104 MB, downloaded on first use",
-    port: 4100,
-    bin: "dist/cqz-ai.js",
-  },
-};
+/**
+ * The complete set. Adding to it is a code change, by design.
+ *
+ * Empty on purpose. `cqz-ai` lived here until its classifier was measured:
+ * on a clear contrast it rated robust `getByRole` selectors as *more* fragile
+ * than `div:nth-child(3) > button.btn-x7f`, and on real test names it called
+ * single identifiers "several behaviours". It is a natural-language entailment
+ * model and source code is out of distribution for it. Offering a 104 MB
+ * download that produces confident, wrong numbers is worse than offering
+ * nothing, so the studio no longer offers it.
+ *
+ * The machinery below is kept: installing, starting, proxying and killing a
+ * child process is general, it is tested, and the next add-on will need it.
+ */
+export const ADDONS = {};
 
 export function addonsRoot() {
   return process.env.CQZ_ADDONS_DIR || join(homedir(), ".cqz", "addons");
