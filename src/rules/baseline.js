@@ -85,7 +85,13 @@ export function diffAgainstBaseline(results, baseline, rootDir) {
     }
   }
 
+  // Only files that were actually audited can be said to have improved.
+  // Without this, auditing a subdirectory — or --changed, which audits a
+  // handful of files — reports every untouched file in the baseline as
+  // "fixed", which is both wrong and flattering.
+  const auditedKeys = new Set(results.map(({ file }) => relativise(file, rootDir)));
   for (const [key, rules] of Object.entries(accepted)) {
+    if (!auditedKeys.has(key)) continue;
     for (const [ruleId, count] of Object.entries(rules)) {
       const now = current[key]?.[ruleId] ?? 0;
       if (now < count) fixed += count - now;

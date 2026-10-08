@@ -171,6 +171,38 @@ A full walkthrough for every client ships with the source, in
 
 ---
 
+## Adopting it on an existing suite
+
+A real suite does not start clean. Gate on *new* findings instead of all of
+them:
+
+```bash
+cqs ./tests --baseline-write .cqs-baseline.json   # accept today's reality
+cqs ./tests --baseline .cqs-baseline.json         # fails only on new findings
+```
+
+Commit the baseline file. Existing debt stays visible but non-blocking; the
+suite cannot get worse. When someone fixes debt, the run reports it so you can
+re-record and lock the gain in.
+
+Findings are keyed by file and rule, counted — not by line number, which moves
+whenever anyone edits above a finding. So it can tell you a file gained a third
+hard wait, but not which occurrence is new.
+
+### Audit only what changed
+
+```bash
+cqs --changed                     # vs origin/main
+cqs --changed --since develop
+```
+
+Covers committed, staged, unstaged and untracked files. Pairs naturally with
+the baseline for a pull-request gate:
+
+```bash
+cqs --changed --baseline .cqs-baseline.json
+```
+
 ## CI integration
 
 `cqs` exits `1` when critical findings exist, so it plugs straight in:

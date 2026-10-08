@@ -95,7 +95,7 @@ function parseArgs(argv) {
   const args = {
     paths: [], stack: null, severity: "all", category: null, output: "pretty",
     help: false, version: false, listStacks: false,
-    baseline: null, baselineWrite: null, readReport: null, open: false, noReport: false,
+    baseline: null, baselineWrite: null, changed: false, since: null, readReport: null, open: false, noReport: false,
     rulesFile: null, noRules: false,
     command: null, dryRun: false, commit: false, branch: null, maxFiles: 10, force: false,
     repo: null, pr: null, token: null, threshold: null, maxComments: 30, onlyAdded: false,
@@ -121,6 +121,8 @@ function parseArgs(argv) {
     else if ((a === "--read-report" || a === "-r") && argv[i+1]) { args.readReport = argv[++i]; }
     else if (a === "--open")                                      { args.open = true; }
     else if (a === "--no-report" || a === "--no-open")            { args.noReport = true; }
+    else if (a === "--changed")                                   { args.changed = true; }
+    else if (a === "--since" && argv[i+1])                        { args.since = argv[++i]; }
     else if (a === "--baseline" && argv[i+1])                     { args.baseline = argv[++i]; }
     else if (a === "--baseline-write" && argv[i+1])               { args.baselineWrite = argv[++i]; }
     else if (a === "--rules")                                     { args.rulesFile = argv[++i]; }
@@ -267,6 +269,10 @@ const STACK_MARKERS = {
 function classifyFile(file) {
   const name = basename(file);
 
+  // The baseline is a record of findings, not source. Left in, it is picked
+  // up as a Postman collection and reports findings about itself.
+  if (/(^|[.-])cqs-baseline\.json$/i.test(name)) return null;
+
   // What a file imports beats what it is called. Shared with the web app so
   // the two cannot disagree about which stack owns a file.
   let head = "";
@@ -307,6 +313,52 @@ function routeFilesByStack(inputPaths) {
     }
   }
   return byStack;
+}
+
+
+/** Group an explicit list of files by the stack that owns each. */
+function routeFileList(files) {
+  const byStack = new Map();
+  for (const f of files) {
+    const owner = classifyFile(f);
+    if (!owner) continue;
+    if (!byStack.has(owner)) byStack.set(owner, []);
+    byStack.get(owner).push(f);
+  }
+  return byStack;
+}
+
+/**
+ * Files this branch changed, for --changed.
+ *
+ * Includes committed, staged and unstaged changes, because the useful
+ * question before a push is "what have I touched", not "what have I
+ * committed". Deleted files are dropped — auditing a file that no longer
+ * exists is noise.
+ */
+function gitChangedFiles(sinceRef) {
+  const run = (cmd) => {
+    try { return execSync(cmd, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim(); }
+    catch { return ""; }
+  };
+  if (!run("git rev-parse --is-inside-work-tree")) {
+    console.error("  --changed needs a git repository.");
+    process.exit(1);
+  }
+  // Pick a base that exists: what the user asked for, else the usual suspects.
+  const candidates = sinceRef ? [sinceRef] : ["origin/main", "origin/master", "main", "master"];
+  const base = candidates.find((r) => run(`git rev-parse --verify --quiet ${r}`)) ?? "HEAD";
+
+  const sets = [
+    run(`git diff --name-only ${base}...HEAD`),   // committed on this branch
+    run("git diff --name-only HEAD"),             // unstaged
+    run("git diff --name-only --cached"),         // staged
+    run("git ls-files --others --exclude-standard"), // new, untracked
+  ];
+  const files = [...new Set(sets.join("\n").split("\n").filter(Boolean))]
+    .map((f) => resolve(f))
+    .filter((f) => existsSync(f));
+  return { base, files };
 }
 
 function detectStack(files) {
@@ -358,6 +410,8 @@ ${b("OPTIONS")}
   -r, --read-report <file>        Read a saved JSON report and print summary
       --open                      Force the report even when piped or in CI
       --no-report                 Skip the report for this run (alias: --no-open)
+      --changed                   Audit only files changed on this branch
+      --since <ref>               Base ref for --changed (default: origin/main)
       --baseline-write <file>     Record current findings as accepted
       --baseline <file>           Fail only on findings beyond the baseline
       --rules <file>              Use this cqs-rules.json (default: discovered by walking up)
@@ -1388,7 +1442,24 @@ async function main() {
   // Route every file to the stack that owns it. A repo with specs, frontend
   // code and a Java service is three stacks, not one.
   if (!args.stack) {
-    const byStack = routeFilesByStack(inputPaths);
+    let byStack;
+    if (args.changed) {
+      const { base, files } = gitChangedFiles(args.since);
+      if (files.length === 0) {
+        console.log(dim(`  No changed files vs ${base} — nothing to audit.`));
+        return;
+      }
+      if (args.output === "pretty") {
+        console.log(dim(`  ${files.length} changed file(s) vs ${base}`));
+      }
+      byStack = routeFileList(files);
+      if (byStack.size === 0) {
+        console.log(dim(`  ${files.length} file(s) changed, none in a supported stack.`));
+        return;
+      }
+    } else {
+      byStack = routeFilesByStack(inputPaths);
+    }
     if (byStack.size === 0) {
       console.error(`  No supported files found in: ${inputPaths.join(", ")}`);
       process.exit(1);
@@ -1418,7 +1489,7 @@ async function main() {
 
     // Say what was not looked at. A clean report over half a repo is worse
     // than no report, because it reads as a clean bill of health.
-    if (args.output === "pretty") {
+    if (args.output === "pretty" && !args.changed) {
       const skipped = unsupportedExtensions(inputPaths, analysed);
       if (skipped.size) {
         const total = [...skipped.values()].reduce((a, b) => a + b, 0);
