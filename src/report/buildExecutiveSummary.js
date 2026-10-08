@@ -186,7 +186,7 @@ export function buildExecutiveHtml(payload) {
     ${gapList}
   </section>
 
-  <footer>Executive summary — Code Quality Studio. Download the full HTML report for detailed findings and fixes.</footer>
+  <footer>Executive summary — Code Quality Zone. Download the full HTML report for detailed findings and fixes.</footer>
 </body>
 </html>`;
 }

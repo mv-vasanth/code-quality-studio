@@ -43,7 +43,7 @@ export default function StudioFooter({ categoryCount = 10, modeLabel, files = []
       }}
     >
       <span>
-        Code Quality Studio{modeLabel ? ` · ${modeLabel}` : ""}
+        Code Quality Zone{modeLabel ? ` · ${modeLabel}` : ""}
       </span>
 
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

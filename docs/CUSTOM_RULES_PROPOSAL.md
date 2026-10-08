@@ -5,10 +5,10 @@
 ## The problem
 
 Custom rules already work, but only in the web app. `src/rules/customRulesStorage.js`
-persists them to `localStorage` under `cqs-custom-rules-<stackId>`, and
+persists them to `localStorage` under `cqz-custom-rules-<stackId>`, and
 `src/analyzers/index.js` applies them via `runCustomRules()`.
 
-The CLI and MCP server import each analyzer **directly** (`cqs.entry.js` imports
+The CLI and MCP server import each analyzer **directly** (`cqz.entry.js` imports
 `../../src/analyzers/playwright.js`, not `analyzers/index.js`), so they never call
 `runCustomRules()`. That means a custom rule:
 
@@ -23,13 +23,13 @@ person's browser.
 
 ## Proposed solution
 
-A `cqs-rules.json` file committed to the repo, discovered automatically by the CLI,
+A `cqz-rules.json` file committed to the repo, discovered automatically by the CLI,
 the MCP server and the web app.
 
 ### Discovery
 
 Starting from the audited path, walk up to the filesystem root and use the **first**
-`cqs-rules.json` found. Stop at a `.git` directory boundary. An explicit
+`cqz-rules.json` found. Stop at a `.git` directory boundary. An explicit
 `--rules <path>` flag overrides discovery entirely; `--no-rules` disables it.
 
 This matches how developers already expect `.eslintrc` / `.prettierrc` to behave, so
@@ -39,7 +39,7 @@ there is nothing new to learn.
 
 ```jsonc
 {
-  "$schema": "https://unpkg.com/cqs-audit/schema/cqs-rules.schema.json",
+  "$schema": "https://unpkg.com/cqz-audit/schema/cqz-rules.schema.json",
   "version": 1,
 
   // Turn off built-in rules that do not apply to this repo
@@ -84,7 +84,7 @@ breaking format change.
 Later entries win, so a developer can always relax a rule locally:
 
 1. built-in rules
-2. `cqs-rules.json` found by discovery
+2. `cqz-rules.json` found by discovery
 3. `--rules <path>`
 4. `--disable <id>` on the command line
 
@@ -95,15 +95,15 @@ Invalid rules must **warn and skip**, never crash an audit — the existing
 the same way. Validate on load and print one clear line per problem:
 
 ```
-cqs-rules.json: rule ACME-003 skipped — category "selectors" is not valid for stack
+cqz-rules.json: rule ACME-003 skipped — category "selectors" is not valid for stack
                 java_api (valid: api_design, security, data_access, …)
 ```
 
-A `cqs --validate-rules` subcommand would let CI fail fast on a malformed file.
+A `cqz --validate-rules` subcommand would let CI fail fast on a malformed file.
 
 ### Migration from localStorage
 
-Add an **Export to cqs-rules.json** button to the Rules tab that serialises the
+Add an **Export to cqz-rules.json** button to the Rules tab that serialises the
 current localStorage rules into this format. The web app then prefers the file when
 one is present and shows a read-only banner explaining that rules are now
 project-managed, with an explicit override to keep editing locally.
@@ -115,11 +115,11 @@ Small, and mostly reuse:
 | Change | Where | Notes |
 |---|---|---|
 | Loader + discovery walk | new `src/rules/fileRules.js` | ~80 lines |
-| Wire into CLI | `cli/bin/cqs.entry.js` | load once, pass into each analyzer call |
-| Wire into MCP | `cli/bin/cqs-mcp.entry.js` | plus a `rules_file` tool argument |
+| Wire into CLI | `cli/bin/cqz.entry.js` | load once, pass into each analyzer call |
+| Wire into MCP | `cli/bin/cqz-mcp.entry.js` | plus a `rules_file` tool argument |
 | Web app reads the same file | `src/rules/customRulesStorage.js` | keep localStorage as the fallback |
-| `--rules` / `--no-rules` / `--validate-rules` | `cli/bin/cqs.entry.js` | flag parsing |
-| JSON schema for editor autocomplete | new `schema/cqs-rules.schema.json` | ships in the npm package |
+| `--rules` / `--no-rules` / `--validate-rules` | `cli/bin/cqz.entry.js` | flag parsing |
+| JSON schema for editor autocomplete | new `schema/cqz-rules.schema.json` | ships in the npm package |
 
 The matching engine itself already exists in `runCustomRules()` and can be reused
 unchanged — the only real new work is discovery, validation and threading the rules
@@ -141,14 +141,14 @@ off to a separate provider.
 
 | Tool | Kind | Purpose |
 |---|---|---|
-| `cqs_list_rules` | read | Built-in + custom rules for a stack, with enabled/disabled state. Lets the agent check whether a pattern is already covered before inventing a rule. |
-| `cqs_validate_rules` | read | Validate `cqs-rules.json` — category valid for stack, regex compiles, no duplicate IDs. Returns per-rule errors. |
-| `cqs_test_rule` | read | **The important one.** Takes a candidate rule and a path, runs it *without saving*, and returns what it would match. Turns "this regex looks right" into "this regex matches 4 real lines, and here they are". |
-| `cqs_audit` (extend) | read | Add `rules_file` and `include_custom` arguments. |
+| `cqz_list_rules` | read | Built-in + custom rules for a stack, with enabled/disabled state. Lets the agent check whether a pattern is already covered before inventing a rule. |
+| `cqz_validate_rules` | read | Validate `cqz-rules.json` — category valid for stack, regex compiles, no duplicate IDs. Returns per-rule errors. |
+| `cqz_test_rule` | read | **The important one.** Takes a candidate rule and a path, runs it *without saving*, and returns what it would match. Turns "this regex looks right" into "this regex matches 4 real lines, and here they are". |
+| `cqz_audit` (extend) | read | Add `rules_file` and `include_custom` arguments. |
 
 ### Deliberately no write tool
 
-`cqs_add_rule` is the obvious fifth tool, and I think it is the wrong call.
+`cqz_add_rule` is the obvious fifth tool, and I think it is the wrong call.
 
 The host agent — Claude Code, Cursor — already has file editing that runs through the
 user's own approval and diff review. A write tool inside the MCP server would
@@ -156,11 +156,11 @@ duplicate that while bypassing the review, so a rule could land in the repo with
 scrutiny than any other code change. Rules are policy: they gate other people's
 pull requests, and they deserve at least as much review as the code they govern.
 
-So the flow is: the agent calls `cqs_test_rule` to prove the rule matches what it
+So the flow is: the agent calls `cqz_test_rule` to prove the rule matches what it
 claims, shows the user the JSON and the evidence, and then writes it with its normal
 file-edit tool where the user sees a diff and approves.
 
-`cqs_test_rule` is what makes this trustworthy — without it an agent is guessing at
+`cqz_test_rule` is what makes this trustworthy — without it an agent is guessing at
 regexes, and a plausible-looking rule that silently matches nothing is worse than no
 rule, because the team believes they are covered.
 
@@ -169,24 +169,24 @@ rule, because the team believes they are covered.
 ```
 User:  Everyone keeps using cy.wait with a number. Make that a rule.
 
-Agent: [cqs_list_rules stack=cypress]            -> not already covered
-       [cqs_test_rule  pattern="cy\.wait\(\s*\d+" path=./cypress/e2e]
+Agent: [cqz_list_rules stack=cypress]            -> not already covered
+       [cqz_test_rule  pattern="cy\.wait\(\s*\d+" path=./cypress/e2e]
          -> 12 matches across 5 files, sample: checkout.cy.ts:44
 
        Found 12 real occurrences. Proposed rule:
          { "id": "ACME-010", "severity": "warning", "category": "commands", ... }
-       Add it to cqs-rules.json?
+       Add it to cqz-rules.json?
 
 User:  yes
 
-Agent: [edits cqs-rules.json — user reviews the diff and approves]
+Agent: [edits cqz-rules.json — user reviews the diff and approves]
 ```
 
 ## Open questions
 
 1. **Per-rule file scoping.** Worth adding `"include": ["tests/e2e/**"]` so a rule
    can target part of a repo, or is stack-level targeting enough to start?
-2. **Shareable rule packs.** Should `"extends": "@acme/cqs-rules"` resolve a rule
+2. **Shareable rule packs.** Should `"extends": "@acme/cqz-rules"` resolve a rule
    pack from npm, so several repos share one standard? Useful, but it pulls package
    resolution into the CLI, which is currently dependency-free by design.
 3. **One finding per rule per file.** `runCustomRules()` currently breaks after the

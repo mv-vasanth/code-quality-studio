@@ -19,7 +19,7 @@ export default defineConfig([
     },
   },
   {
-    // cqs-ai runs in Node, not a browser: it forks processes, reads argv and
+    // cqz-ai runs in Node, not a browser: it forks processes, reads argv and
     // talks over IPC. Linting it against browser globals reported `process`
     // as undefined 60-odd times and said nothing useful.
     files: ['ai/**/*.{js,mjs}'],

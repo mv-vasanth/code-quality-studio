@@ -21,15 +21,15 @@ let exitHooked = false;
  *
  * Importable standalone, the worker is the file next to this one. Inside the
  * bundled CLI that file does not exist on disk — there is only the single
- * bundle — so the CLI re-executes itself with CQS_AI_WORKER=1 instead and the
+ * bundle — so the CLI re-executes itself with CQZ_AI_WORKER=1 instead and the
  * bundle's own entry hands control to the worker loop.
  */
 function defaultEntry() {
   // Set by the bundled CLI to its own path: the child is this binary again,
-  // and CQS_AI_WORKER is what tells it to run the worker loop instead of
+  // and CQZ_AI_WORKER is what tells it to run the worker loop instead of
   // parsing arguments.
-  if (process.env.CQS_AI_WORKER_ENTRY) {
-    return { path: process.env.CQS_AI_WORKER_ENTRY, env: { CQS_AI_WORKER: "1" } };
+  if (process.env.CQZ_AI_WORKER_ENTRY) {
+    return { path: process.env.CQZ_AI_WORKER_ENTRY, env: { CQZ_AI_WORKER: "1" } };
   }
   // Imported from source, the worker really is the file next to this one.
   return { path: fileURLToPath(new URL("./worker.mjs", import.meta.url)), env: {} };

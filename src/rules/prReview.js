@@ -91,7 +91,7 @@ export function buildReview(files, { onlyAdded = false, maxComments = 30 } = {})
 export function reviewSummary({ files, counts, score, threshold, comments, outside, dropped }) {
   const gateFailed = threshold != null && score < threshold;
   const lines = [
-    `## cqs quality review`,
+    `## cqz quality review`,
     "",
     `**${files}** changed file(s) analysed · score **${score}/100**` +
       (threshold != null ? ` · threshold ${threshold} — ${gateFailed ? "❌ failed" : "✅ passed"}` : ""),

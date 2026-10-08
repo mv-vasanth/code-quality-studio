@@ -1,4 +1,4 @@
-# Multi-stack Code Quality Studio
+# Multi-stack Code Quality Zone
 
 ## Stacks
 

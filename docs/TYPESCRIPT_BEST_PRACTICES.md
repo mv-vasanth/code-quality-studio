@@ -1,6 +1,6 @@
 # TypeScript core / API best practices
 
-Reference for the **TypeScript** stack in Code Quality Studio.
+Reference for the **TypeScript** stack in Code Quality Zone.
 
 ## Type safety
 - `strict` mode; avoid `any`; use `unknown` + narrowing at boundaries

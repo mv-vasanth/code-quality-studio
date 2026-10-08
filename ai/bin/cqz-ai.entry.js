@@ -1,11 +1,11 @@
 /**
- * cqs-ai — the offline AI layer, as its own process.
+ * cqz-ai — the offline AI layer, as its own process.
  *
- * Deliberately a separate package from cqs-audit. The audit CLI is live and
+ * Deliberately a separate package from cqz-audit. The audit CLI is live and
  * installed by people who want 530 deterministic rules and a 2 MB download;
  * nothing about adding a classifier should be able to break that. So this does
  * not patch, wrap or re-export the audit CLI — it runs beside it, on its own
- * port, and the studio finds it the same way it finds `cqs serve`.
+ * port, and the studio finds it the same way it finds `cqz serve`.
  *
  * If this package fails to install, fails to load its model, or is simply not
  * there, `cqs` behaves exactly as it does today.
@@ -20,15 +20,15 @@ import { shutdownIsolated, isRunning, workerPid } from "../src/isolated.js";
 import { warmIsolated } from "../src/isolated.js";
 import { DEFAULT_MODEL, TINY_MODEL, defaultCacheDir } from "../src/backend.js";
 
-/* global __CQS_AI_VERSION__ */   // injected by build.mjs at bundle time
+/* global __CQZ_AI_VERSION__ */   // injected by build.mjs at bundle time
 
-const VERSION = typeof __CQS_AI_VERSION__ !== "undefined" ? __CQS_AI_VERSION__ : "0.0.0-dev";
+const VERSION = typeof __CQZ_AI_VERSION__ !== "undefined" ? __CQZ_AI_VERSION__ : "0.0.0-dev";
 
-/** Its own port. 4000 is `cqs serve`; these are meant to run side by side. */
+/** Its own port. 4000 is `cqz serve`; these are meant to run side by side. */
 const DEFAULT_PORT = 4100;
 
 const ALLOWED_ORIGINS = new Set([
-  "http://localhost:4000", "http://127.0.0.1:4000",   // cqs serve, serving the studio
+  "http://localhost:4000", "http://127.0.0.1:4000",   // cqz serve, serving the studio
   "http://localhost:4001", "http://127.0.0.1:4001",   // vite dev
   "http://localhost:4002", "http://127.0.0.1:4002",   // vite preview
 ]);
@@ -61,13 +61,13 @@ function parseArgs(argv) {
 }
 
 const HELP = `
-  ${C.b("cqs-ai")} ${C.dim(`v${VERSION}`)} — offline AI layer for Code Quality Studio
+  ${C.b("cqz-ai")} ${C.dim(`v${VERSION}`)} — offline AI layer for Code Quality Zone
 
   ${C.b("Usage")}
-    cqs-ai <file...>              Audit files (static rules, then the model)
-    cqs-ai serve [--port 4100]    Run beside \`cqs serve\` for the studio
-    cqs-ai warm                   Download the model now instead of on first use
-    cqs-ai where                  Print the model cache directory
+    cqz-ai <file...>              Audit files (static rules, then the model)
+    cqz-ai serve [--port 4100]    Run beside \`cqz serve\` for the studio
+    cqz-ai warm                   Download the model now instead of on first use
+    cqz-ai where                  Print the model cache directory
 
   ${C.b("Options")}
     --model <id>                  Hugging Face model (default ${DEFAULT_MODEL})
@@ -140,7 +140,7 @@ async function runServe(args) {
       "content-length": Buffer.byteLength(payload),
       ...(origin ? {
         "access-control-allow-origin": origin,
-        "access-control-allow-headers": "content-type, x-cqs-token",
+        "access-control-allow-headers": "content-type, x-cqz-token",
         "access-control-allow-methods": "GET, POST, OPTIONS",
         "vary": "Origin",
       } : {}),
@@ -161,15 +161,15 @@ async function runServe(args) {
 
     if (url.pathname === "/health" && req.method === "GET") {
       return send(res, 200, {
-        ok: true, service: "cqs-ai", version: VERSION,
+        ok: true, service: "cqz-ai", version: VERSION,
         model: args.model ?? DEFAULT_MODEL,
         loaded: isRunning(), workerPid: workerPid(),
         cacheDir: defaultCacheDir(),
       }, corsOrigin);
     }
 
-    if (req.headers["x-cqs-token"] !== token) {
-      return send(res, 401, { error: "Missing or invalid x-cqs-token" }, corsOrigin);
+    if (req.headers["x-cqz-token"] !== token) {
+      return send(res, 401, { error: "Missing or invalid x-cqz-token" }, corsOrigin);
     }
 
     let body;
@@ -200,10 +200,10 @@ async function runServe(args) {
 
   await new Promise((ok, fail) => {
     server.once("error", fail);
-    server.listen(port, "127.0.0.1", ok);   // this machine only, like cqs serve
+    server.listen(port, "127.0.0.1", ok);   // this machine only, like cqz serve
   });
 
-  console.log(`\n  ${C.b("cqs-ai serve")} ${C.dim(`v${VERSION}`)}`);
+  console.log(`\n  ${C.b("cqz-ai serve")} ${C.dim(`v${VERSION}`)}`);
   console.log(`  ${C.dim("listening on")} http://127.0.0.1:${port} ${C.dim("(this machine only)")}`);
   console.log(`  ${C.dim("model:")} ${args.model ?? DEFAULT_MODEL} ${C.dim("— downloads on first request")}`);
   console.log(`  ${C.dim("cache:")} ${defaultCacheDir()}`);
@@ -223,7 +223,7 @@ async function runServe(args) {
 async function main() {
   // Worker mode: this binary re-executes itself as the model's child process,
   // because the published bundle is one file with no worker.mjs beside it.
-  if (process.env.CQS_AI_WORKER === "1") {
+  if (process.env.CQZ_AI_WORKER === "1") {
     await import("../src/worker.mjs");
     return;
   }
@@ -231,7 +231,7 @@ async function main() {
   // Bundled, there is no worker.mjs on disk — so the worker is this binary,
   // re-executed. Harmless when running from source, where the default entry
   // resolves to the real file.
-  process.env.CQS_AI_WORKER_ENTRY ??= process.argv[1];
+  process.env.CQZ_AI_WORKER_ENTRY ??= process.argv[1];
 
   const args = parseArgs(process.argv.slice(2));
   if (args.version) { console.log(VERSION); return; }

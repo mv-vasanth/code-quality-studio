@@ -2,7 +2,7 @@
  * Merge cross-file duplicate findings into per-file results.
  *
  * The duplicate detector has existed for a while but only the web app called
- * it, so `cqs ./tests/` and the MCP server reported no duplicates at all —
+ * it, so `cqz ./tests/` and the MCP server reported no duplicates at all —
  * the same "shared engine, one entry point benefits" problem as the routing.
  * Both the merge and the rescoring live here so the three callers cannot
  * drift apart again.

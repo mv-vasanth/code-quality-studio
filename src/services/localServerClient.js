@@ -1,5 +1,5 @@
 /**
- * Client for `cqs serve` — the optional local companion.
+ * Client for `cqz serve` — the optional local companion.
  *
  * The browser can only see files you hand it through a picker, which means
  * the app audits what you selected rather than what is on disk. When the
@@ -9,22 +9,22 @@
  * Entirely optional. Nothing here runs unless a server is actually up, and
  * `detect()` is cheap enough to call on load and forget about.
  *
- * Two ways in. When the page was served *by* `cqs serve`, the token is already
+ * Two ways in. When the page was served *by* `cqz serve`, the token is already
  * on `window` and the origin is the server's own — nothing to configure, and
  * no CORS involved. When the app is running somewhere else (vite, a static
  * host) it falls back to probing 127.0.0.1 and asking for the token.
  */
 
 const DEFAULT_PORT = 4000;
-const STORAGE_KEY = "cqs-local-server";
+const STORAGE_KEY = "cqz-local-server";
 
 /**
- * Details injected by `cqs serve` into the page it serves.
+ * Details injected by `cqz serve` into the page it serves.
  * Absent whenever the app is running anywhere else.
  */
 export function injectedServer() {
   if (typeof window === "undefined") return null;
-  const s = window.__CQS_SERVER__;
+  const s = window.__CQZ_SERVER__;
   return s && typeof s.token === "string" ? s : null;
 }
 
@@ -40,7 +40,7 @@ function remember(state) {
 }
 export function recall() {
   // An injected token always wins: it is this run's, where a stored one may
-  // be from a previous `cqs serve` that has since exited.
+  // be from a previous `cqz serve` that has since exited.
   const injected = injectedServer();
   if (injected) return { port: currentPort(), token: injected.token, injected: true };
   try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null"); } catch { return null; }
@@ -97,15 +97,15 @@ export async function detect(port = DEFAULT_PORT, timeoutMs = 800) {
 /**
  * Audit a directory through the companion.
  *
- * @param path   absolute or relative to wherever `cqs serve` was started
- * @param token  printed once by `cqs serve`
+ * @param path   absolute or relative to wherever `cqz serve` was started
+ * @param token  printed once by `cqz serve`
  * @param opts   { stack, app, appOnly, port }
  */
 export async function auditPath(path, token, opts = {}) {
   const port = opts.port ?? currentPort();
   const res = await fetch(`${baseUrl(port)}/audit`, {
     method: "POST",
-    headers: { "content-type": "application/json", "x-cqs-token": token },
+    headers: { "content-type": "application/json", "x-cqz-token": token },
     body: JSON.stringify({
       path,
       stack: opts.stack ?? undefined,
@@ -115,7 +115,7 @@ export async function auditPath(path, token, opts = {}) {
   });
 
   const body = await res.json().catch(() => ({}));
-  if (res.status === 401) throw new Error("That token was rejected. Copy the one printed by `cqs serve`.");
+  if (res.status === 401) throw new Error("That token was rejected. Copy the one printed by `cqz serve`.");
   if (res.status === 403) throw new Error(body.error || "The server refused this request.");
   if (!res.ok) throw new Error(body.error || `Audit failed (HTTP ${res.status})`);
 
@@ -163,7 +163,7 @@ async function addonCall(path, { token, port, method = "POST", body } = {}) {
     method,
     headers: {
       "content-type": "application/json",
-      "x-cqs-token": token ?? recall()?.token ?? "",
+      "x-cqz-token": token ?? recall()?.token ?? "",
     },
     ...(method === "POST" ? { body: JSON.stringify(body ?? {}) } : {}),
   });

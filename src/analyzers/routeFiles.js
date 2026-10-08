@@ -51,8 +51,11 @@ export function classifyFile(file, readHead) {
   // cqs's own files describe findings and rules; they are not source. Left
   // in, a baseline is picked up as a Postman collection and reports findings
   // about itself, and a rules file gets flagged for not being a collection.
-  if (/(^|[.-])cqs-baseline\.json$/i.test(name)) return null;
-  if (/^cqs-rules\.json$/i.test(name)) return null;
+  // Both spellings: a repo upgraded from cqz still has the old filenames, and
+  // auditing your own baseline as if it were a Postman collection is a bad
+  // first impression.
+  if (/(^|[.-])cq[sz]-baseline\.json$/i.test(name)) return null;
+  if (/^cq[sz]-rules\.json$/i.test(name)) return null;
 
   // What a file imports beats what it is called.
   const head = readHead ? readHead(file) : "";

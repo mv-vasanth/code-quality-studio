@@ -1,10 +1,10 @@
-# cqs-ai
+# cqz-ai
 
-An offline AI layer for [Code Quality Studio](https://npmjs.com/package/cqs-audit).
+An offline AI layer for [Code Quality Zone](https://npmjs.com/package/cqz-audit).
 A ~100 MB classifier that runs on your machine, needs no API key, and answers a
 fixed list of questions about a test file.
 
-**A separate package on purpose.** `cqs-audit` is live and installed by people
+**A separate package on purpose.** `cqz-audit` is live and installed by people
 who want 530 deterministic rules and a small download; nothing about adding a
 classifier should be able to break that. This does not patch, wrap or re-export
 it — it runs beside it. If this package fails to install, fails to load its
@@ -24,7 +24,7 @@ plane.
 ## Install
 
 ```bash
-npm install -g cqs-ai
+npm install -g cqz-ai
 ```
 
 Pulls `@huggingface/transformers` and `onnxruntime-node`. The 104 MB of model
@@ -33,17 +33,17 @@ weights are **not** part of the install — they download on first use.
 ## Use it
 
 ```bash
-cqs-ai ./tests/checkout.spec.ts     # audit a file
-cqs-ai warm                         # download the model now, not on first use
-cqs-ai where                        # print the cache directory
-cqs-ai serve                        # run beside `cqs serve` on port 4100
+cqz-ai ./tests/checkout.spec.ts     # audit a file
+cqz-ai warm                         # download the model now, not on first use
+cqz-ai where                        # print the cache directory
+cqz-ai serve                        # run beside `cqz serve` on port 4100
 ```
 
 | | |
 |---|---|
 | Model | `Xenova/nli-deberta-v3-xsmall`, quantised (q8) |
 | Download | 96 MB model + 8 MB tokenizer = **104 MB**, measured |
-| Cache | `~/.cache/cqs-models` (`CQS_MODEL_CACHE` to move it) |
+| Cache | `~/.cache/cqz-models` (`CQZ_MODEL_CACHE` to move it) |
 | Resident | ~470 MB **in a child process**, not in your server |
 | First call | ~15–20 s including download; ~700 ms warm |
 | Keys | none, ever |
@@ -54,7 +54,7 @@ noticeably blunter.
 ## Using it from code
 
 ```js
-import { auditTestCode } from "cqs-ai";
+import { auditTestCode } from "cqz-ai";
 
 const { findings, static: staticPart, model } = await auditTestCode(sourceText);
 ```
@@ -109,23 +109,23 @@ will not act on a message, and leaving 400 MB behind out of politeness is
 exactly what this avoids. It respawns transparently on the next request.
 
 It is never a background service. There is nothing to install, nothing to start
-at boot, and nothing left running when `cqs serve` stops.
+at boot, and nothing left running when `cqz serve` stops.
 
 ## Running beside the studio
 
 ```bash
-cqs serve --open        # port 4000 — the audit engine and the studio
-cqs-ai serve            # port 4100 — this, on its own
+cqz serve --open        # port 4000 — the audit engine and the studio
+cqz-ai serve            # port 4100 — this, on its own
 ```
 
-Two processes, two ports, no shared code. `cqs-ai serve` carries the same
-protections as `cqs serve`: bound to 127.0.0.1 only, a random token per run on
+Two processes, two ports, no shared code. `cqz-ai serve` carries the same
+protections as `cqz serve`: bound to 127.0.0.1 only, a random token per run on
 every request except `/health`, and an origin allowlist that includes 4000 so
 the studio can reach it.
 
 ```bash
 curl -s -X POST http://127.0.0.1:4100/ai-audit \
-  -H "x-cqs-token: $TOKEN" -H 'content-type: application/json' \
+  -H "x-cqz-token: $TOKEN" -H 'content-type: application/json' \
   -d '{"path":"./tests/checkout.spec.ts"}'
 ```
 

@@ -132,7 +132,7 @@ export default function PlaywrightQualityStudio() {
   const [rerunBusy, setRerunBusy] = useState(false);
   const [fileDropOpen, setFileDropOpen] = useState(false);
   const [resultsView, setResultsView] = useState("local");
-  const [stackId, setStackId] = useState(() => { try { return sessionStorage.getItem("cqs-active-stack") || DEFAULT_STACK_ID; } catch { return DEFAULT_STACK_ID; } });
+  const [stackId, setStackId] = useState(() => { try { return sessionStorage.getItem("cqz-active-stack") || DEFAULT_STACK_ID; } catch { return DEFAULT_STACK_ID; } });
   const stack = getAuditStack(stackId);
   const CATEGORIES = stack.categories;
   const [projectName, setProjectName] = useState(stack.defaultProjectName);
@@ -194,7 +194,7 @@ export default function PlaywrightQualityStudio() {
     [files, stackId],
   );
 
-  // Results from `cqs serve` arrive already analysed, so they slot straight
+  // Results from `cqz serve` arrive already analysed, so they slot straight
   // into the same state the file pickers populate. No content comes back —
   // the server read the files, the browser never saw them — so anything
   // needing source stays disabled for these rather than failing later.
@@ -259,7 +259,7 @@ export default function PlaywrightQualityStudio() {
     if (files.length > 0 && !window.confirm("Switching stack clears loaded files. Continue?")) return;
     if (files.length > 0) { setFiles([]); setSelectedFile(null); setFolderHint(""); setWorkspaceSavedAt(null); clearWorkspace(); }
     setStackId(nextId);
-    try { sessionStorage.setItem("cqs-active-stack", nextId); } catch {}
+    try { sessionStorage.setItem("cqz-active-stack", nextId); } catch {}
     setProjectName(getAuditStack(nextId).defaultProjectName);
     setCatFilter("all"); setSevFilter("all"); setActiveTab("overview");
   }, [stackId, files.length]);
@@ -274,10 +274,10 @@ export default function PlaywrightQualityStudio() {
         return;
       }
       let activeStack = DEFAULT_STACK_ID;
-      try { activeStack = sessionStorage.getItem("cqs-active-stack") || saved.stackId || DEFAULT_STACK_ID; } catch { activeStack = saved.stackId || DEFAULT_STACK_ID; }
+      try { activeStack = sessionStorage.getItem("cqz-active-stack") || saved.stackId || DEFAULT_STACK_ID; } catch { activeStack = saved.stackId || DEFAULT_STACK_ID; }
       if (saved.stackId && saved.stackId !== activeStack) { setWorkspaceReady(true); return; }
       setStackId(saved.stackId || activeStack);
-      try { sessionStorage.setItem("cqs-active-stack", saved.stackId || activeStack); } catch {}
+      try { sessionStorage.setItem("cqz-active-stack", saved.stackId || activeStack); } catch {}
       setProjectName(saved.projectName || getAuditStack(saved.stackId || activeStack).defaultProjectName);
       setResultsView(saved.resultsView || "local");
       setFolderHint(saved.folderHint || inferFolderHint(saved.files.map((f) => f.name)));
@@ -905,7 +905,7 @@ export default function PlaywrightQualityStudio() {
 
                   {/* Title */}
                   <div style={{ fontWeight: 800, fontSize: 28, color: "#0f172a", marginBottom: 4, letterSpacing: "-0.5px" }}>
-                    Code Quality Studio
+                    Code Quality Zone
                   </div>
                   <div style={{ fontWeight: 600, fontSize: 13, color: "#0d9488", marginBottom: 28 }}>
                     {getPersona(stack.persona).label} · {getPersona(stack.persona).blurb}

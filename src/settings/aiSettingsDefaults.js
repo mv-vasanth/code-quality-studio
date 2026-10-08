@@ -91,7 +91,7 @@ export const LOCAL_AI_PROVIDER = {
   id: "local-ai",
   label: "Local AI (offline)",
   shortLabel: "Local AI",
-  description: "Runs on this machine via the cqs-ai add-on. No key, no network.",
+  description: "Runs on this machine via the cqz-ai add-on. No key, no network.",
   offline: true,
 };
 

@@ -1,4 +1,4 @@
-# cqs — architecture overview
+# cqz — architecture overview
 
 Audience: engineers and architects picking this up for the first time.
 Covers what the system is, how a file flows through it, where to extend it, and
@@ -16,8 +16,8 @@ It ships through four channels off one rule engine:
 
 | Channel | Entry point | Notes |
 |---|---|---|
-| CLI | `cli/bin/cqs.entry.js` → `dist/cqs.js` | `npm i -g cqs-audit` |
-| MCP server | `cli/bin/cqs-mcp.entry.js` → `dist/cqs-mcp.js` | 6 tools for Claude Code / Cursor |
+| CLI | `cli/bin/cqz.entry.js` → `dist/cqz.js` | `npm i -g cqz-audit` |
+| MCP server | `cli/bin/cqz-mcp.entry.js` → `dist/cqz-mcp.js` | 6 tools for Claude Code / Cursor |
 | Web app | `src/main.jsx` (Vite + React 19) | `npm run dev` |
 | Standalone binary | `cli/build-binary.mjs` | Node SEA, ~107 MB, no Node needed |
 
@@ -49,10 +49,10 @@ change, not a rule change. Budget for it accordingly.
 ## 3. How a file flows
 
 ```
-cqs ./tests/
+cqz ./tests/
   └─ collectFiles(path, stackId)        walk dir, filter by stack filePattern
   └─ detectStack(files)                 if --stack omitted: score stacks by extension hits
-  └─ discoverRulesFile(path)            walk UP to repo root looking for cqs-rules.json
+  └─ discoverRulesFile(path)            walk UP to repo root looking for cqz-rules.json
   └─ for each file:
        ├─ runner(filename, content, { disabledRuleIds })     the stack analyzer
        │    └─ ~N independent regex checks → pushFinding(...)
@@ -92,15 +92,15 @@ src/
     index.js                web-app entry: adds localStorage custom rules
   stacks/definitions.js     18 stack definitions: icon, filePattern, categories
   rules/
-    fileRules.js            cqs-rules.json — discovery, validation, execution
+    fileRules.js            cqz-rules.json — discovery, validation, execution
     customRulesStorage.js   localStorage rules (web app only)
     verifyFix.js            re-audit a proposed fix, diff findings before/after
     remediate.js            fix prompt, code extraction, accept/reject decision
     catalog.js              Rules-tab metadata
   services/ai/              provider adapters + AI features (web app)
 cli/
-  bin/cqs.entry.js          CLI
-  bin/cqs-mcp.entry.js      MCP server
+  bin/cqz.entry.js          CLI
+  bin/cqz-mcp.entry.js      MCP server
   build*.mjs                esbuild bundlers
 ```
 
@@ -119,9 +119,9 @@ prefix, write the regex, call `pushFinding` with a category valid for that stack
 
 **Add a stack** — add an entry to `AUDIT_STACKS`, create
 `src/analyzers/<stack>.js`, register it in the `RUNNERS` map in *three* places:
-`cli/bin/cqs.entry.js`, `cli/bin/cqs-mcp.entry.js`, `src/analyzers/index.js`.
+`cli/bin/cqz.entry.js`, `cli/bin/cqz-mcp.entry.js`, `src/analyzers/index.js`.
 
-**Add a project rule** — no code. Drop a `cqs-rules.json` in the repo.
+**Add a project rule** — no code. Drop a `cqz-rules.json` in the repo.
 
 **Add an MCP tool** — `ListToolsRequestSchema` handler for the schema, then a
 branch in the `CallToolRequestSchema` handler.
@@ -143,7 +143,7 @@ bad severities, empty fields and runtime crashes.
 
 ### Working
 530 rules · CLI · MCP server (6 tools) · web app · standalone binary ·
-`cqs-rules.json` project rules · AI review across 4 providers · per-finding AI
+`cqz-rules.json` project rules · AI review across 4 providers · per-finding AI
 fix · rule-suggestion agent · cross-file duplicate detection.
 
 ### Partial or missing

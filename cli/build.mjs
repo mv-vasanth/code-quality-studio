@@ -1,6 +1,6 @@
 /**
- * cqs CLI bundler
- * Produces a single self-contained dist/cqs.js with no external dependencies.
+ * cqz CLI bundler
+ * Produces a single self-contained dist/cqz.js with no external dependencies.
  *
  * Usage:  node build.mjs
  */
@@ -23,14 +23,14 @@ if (app.js) {
 mkdirSync(join(__dirname, "dist"), { recursive: true });
 
 const result = await build({
-  entryPoints: [join(__dirname, "bin/cqs.entry.js")],
+  entryPoints: [join(__dirname, "bin/cqz.entry.js")],
   bundle: true,
   platform: "node",
   target: "node18",
   format: "esm",
-  outfile: join(__dirname, "dist/cqs.js"),
+  outfile: join(__dirname, "dist/cqz.js"),
   // Inject version and the built app from package.json / dist at build time
-  define: { __CQS_VERSION__: JSON.stringify(version), ...appDefines(app) },
+  define: { __CQZ_VERSION__: JSON.stringify(version), ...appDefines(app) },
   // Exclude Node.js built-ins (they're always available)
   external: ["fs", "path", "process", "url", "os", "crypto", "stream", "util", "events"],
   // Mark AWS/Google SDKs as external — CLI doesn't need AI providers
@@ -39,13 +39,13 @@ const result = await build({
   sourcemap: false,
   metafile: true,
   banner: {
-    js: `#!/usr/bin/env node\n// cqs v${version} — Code Quality Studio CLI\n`,
+    js: `#!/usr/bin/env node\n// cqz v${version} — Code Quality Zone CLI\n`,
   },
   logLevel: "info",
 });
 
 // Make the output executable
-const outPath = join(__dirname, "dist/cqs.js");
+const outPath = join(__dirname, "dist/cqz.js");
 chmodSync(outPath, 0o755);
 
 // Guard: nothing outside Node's builtins may survive into the bundle.
@@ -61,4 +61,4 @@ for (const [file, info] of outputs) {
 console.log("\n  Done! Install globally with:\n");
 console.log("    npm install -g .\n");
 console.log("  Then run:\n");
-console.log("    cqs ./your-tests/ --stack playwright\n");
+console.log("    cqz ./your-tests/ --stack playwright\n");

@@ -1,5 +1,5 @@
 /**
- * cqs-ai bundler.
+ * cqz-ai bundler.
  *
  * Unlike the audit CLI this package has a real runtime dependency —
  * @huggingface/transformers pulls onnxruntime-node, which is a native addon and
@@ -17,20 +17,20 @@ const { version } = JSON.parse(readFileSync(join(__dirname, "package.json"), "ut
 mkdirSync(join(__dirname, "dist"), { recursive: true });
 
 const result = await build({
-  entryPoints: [join(__dirname, "bin/cqs-ai.entry.js")],
+  entryPoints: [join(__dirname, "bin/cqz-ai.entry.js")],
   bundle: true,
   platform: "node",
   target: "node20",
   format: "esm",
-  outfile: join(__dirname, "dist/cqs-ai.js"),
-  define: { __CQS_AI_VERSION__: JSON.stringify(version) },
+  outfile: join(__dirname, "dist/cqz-ai.js"),
+  define: { __CQZ_AI_VERSION__: JSON.stringify(version) },
   packages: "external",
   metafile: true,
   logLevel: "info",
-  banner: { js: `#!/usr/bin/env node\n// cqs-ai v${version} — offline AI layer for Code Quality Studio\n` },
+  banner: { js: `#!/usr/bin/env node\n// cqz-ai v${version} — offline AI layer for Code Quality Zone\n` },
 });
 
-chmodSync(join(__dirname, "dist/cqs-ai.js"), 0o755);
+chmodSync(join(__dirname, "dist/cqz-ai.js"), 0o755);
 
 // The only non-builtin import allowed to survive is the one we declare.
 const declared = new Set(Object.keys(JSON.parse(readFileSync(join(__dirname, "package.json"), "utf8")).dependencies ?? {}));
@@ -54,4 +54,4 @@ if (bad.length) {
 for (const [file, info] of Object.entries(result.metafile.outputs)) {
   console.log(`\n  ✓ ${file}  (${(info.bytes / 1024).toFixed(1)} KB)`);
 }
-console.log("\n  Install:  npm install -g .\n  Run:      cqs-ai ./tests/example.spec.ts\n");
+console.log("\n  Install:  npm install -g .\n  Run:      cqz-ai ./tests/example.spec.ts\n");

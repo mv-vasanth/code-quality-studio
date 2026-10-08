@@ -1,4 +1,4 @@
-Copyright (c) 2026 Code Quality Studio. All rights reserved.
+Copyright (c) 2026 Code Quality Zone. All rights reserved.
 
 This software is provided as source-available, not open source.
 
@@ -14,7 +14,7 @@ release. Until then, treat any use beyond reading the source as requiring
 permission.
 
 NOTE ON EARLIER RELEASES
-Versions of the npm package `cqs-audit` up to and including 2.3.1 were
+Versions of the npm package `cqz-audit` up to and including 2.3.1 were
 published under the MIT Licence. That grant is irrevocable for those
 versions and is unaffected by this notice, which applies only to this source
 tree and to releases made after it.

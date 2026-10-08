@@ -1,5 +1,5 @@
 /**
- * `cqs serve` — a local companion for the web app.
+ * `cqz serve` — a local companion for the web app.
  *
  * The browser can read files you pick but cannot write them back, so the
  * agents (remediate, pr-review) have only ever worked from the CLI. This runs
@@ -24,7 +24,7 @@
  *      it even if the token leaked into a log.
  *
  * Writes additionally require an explicit --allow-write at startup. Running
- * `cqs serve` with no flags can audit and nothing else.
+ * `cqz serve` with no flags can audit and nothing else.
  *
  * ── Why the app is served from here ───────────────────────────────────────
  *
@@ -42,7 +42,7 @@ import { existsSync } from "fs";
 
 // 4000 by default: away from the app's own 5173 and from the usual 3000/8080
 // a project's dev server tends to occupy. The server is opt-in anyway —
-// nothing starts it unless you run `cqs serve`.
+// nothing starts it unless you run `cqz serve`.
 const DEFAULT_PORT = 4000;
 const ALLOWED_ORIGINS = new Set([
   "http://localhost:4001", "http://127.0.0.1:4001",   // vite dev server
@@ -59,7 +59,7 @@ function send(res, status, body, origin) {
     "content-length": Buffer.byteLength(payload),
     ...(origin ? {
       "access-control-allow-origin": origin,
-      "access-control-allow-headers": "content-type, x-cqs-token",
+      "access-control-allow-headers": "content-type, x-cqz-token, x-cqs-token",
       "access-control-allow-methods": "GET, POST, OPTIONS",
       "vary": "Origin",
     } : {}),
@@ -139,7 +139,7 @@ export function startLocalServer(handlers, opts = {}) {
     if ((url.pathname === "/" || url.pathname === "/index.html") && req.method === "GET") {
       if (!opts.renderApp) {
         return send(res, 404, {
-          error: "This build has no embedded app. Use the API, or run `cqs --open`.",
+          error: "This build has no embedded app. Use the API, or run `cqz --open`.",
         }, corsOrigin);
       }
       return sendHtml(res, opts.renderApp(token));
@@ -157,8 +157,11 @@ export function startLocalServer(handlers, opts = {}) {
       }, corsOrigin);
     }
 
-    if (req.headers["x-cqs-token"] !== token) {
-      return send(res, 401, { error: "Missing or invalid x-cqs-token" }, corsOrigin);
+    // Both spellings for one release: the app and server ship together, but a
+    // browser tab left open across an upgrade still holds the old header.
+    const presented = req.headers["x-cqz-token"] ?? req.headers["x-cqs-token"];
+    if (presented !== token) {
+      return send(res, 401, { error: "Missing or invalid x-cqz-token" }, corsOrigin);
     }
 
     let body;
@@ -205,7 +208,7 @@ export function startLocalServer(handlers, opts = {}) {
       // and one token no matter how many add-ons are running.
       if (url.pathname === "/ai-audit" && req.method === "POST") {
         if (!handlers.addons) return send(res, 404, { error: "Add-ons are not available in this build." }, corsOrigin);
-        const out = await handlers.addons.proxy("cqs-ai", "/ai-audit", body);
+        const out = await handlers.addons.proxy("cqz-ai", "/ai-audit", body);
         if (out.ok === false && out.error) return send(res, out.status ?? 500, { error: out.error }, corsOrigin);
         return send(res, out.status ?? 200, out.body, corsOrigin);
       }

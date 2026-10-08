@@ -285,7 +285,7 @@ export function buildHtmlReport(payload) {
     ${sectionBlock("File scorecard", scorecard)}
     ${(() => { const r = renderRoadmap(payload); return r ? sectionBlock("Fix roadmap", r) : ""; })()}
     ${gaps}
-    <footer>Code Quality Studio — share this file with your team or attach to a ticket.</footer>
+    <footer>Code Quality Zone — share this file with your team or attach to a ticket.</footer>
   </div>
 </body>
 </html>`;

@@ -1,6 +1,6 @@
 /**
- * cqs — Code Quality Studio CLI
- * Entry point bundled by build.mjs → dist/cqs.js
+ * cqz — Code Quality Zone CLI
+ * Entry point bundled by build.mjs → dist/cqz.js
  */
 import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from "fs";
 import { resolve, extname, basename, relative, join, dirname } from "path";
@@ -9,16 +9,16 @@ import { tmpdir } from "os";
 import { execSync } from "child_process";
 import process from "process";
 
-/* global __CQS_VERSION__, __CQS_APP_JS__, __CQS_APP_CSS__ */
-const CQS_VERSION = typeof __CQS_VERSION__ !== "undefined" ? __CQS_VERSION__ : "1.0.0";
+/* global __CQZ_VERSION__, __CQZ_APP_JS__, __CQZ_APP_CSS__ */
+const CQZ_VERSION = typeof __CQZ_VERSION__ !== "undefined" ? __CQZ_VERSION__ : "1.0.0";
 // The built web app, inlined at bundle time. Empty when the CLI was built
 // without `npm run build` having produced dist/assets — see build.mjs.
 // Set by runStack in --baseline mode; the exit code must reflect findings
 // beyond the baseline, not every finding in the repo.
 let baselineNewCriticals = 0;
 
-const CQS_APP_JS  = typeof __CQS_APP_JS__  !== "undefined" ? __CQS_APP_JS__  : "";
-const CQS_APP_CSS = typeof __CQS_APP_CSS__ !== "undefined" ? __CQS_APP_CSS__ : "";
+const CQZ_APP_JS  = typeof __CQZ_APP_JS__  !== "undefined" ? __CQZ_APP_JS__  : "";
+const CQZ_APP_CSS = typeof __CQZ_APP_CSS__ !== "undefined" ? __CQZ_APP_CSS__ : "";
 
 // ── Analyzers (imported directly — bypass localStorage in index.js) ──────────
 import { analysePlaywright }           from "../../src/analyzers/playwright.js";
@@ -181,7 +181,7 @@ function collectFiles(inputPath, stackId) {
       const known = ["remediate", "pr-review"];
       const near = known.find((k) => k.startsWith(inputPath.slice(0, 4)) || inputPath.startsWith(k.slice(0, 4)));
       if (near) {
-        console.error(`  Did you mean \`cqs ${near} ...\`? This build is ${CQS_VERSION} — run \`cqs --help\` to see its commands.`);
+        console.error(`  Did you mean \`cqz ${near} ...\`? This build is ${CQZ_VERSION} — run \`cqz --help\` to see its commands.`);
       }
     }
     process.exit(1);
@@ -288,18 +288,18 @@ function sevBadge(sev) {
 // ── Help text ─────────────────────────────────────────────────────────────────
 function printHelp() {
   console.log(`
-${b("cqs")} — Code Quality Studio CLI  ${dim(`v${CQS_VERSION}`)}
+${b("cqz")} — Code Quality Zone CLI  ${dim(`v${CQZ_VERSION}`)}
 
 ${b("USAGE")}
-  cqs [path...]                   Analyse files/folders (defaults to current directory)
-  cqs --list-stacks               List all available stacks
-  cqs --read-report <file>        Print summary of a saved JSON report
-  cqs remediate [path...]         AI-fix findings, verifying each fix before keeping it
-  cqs pr-review                   Review a pull request with inline GitHub comments
-  cqs serve --open                Open the full studio in your browser
-  cqs serve [--port 4000]         ...or just the local API, for scripts
+  cqz [path...]                   Analyse files/folders (defaults to current directory)
+  cqz --list-stacks               List all available stacks
+  cqz --read-report <file>        Print summary of a saved JSON report
+  cqz remediate [path...]         AI-fix findings, verifying each fix before keeping it
+  cqz pr-review                   Review a pull request with inline GitHub comments
+  cqz serve --open                Open the full studio in your browser
+  cqz serve [--port 4000]         ...or just the local API, for scripts
                                   (add --allow-write to let it edit files)
-  cqs mcp-config [client]         Print MCP client config with correct paths
+  cqz mcp-config [client]         Print MCP client config with correct paths
                                   (client: cursor | claude)
 
 ${b("OPTIONS")}
@@ -316,36 +316,36 @@ ${b("OPTIONS")}
       --since <ref>               Base ref for --changed (default: origin/main)
       --baseline-write <file>     Record current findings as accepted
       --baseline <file>           Fail only on findings beyond the baseline
-      --rules <file>              Use this cqs-rules.json (default: discovered by walking up)
-      --no-rules                  Ignore any cqs-rules.json found
+      --rules <file>              Use this cqz-rules.json (default: discovered by walking up)
+      --no-rules                  Ignore any cqz-rules.json found
       --no-color                  Disable ANSI colours
   -h, --help                      Show this help
   -v, --version                   Print the version and exit
 
 ${b("EXAMPLES")}
-  cqs ./tests/
-  cqs ./tests/ --stack cypress --severity critical
-  cqs ./tests/ --output json > report.json
-  cqs ./tests/                                           # report opens automatically
-  cqs ./tests/ --no-report                               # terminal output only
-  cqs --read-report report.json --open                   # open saved report in browser
-  cqs ./e2e/ -s selenium_java -S warning
-  cqs . --list-stacks
+  cqz ./tests/
+  cqz ./tests/ --stack cypress --severity critical
+  cqz ./tests/ --output json > report.json
+  cqz ./tests/                                           # report opens automatically
+  cqz ./tests/ --no-report                               # terminal output only
+  cqz --read-report report.json --open                   # open saved report in browser
+  cqz ./e2e/ -s selenium_java -S warning
+  cqz . --list-stacks
 
 ${b("AI REVIEW")}  ${dim("(adds second-eye review on top of 530 rules)")}
-  cqs ./tests/ --ai anthropic --api-key sk-ant-xxx
-  cqs ./tests/ --ai bedrock --aws-region us-east-1 --aws-access-key KEY --aws-secret-key SECRET
-  cqs ./tests/ --ai vertex --vertex-project my-proj --vertex-location us-central1 --vertex-key-file sa.json
+  cqz ./tests/ --ai anthropic --api-key sk-ant-xxx
+  cqz ./tests/ --ai bedrock --aws-region us-east-1 --aws-access-key KEY --aws-secret-key SECRET
+  cqz ./tests/ --ai vertex --vertex-project my-proj --vertex-location us-central1 --vertex-key-file sa.json
 
   ${dim("Or set via environment variables (recommended for CI):")}
-  ANTHROPIC_API_KEY=sk-ant-xxx cqs ./tests/ --ai anthropic
-  AWS_REGION=us-east-1 AWS_ACCESS_KEY_ID=K AWS_SECRET_ACCESS_KEY=S cqs ./tests/ --ai bedrock
-  VERTEX_PROJECT=p VERTEX_LOCATION=us-central1 GOOGLE_APPLICATION_CREDENTIALS=sa.json cqs ./tests/ --ai vertex
+  ANTHROPIC_API_KEY=sk-ant-xxx cqz ./tests/ --ai anthropic
+  AWS_REGION=us-east-1 AWS_ACCESS_KEY_ID=K AWS_SECRET_ACCESS_KEY=S cqz ./tests/ --ai bedrock
+  VERTEX_PROJECT=p VERTEX_LOCATION=us-central1 GOOGLE_APPLICATION_CREDENTIALS=sa.json cqz ./tests/ --ai vertex
 
 ${b("REMEDIATE")}  ${dim("(AI writes the fix; every fix is re-audited before it is kept)")}
-  cqs remediate ./tests/ --ai anthropic --dry-run      ${dim("preview the diff, write nothing")}
-  cqs remediate ./tests/ --ai anthropic                ${dim("apply fixes in place")}
-  cqs remediate ./tests/ --ai anthropic --branch fix/cqs --commit
+  cqz remediate ./tests/ --ai anthropic --dry-run      ${dim("preview the diff, write nothing")}
+  cqz remediate ./tests/ --ai anthropic                ${dim("apply fixes in place")}
+  cqz remediate ./tests/ --ai anthropic --branch fix/cqz --commit
 
       --dry-run                   Show the diff without writing
       --branch <name>             Create a branch before committing
@@ -358,8 +358,8 @@ ${b("REMEDIATE")}  ${dim("(AI writes the fix; every fix is re-audited before it 
   ${dim("drops half the file. Writing is refused unless the git tree is clean.")}
 
 ${b("PR REVIEW")}  ${dim("(inline GitHub comments on the changed files)")}
-  cqs pr-review --repo owner/name --pr 42 --token ghp_xxx --dry-run
-  cqs pr-review --stack playwright --threshold 80      ${dim("in GitHub Actions")}
+  cqz pr-review --repo owner/name --pr 42 --token ghp_xxx --dry-run
+  cqz pr-review --stack playwright --threshold 80      ${dim("in GitHub Actions")}
 
       --repo <owner/name>         Defaults to GITHUB_REPOSITORY
       --pr <number>               Auto-detected from the Actions event
@@ -461,7 +461,7 @@ function printPretty(stackId, results, args) {
   const { letter, color: gc } = grade(avgScore);
 
   console.log();
-  console.log(`${C.cyan()}${C.bold()}  Code Quality Studio${C.reset()}  ${dim("─")} ${stack.icon} ${b(stack.name)}`);
+  console.log(`${C.cyan()}${C.bold()}  Code Quality Zone${C.reset()}  ${dim("─")} ${stack.icon} ${b(stack.name)}`);
   console.log(`  ${dim("─".repeat(52))}`);
   console.log(`  Files analysed : ${b(String(results.length))}`);
   console.log(`  Overall score  : ${gc}${C.bold()}${avgScore}/100  Grade ${letter}${C.reset()}`);
@@ -545,7 +545,7 @@ function printSummary(stackId, results, args) {
   const avgScore = results.length
     ? Math.round(results.reduce((s, r) => s + (r.result.overallScore ?? 0), 0) / results.length)
     : 0;
-  console.log(`cqs ${stack.icon} ${stack.name} · ${results.length} files · score ${avgScore} · ${crit} critical · ${warn} warning`);
+  console.log(`cqz ${stack.icon} ${stack.name} · ${results.length} files · score ${avgScore} · ${crit} critical · ${warn} warning`);
   // Filtering the display must not hide a failing build: count criticals across
   // everything, matching printPretty's convention.
   if (allFindings.some(f => f.severity === "critical")
@@ -592,16 +592,16 @@ function printJson(stackId, results, args) {
  */
 function printMcpConfig(which) {
   const here = dirname(fileURLToPath(import.meta.url));
-  const server = join(here, "cqs-mcp.js");
+  const server = join(here, "cqz-mcp.js");
   const entry = { command: process.execPath, args: [server] };
 
   if (!existsSync(server)) {
     console.error(`\n  Cannot find the MCP server next to this CLI:\n    ${server}`);
-    console.error("  Reinstall with: npm install -g cqs-audit@latest\n");
+    console.error("  Reinstall with: npm install -g cqz-audit@latest\n");
     process.exit(1);
   }
 
-  const block = JSON.stringify({ mcpServers: { cqs: entry } }, null, 2);
+  const block = JSON.stringify({ mcpServers: { cqz: entry } }, null, 2);
   const targets = {
     cursor: "~/.cursor/mcp.json",
     claude: "~/Library/Application Support/Claude/claude_desktop_config.json",
@@ -616,7 +616,7 @@ function printMcpConfig(which) {
 
   if (which === "claude") {
     console.log(`  ${dim("Claude Code users can skip the file entirely:")}`);
-    console.log(`    claude mcp add cqs ${process.execPath} ${server}\n`);
+    console.log(`    claude mcp add cqz ${process.execPath} ${server}\n`);
   }
 }
 
@@ -665,7 +665,7 @@ async function runServe(args) {
       return { stacks: out };
     },
 
-    // Optional extras — today just cqs-ai. The audit engine never imports
+    // Optional extras — today just cqz-ai. The audit engine never imports
     // any of them; it installs them into ~/.cqs/addons, runs them as child
     // processes and proxies HTTP. An add-on that is broken, missing or
     // uninstallable leaves everything else working.
@@ -712,7 +712,7 @@ async function runServe(args) {
       return {
         error: "Not implemented yet",
         detail: dryRun
-          ? "Use `cqs remediate <path> --ai <provider> --dry-run` from a terminal for now."
+          ? "Use `cqz remediate <path> --ai <provider> --dry-run` from a terminal for now."
           : "Writing from the browser is not wired up. Use the CLI.",
       };
     },
@@ -721,15 +721,15 @@ async function runServe(args) {
   // The app is already inside this bundle, so serve it rather than asking the
   // user to run a second thing on a second port and paste a token between the
   // two. Served from the same origin as the API, it needs neither.
-  const renderApp = CQS_APP_JS
+  const renderApp = CQZ_APP_JS
     ? (token) => buildAppShellHtml({
-        appJs: CQS_APP_JS,
-        appCss: CQS_APP_CSS,
-        title: "Code Quality Studio",
+        appJs: CQZ_APP_JS,
+        appCss: CQZ_APP_CSS,
+        title: "Code Quality Zone",
         globals: {
-          __CQS_SERVER__: {
+          __CQZ_SERVER__: {
             token,
-            version: CQS_VERSION,
+            version: CQZ_VERSION,
             cwd: process.cwd(),
             allowWrite: Boolean(args.allowWrite),
             // Same-origin, the app trusts this instead of calling /health —
@@ -744,7 +744,7 @@ async function runServe(args) {
   const { port, token } = await startLocalServer(handlers, {
     port: args.port ?? undefined,
     allowWrite: args.allowWrite,
-    version: CQS_VERSION,
+    version: CQZ_VERSION,
     cwd: process.cwd(),
     renderApp,
     // Add-ons run as our children; they must not outlive us.
@@ -759,7 +759,7 @@ async function runServe(args) {
     });
   }
 
-  console.log(`\n  ${b("cqs serve")} ${dim(`v${CQS_VERSION}`)}`);
+  console.log(`\n  ${b("cqz serve")} ${dim(`v${CQZ_VERSION}`)}`);
   if (renderApp) {
     console.log(`\n  ${C.cyan()}${C.bold()}Open${C.reset()}  ${url}`);
     console.log(`  ${dim("The page signs itself in \u2014 no token to copy.")}`);
@@ -798,25 +798,25 @@ async function runServe(args) {
  * to the flat report rather than writing a blank page.
  */
 function renderAppReport(stackId, fileResults, { projectName } = {}) {
-  if (!CQS_APP_JS) return "";
+  if (!CQZ_APP_JS) return "";
   const stack = AUDIT_STACKS[stackId] ?? AUDIT_STACKS.playwright;
   const workspace = workspaceFromResults({
     stackId,
-    projectName: projectName || stack.defaultProjectName || `cqs audit — ${stack.name}`,
+    projectName: projectName || stack.defaultProjectName || `cqz audit — ${stack.name}`,
     results: fileResults,
   });
   return buildAppHtmlReport({
-    appJs: CQS_APP_JS,
-    appCss: CQS_APP_CSS,
+    appJs: CQZ_APP_JS,
+    appCss: CQZ_APP_CSS,
     workspace,
-    title: `${workspace.projectName} — Code Quality Studio`,
+    title: `${workspace.projectName} — Code Quality Zone`,
   });
 }
 
 function renderWebReport(stackId, fileResults, { projectName, aiResults = [] } = {}) {
   const stack = AUDIT_STACKS[stackId] ?? AUDIT_STACKS.playwright;
   const payload = buildFindingsReportPayload({
-    projectName: projectName || `cqs audit — ${stack.name}`,
+    projectName: projectName || `cqz audit — ${stack.name}`,
     // filesWithViewResults reads resultLocal for the "local" view and copies it
     // onto .result — passing only .result yields an empty report.
     files: fileResults.map(({ file, result }) => ({
@@ -1086,11 +1086,11 @@ function resolveAiConfig(args) {
  * printing six paths, so only the largest stack opens.
  *
  * Named by stack rather than by timestamp: six files called
- * cqs-report-1791475576139.html are indistinguishable.
+ * cqz-report-1791475576139.html are indistinguishable.
  */
 function openHtmlReport(htmlContent, { stackId = null, open = true } = {}) {
   const label = stackId ? `-${stackId}` : "";
-  const tmp = join(tmpdir(), `cqs-report${label}-${Date.now()}.html`);
+  const tmp = join(tmpdir(), `cqz-report${label}-${Date.now()}.html`);
   writeFileSync(tmp, htmlContent, "utf8");
   if (open) {
     const cmd = process.platform === "win32" ? `start "" "${tmp}"` :
@@ -1118,7 +1118,7 @@ function printReportSummary(filePath) {
   const { letter, color: gc } = grade(avgScore);
 
   console.log();
-  console.log(`${C.cyan()}${C.bold()}  Code Quality Studio${C.reset()}  ${dim("─")}  ${b("Report Summary")}`);
+  console.log(`${C.cyan()}${C.bold()}  Code Quality Zone${C.reset()}  ${dim("─")}  ${b("Report Summary")}`);
   console.log(`  ${dim("─".repeat(52))}`);
   console.log(`  Stack          : ${b(stack?.name ?? stack?.id ?? "unknown")}`);
   console.log(`  Files analysed : ${b(String(files))}`);
@@ -1196,7 +1196,7 @@ function printReportSummary(filePath) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-// ── Remediation agent (cqs remediate) ────────────────────────────────────────
+// ── Remediation agent (cqz remediate) ────────────────────────────────────────
 function gitState(dir) {
   try {
     execSync("git rev-parse --is-inside-work-tree", { cwd: dir, stdio: "pipe" });
@@ -1336,7 +1336,7 @@ async function runRemediate(args) {
       if (args.branch) { execSync(`git checkout -b ${JSON.stringify(args.branch)}`, { cwd, stdio: "pipe" }); console.log(`  branch: ${args.branch}`); }
       if (args.commit) {
         for (const a of applied) execSync(`git add ${JSON.stringify(a.file)}`, { cwd, stdio: "pipe" });
-        const msg = `fix: cqs remediation — ${applied.length} file(s)\n\nApplied by cqs remediate; each fix was re-audited and only kept\nwhen it reduced findings without introducing a new critical.\n`;
+        const msg = `fix: cqz remediation — ${applied.length} file(s)\n\nApplied by cqz remediate; each fix was re-audited and only kept\nwhen it reduced findings without introducing a new critical.\n`;
         execSync("git commit -F -", { cwd, input: msg, stdio: ["pipe", "pipe", "pipe"] });
         console.log(`  committed ${applied.length} file(s)`);
       }
@@ -1345,7 +1345,7 @@ async function runRemediate(args) {
   console.log();
 }
 
-// ── PR review bot (cqs pr-review) ────────────────────────────────────────────
+// ── PR review bot (cqz pr-review) ────────────────────────────────────────────
 const GH_API = process.env.GITHUB_API_URL || "https://api.github.com";
 
 async function gh(path, token, init = {}) {
@@ -1521,9 +1521,9 @@ async function runPrReview(args) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
 
-  // Before anything that touches the filesystem: `cqs --version` used to
+  // Before anything that touches the filesystem: `cqz --version` used to
   // fall through as a path and start auditing the current directory.
-  if (args.version)    { console.log(CQS_VERSION); process.exit(0); }
+  if (args.version)    { console.log(CQZ_VERSION); process.exit(0); }
   if (args.help)       { printHelp();   process.exit(0); }
   if (args.command === "remediate") { await runRemediate(args); return; }
   if (args.command === "pr-review") { await runPrReview(args); return; }
@@ -1628,7 +1628,7 @@ async function main() {
         const kinds = [...skipped.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)
           .map(([ext, n]) => `${ext} (${n})`).join(", ");
         console.log(`\n${dim(`  Not audited: ${total} file${total === 1 ? "" : "s"} with no matching stack \u2014 ${kinds}`)}`);
-        console.log(dim("  Run cqs --list-stacks to see what is supported."));
+        console.log(dim("  Run cqz --list-stacks to see what is supported."));
       }
     }
     if (args.baselineWrite) return;              // recording, never a failure
@@ -1638,7 +1638,7 @@ async function main() {
   }
 
   if (!RUNNERS[args.stack]) {
-    console.error(`Unknown stack: "${args.stack}". Run cqs --list-stacks for valid IDs.`);
+    console.error(`Unknown stack: "${args.stack}". Run cqz --list-stacks for valid IDs.`);
     process.exit(1);
   }
   const forcedFiles = inputPaths.flatMap((p) => { try { return collectFiles(p, args.stack); } catch { return []; } });
@@ -1667,7 +1667,7 @@ async function runStack(stackId, allFiles, args, inputPaths, { label = false, em
     const st = AUDIT_STACKS[stackId];
     console.log(`\n${b(`\u2500\u2500 ${st.icon} ${st.name}`)} ${dim(`(${allFiles.length} file${allFiles.length === 1 ? "" : "s"})`)}`);
   }
-  // Project rules from cqs-rules.json (explicit --rules, or discovered by walking up)
+  // Project rules from cqz-rules.json (explicit --rules, or discovered by walking up)
   let ruleSet = { rules: [], disabled: [], errors: [], path: null };
   if (!args.noRules) {
     const rulesPath = args.rulesFile
@@ -1678,7 +1678,9 @@ async function runStack(stackId, allFiles, args, inputPaths, { label = false, em
   if (ruleSet.path) {
     console.error(`  Project rules: ${ruleSet.rules.length} from ${ruleSet.path}`);
   }
-  for (const err of ruleSet.errors) console.error(`  ${RULES_FILENAME}: ${err}`);
+  // The discovered file, which may still be the legacy cqs-rules.json.
+  const rulesLabel = ruleSet.path ? basename(ruleSet.path) : RULES_FILENAME;
+  for (const err of ruleSet.errors) console.error(`  ${rulesLabel}: ${err}`);
   const disabledRuleIds = new Set(ruleSet.disabled);
 
   // Run analysis
@@ -1726,7 +1728,7 @@ async function runStack(stackId, allFiles, args, inputPaths, { label = false, em
     let existing = {};
     try { existing = JSON.parse(readFileSync(file, "utf8")).files ?? {}; } catch { /* first stack */ }
     const merged = mergeCounts(existing, countFindings(results, root));
-    writeFileSync(file, JSON.stringify(buildBaseline(merged, { cqsVersion: CQS_VERSION }), null, 2) + "\n");
+    writeFileSync(file, JSON.stringify(buildBaseline(merged, { cqsVersion: CQZ_VERSION }), null, 2) + "\n");
     const total = Object.values(merged).reduce((n, r) => n + Object.values(r).reduce((a, b) => a + b, 0), 0);
     console.log(`  ${C.green()}Baseline written${C.reset()} ${dim(`${total} accepted finding(s) across ${Object.keys(merged).length} file(s) -> ${file}`)}`);
     return results;
@@ -1751,7 +1753,7 @@ async function runStack(stackId, allFiles, args, inputPaths, { label = false, em
         console.log(`    ${sevBadge(f.severity)} ${f.title} ${dim(`[${f.ruleId}]`)} ${C.cyan()}${relative(process.cwd(), f._file)}${f.line ? ":" + f.line : ""}${C.reset()}`);
       }
       if (newFindings.length > 30) console.log(dim(`    …and ${newFindings.length - 30} more`));
-      console.log(dim(`\n    Accept these too:  cqs ${inputPaths.join(" ")} --baseline-write ${args.baseline}\n`));
+      console.log(dim(`\n    Accept these too:  cqz ${inputPaths.join(" ")} --baseline-write ${args.baseline}\n`));
     }
     return results;
   }

@@ -116,7 +116,7 @@ export function buildCompleteHtmlReport(payload) {
       ${fullFragment}
     </div>
 
-    <footer class="report-foot">Code Quality Studio — share this file with stakeholders; use toolbar to export Markdown or JSON.</footer>
+    <footer class="report-foot">Code Quality Zone — share this file with stakeholders; use toolbar to export Markdown or JSON.</footer>
   </div>
   <script>
     const PQS_EXPORT = {

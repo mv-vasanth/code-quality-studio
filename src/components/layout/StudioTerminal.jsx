@@ -115,7 +115,7 @@ export default function StudioTerminal({
   onAddFiles,
 }) {
   const [lines, setLines] = useState(() => [
-    line(`Code Quality Studio  ·  cqs terminal  ·  stack: ${stackId}`, "accent"),
+    line(`Code Quality Zone  ·  cqz terminal  ·  stack: ${stackId}`, "accent"),
     line("Type 'help' for all commands, or 'run' to scan loaded files.", "muted"),
   ]);
   const [input, setInput] = useState("");
@@ -141,7 +141,7 @@ export default function StudioTerminal({
     }
     setBusy(true);
     if (!targetFiles) onRunRules?.();
-    push(line(`$ cqs scan --stack=${stackId} --files=${batch.length}`, "prompt"));
+    push(line(`$ cqz scan --stack=${stackId} --files=${batch.length}`, "prompt"));
     await wait(100);
 
     let scoreSum = 0, crit = 0, warn = 0, info = 0;
@@ -325,10 +325,10 @@ export default function StudioTerminal({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `cqs-report-${stackId}-${Date.now()}.json`;
+    a.download = `cqz-report-${stackId}-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    push(line(`  ✓ downloaded cqs-report-${stackId}.json  (${allFindings.length} findings)`, "success"));
+    push(line(`  ✓ downloaded cqz-report-${stackId}.json  (${allFindings.length} findings)`, "success"));
   };
 
   // ── command dispatcher ────────────────────────────────────────────────────────
@@ -436,7 +436,7 @@ export default function StudioTerminal({
         <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#f59e0b" }} />
         <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#22c55e" }} />
         <span style={{ marginLeft: 8, fontSize: 11, color: "#94a3b8" }}>
-          cqs — rules terminal · {files.length} file{files.length !== 1 ? "s" : ""} loaded
+          cqz — rules terminal · {files.length} file{files.length !== 1 ? "s" : ""} loaded
         </span>
         <button
           type="button"

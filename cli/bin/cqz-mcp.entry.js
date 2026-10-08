@@ -1,13 +1,13 @@
 /**
- * cqs MCP Server — exposes cqs as Model Context Protocol tools
+ * cqz MCP Server — exposes cqz as Model Context Protocol tools
  * Works with Claude Code, Cursor, Windsurf, and any MCP-compatible client.
  *
  * Tools:
- *   cqs_audit        — run quality analysis on a path
- *   cqs_list_stacks  — list all 18 supported stacks
- *   cqs_read_report  — summarise a saved JSON report
+ *   cqz_audit        — run quality analysis on a path
+ *   cqz_list_stacks  — list all 18 supported stacks
+ *   cqz_read_report  — summarise a saved JSON report
  */
-/* global __CQS_APP_JS__, __CQS_APP_CSS__ */
+/* global __CQZ_APP_JS__, __CQZ_APP_CSS__ */
 import { Server }               from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -46,8 +46,8 @@ import {
   runFileRules, testRuleAgainstFiles, validateRule,
 } from "../../src/rules/fileRules.js";
 
-/* global __CQS_VERSION__, __CQS_BUILTIN_RULES__ */
-const VERSION = typeof __CQS_VERSION__ !== "undefined" ? __CQS_VERSION__ : "2.1.0";
+/* global __CQZ_VERSION__, __CQS_BUILTIN_RULES__ */
+const VERSION = typeof __CQZ_VERSION__ !== "undefined" ? __CQZ_VERSION__ : "2.1.0";
 
 // Injected at build time by build-mcp.mjs (see the ANALYZER_BY_STACK scan there).
 const BUILTIN_RULES = typeof __CQS_BUILTIN_RULES__ !== "undefined" ? __CQS_BUILTIN_RULES__ : {};
@@ -120,13 +120,13 @@ function runAudit(inputPath, stackId, severity = "all", category = null, rulesFi
     // with "no .ts files found" on a repo full of Java and Python tests.
     const byStack = routeByStack([inputPath], { collectFiles, readHead });
     if (byStack.size === 0) {
-      throw new Error(`No supported files found in: ${inputPath}. Run cqs_list_stacks to see what is supported.`);
+      throw new Error(`No supported files found in: ${inputPath}. Run cqz_list_stacks to see what is supported.`);
     }
     const [best] = [...byStack.entries()].sort((a, b) => b[1].length - a[1].length);
     stackId = best[0];
     files = best[1];
   }
-  if (!RUNNERS[stackId]) throw new Error(`Unknown stack: "${stackId}". Run cqs_list_stacks to see valid IDs.`);
+  if (!RUNNERS[stackId]) throw new Error(`Unknown stack: "${stackId}". Run cqz_list_stacks to see valid IDs.`);
   if (files.length === 0) throw new Error(`No ${AUDIT_STACKS[stackId].fileAccept} files found in: ${inputPath}`);
 
   // Project rules: explicit path, or discovered by walking up from the audited path
@@ -174,12 +174,12 @@ function runAudit(inputPath, stackId, severity = "all", category = null, rulesFi
 
   // Format as readable text for the AI
   const lines = [
-    `## cqs Audit — ${AUDIT_STACKS[stackId].icon} ${AUDIT_STACKS[stackId].name}`,
+    `## cqz Audit — ${AUDIT_STACKS[stackId].icon} ${AUDIT_STACKS[stackId].name}`,
     `**Path:** ${inputPath}`,
     `**Files analysed:** ${results.length}  |  **Score:** ${avgScore}/100 (Grade ${grade(avgScore)})`,
     `**Findings:** ${crit} critical  ${warn} warning  ${info} info`,
     ruleSet.path ? `**Project rules:** ${ruleSet.rules.length} from ${ruleSet.path}` : "",
-    ...(ruleSet.errors.length ? [`**⚠ ${RULES_FILENAME} problems (rules skipped):**`, ...ruleSet.errors.map(e => `- ${e}`)] : []),
+    ...(ruleSet.errors.length ? [`**⚠ ${ruleSet.path ? ruleSet.path.split("/").pop() : RULES_FILENAME} problems (rules skipped):**`, ...ruleSet.errors.map(e => `- ${e}`)] : []),
     "",
     "### Per-file scores",
     ...results.map(({ file, result }) => {
@@ -207,20 +207,20 @@ function runAudit(inputPath, stackId, severity = "all", category = null, rulesFi
 
 // ── MCP Server ────────────────────────────────────────────────────────────────
 // The built web app, inlined at bundle time — same as the CLI. Empty when the
-// app was not built before bundling, in which case cqs_report says so rather
+// app was not built before bundling, in which case cqz_report says so rather
 // than writing a blank page.
-const APP_JS  = typeof __CQS_APP_JS__  !== "undefined" ? __CQS_APP_JS__  : "";
-const APP_CSS = typeof __CQS_APP_CSS__ !== "undefined" ? __CQS_APP_CSS__ : "";
+const APP_JS  = typeof __CQZ_APP_JS__  !== "undefined" ? __CQZ_APP_JS__  : "";
+const APP_CSS = typeof __CQZ_APP_CSS__ !== "undefined" ? __CQZ_APP_CSS__ : "";
 
 const server = new Server(
-  { name: "cqs-mcp", version: VERSION },
+  { name: "cqz-mcp", version: VERSION },
   { capabilities: { tools: {} } }
 );
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     {
-      name: "cqs_audit",
+      name: "cqz_audit",
       description: "Audit test/code files for quality issues using 300+ built-in rules across 18 frameworks (Playwright, Cypress, Selenium, Appium, TOSCA, REST Assured, Karate, pytest, Postman, TypeScript, Java, Python). Returns findings grouped by severity with fix suggestions.",
       inputSchema: {
         type: "object",
@@ -234,8 +234,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
-      name: "cqs_report",
-      description: "Audit a path and write a self-contained HTML report the user can open in a browser. The report embeds the full Code Quality Studio UI \u2014 Overview, Files, Findings, Rule Settings, Coverage Radar, Roadmap \u2014 and needs no server or network. Returns the file path. Use this when the user wants to see or share results rather than read them in chat.",
+      name: "cqz_report",
+      description: "Audit a path and write a self-contained HTML report the user can open in a browser. The report embeds the full Code Quality Zone UI \u2014 Overview, Files, Findings, Rule Settings, Coverage Radar, Roadmap \u2014 and needs no server or network. Returns the file path. Use this when the user wants to see or share results rather than read them in chat.",
       inputSchema: {
         type: "object",
         properties: {
@@ -247,35 +247,35 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
-      name: "cqs_list_stacks",
-      description: "List all 18 available cqs stacks with their stack IDs, file patterns, and groups. Use this to find the correct --stack value before calling cqs_audit.",
+      name: "cqz_list_stacks",
+      description: "List all 18 available cqz stacks with their stack IDs, file patterns, and groups. Use this to find the correct --stack value before calling cqz_audit.",
       inputSchema: { type: "object", properties: {} },
     },
     {
-      name: "cqs_list_rules",
-      description: "List the rules that apply to a stack: built-in rule IDs plus any project rules from cqs-rules.json. Call this BEFORE proposing a new custom rule, to check the pattern is not already covered by a built-in rule.",
+      name: "cqz_list_rules",
+      description: "List the rules that apply to a stack: built-in rule IDs plus any project rules from cqz-rules.json. Call this BEFORE proposing a new custom rule, to check the pattern is not already covered by a built-in rule.",
       inputSchema: {
         type: "object",
         properties: {
           stack: { type: "string", description: "Stack ID, e.g. playwright, cypress, java_api" },
-          path:  { type: "string", description: "Path used to discover cqs-rules.json (walks up to the repo root). Defaults to the current directory." },
+          path:  { type: "string", description: "Path used to discover cqz-rules.json (walks up to the repo root). Defaults to the current directory." },
         },
         required: ["stack"],
       },
     },
     {
-      name: "cqs_validate_rules",
-      description: "Validate a cqs-rules.json file: checks that each rule's category is valid for its stack, its regex compiles, required fields are present, and there are no duplicate IDs. Returns one error line per problem. Use this after editing the rules file.",
+      name: "cqz_validate_rules",
+      description: "Validate a cqz-rules.json file: checks that each rule's category is valid for its stack, its regex compiles, required fields are present, and there are no duplicate IDs. Returns one error line per problem. Use this after editing the rules file.",
       inputSchema: {
         type: "object",
         properties: {
-          path:  { type: "string", description: "Path to cqs-rules.json, or a directory to discover it from." },
+          path:  { type: "string", description: "Path to cqz-rules.json, or a directory to discover it from." },
           stack: { type: "string", description: "Stack ID to validate categories against. Defaults to playwright." },
         },
       },
     },
     {
-      name: "cqs_test_rule",
+      name: "cqz_test_rule",
       description: "Dry-run a candidate custom rule against real files WITHOUT saving it. Returns the actual lines it matches, with file and line numbers. Always call this before proposing a rule to the user — it proves the pattern matches real code, and catches a regex that silently matches nothing.",
       inputSchema: {
         type: "object",
@@ -292,8 +292,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
-      name: "cqs_read_report",
-      description: "Read and summarise a previously saved cqs JSON report file (generated with cqs --output json > report.json). Returns a structured summary with top violations and category scores.",
+      name: "cqz_read_report",
+      description: "Read and summarise a previously saved cqz JSON report file (generated with cqz --output json > report.json). Returns a structured summary with top violations and category scores.",
       inputSchema: {
         type: "object",
         properties: {
@@ -306,10 +306,15 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
+  const { name: requested, arguments: args } = request.params;
+
+  // cqs_* are the pre-rename names, still accepted. tools/list only advertises
+  // the cqz_* names, so new callers learn the new ones and old prompts keep
+  // working rather than failing with "unknown tool".
+  const name = requested.startsWith("cqs_") ? "cqz_" + requested.slice(4) : requested;
 
   try {
-    if (name === "cqs_audit") {
+    if (name === "cqz_audit") {
       const result = runAudit(
         resolve(args.path ?? "."),
         args.stack ?? null,
@@ -320,7 +325,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: result.text }] };
     }
 
-    if (name === "cqs_report") {
+    if (name === "cqz_report") {
       if (!APP_JS) {
         throw new Error("This build has no embedded app. Rebuild with `npm run build` at the repo root, then `node build-mcp.mjs`.");
       }
@@ -332,12 +337,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         workspace: workspaceFromResults({
           stackId: audit.stackId,
           // Same default the CLI uses, so both emit an identical report.
-          projectName: AUDIT_STACKS[audit.stackId].defaultProjectName || `cqs audit \u2014 ${audit.stackName}`,
+          projectName: AUDIT_STACKS[audit.stackId].defaultProjectName || `cqz audit \u2014 ${audit.stackName}`,
           results: audit.results,
         }),
-        title: `${AUDIT_STACKS[audit.stackId].defaultProjectName || audit.stackName} \u2014 Code Quality Studio`,
+        title: `${AUDIT_STACKS[audit.stackId].defaultProjectName || audit.stackName} \u2014 Code Quality Zone`,
       });
-      const out = args.output ? resolve(args.output) : join(tmpdir(), `cqs-report-${Date.now()}.html`);
+      const out = args.output ? resolve(args.output) : join(tmpdir(), `cqz-report-${Date.now()}.html`);
       writeFileSync(out, html, "utf8");
       return { content: [{ type: "text", text:
         `Report written to ${out}\n\n` +
@@ -346,9 +351,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         `Open it in a browser \u2014 it is self-contained, no server needed.` }] };
     }
 
-    if (name === "cqs_list_rules") {
+    if (name === "cqz_list_rules") {
       const stackId = args.stack;
-      if (!AUDIT_STACKS[stackId]) throw new Error(`Unknown stack: "${stackId}". Run cqs_list_stacks for valid IDs.`);
+      if (!AUDIT_STACKS[stackId]) throw new Error(`Unknown stack: "${stackId}". Run cqz_list_stacks for valid IDs.`);
       const builtIn = collectBuiltInRuleIds(stackId);
       const rulesPath = discoverRulesFile(resolve(args.path ?? "."));
       const ruleSet = rulesPath ? loadRulesFile(rulesPath, stackId) : null;
@@ -374,7 +379,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: lines.join("\n") }] };
     }
 
-    if (name === "cqs_validate_rules") {
+    if (name === "cqz_validate_rules") {
       const stackId = args.stack ?? "playwright";
       const given = resolve(args.path ?? ".");
       const rulesPath = existsSync(given) && statSync(given).isFile() ? given : discoverRulesFile(given);
@@ -392,7 +397,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: lines.join("\n") }], isError: !ok };
     }
 
-    if (name === "cqs_test_rule") {
+    if (name === "cqz_test_rule") {
       const target = resolve(args.path);
       const candidate = {
         id: "CANDIDATE",
@@ -430,7 +435,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       } else {
         lines.push("### Matches", ...res.matches.map(m => `- \`${basename(m.file)}:${m.line}\` — ${m.text}`));
         if (res.totalMatches > res.matches.length) lines.push(`_…and ${res.totalMatches - res.matches.length} more._`);
-        lines.push("", "### Suggested cqs-rules.json entry", "```json", JSON.stringify({
+        lines.push("", "### Suggested cqz-rules.json entry", "```json", JSON.stringify({
           id: "TEAM-001",
           stacks: [stackId],
           category: args.category ?? AUDIT_STACKS[stackId].categories[0].id,
@@ -444,13 +449,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return { content: [{ type: "text", text: lines.join("\n") }] };
     }
 
-    if (name === "cqs_list_stacks") {
+    if (name === "cqz_list_stacks") {
       const groups = {};
       for (const [id, s] of Object.entries(AUDIT_STACKS)) {
         if (!groups[s.group]) groups[s.group] = [];
         groups[s.group].push({ id, name: s.name, icon: s.icon, accept: s.fileAccept });
       }
-      const lines = ["## Available cqs Stacks\n"];
+      const lines = ["## Available cqz Stacks\n"];
       for (const [group, items] of Object.entries(groups)) {
         lines.push(`### ${group}`);
         for (const { id, name: n, icon, accept } of items) {
@@ -458,11 +463,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
         lines.push("");
       }
-      lines.push("Use the `id` value as the `stack` parameter in `cqs_audit`.");
+      lines.push("Use the `id` value as the `stack` parameter in `cqz_audit`.");
       return { content: [{ type: "text", text: lines.join("\n") }] };
     }
 
-    if (name === "cqs_read_report") {
+    if (name === "cqz_read_report") {
       const abs = resolve(args.file);
       if (!existsSync(abs)) throw new Error(`Report file not found: ${abs}`);
       const report = JSON.parse(readFileSync(abs, "utf8"));
@@ -483,7 +488,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }).slice(0, 10);
 
       const lines = [
-        `## cqs Report Summary — ${stack?.name ?? ""}`,
+        `## cqz Report Summary — ${stack?.name ?? ""}`,
         `**Files:** ${files}  |  **Score:** ${avgScore}/100 (Grade ${grade(avgScore)})`,
         `**Findings:** ${summary.critical} critical  ${summary.warning} warning  ${summary.info} info`,
         "",

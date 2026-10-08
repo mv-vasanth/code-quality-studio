@@ -124,7 +124,7 @@ export default function StudioHeader({
             </div>
             <div style={{ minWidth: 0 }}>
               <div style={{ color: "#fff", fontWeight: 700, fontSize: 14, lineHeight: 1.15, whiteSpace: "nowrap" }}>
-                Code Quality Studio
+                Code Quality Zone
               </div>
               <div style={{ color: "#5eead4", fontSize: 10.5, lineHeight: 1.2, whiteSpace: "nowrap" }}>
                 {getPersona(stack.persona).blurb}

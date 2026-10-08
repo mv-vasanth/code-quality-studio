@@ -15,6 +15,11 @@ name: Publish to npm
 #   Workflow:   publish.yml
 #   Environment: (leave blank)
 #
+# RENAMED cqs-audit -> cqz-audit. npm configures trusted publishing PER PACKAGE,
+# so cqz-audit needs its own Trusted Publisher entry; the cqs-audit one does not
+# carry over. And a package that does not exist yet has no settings page, so the
+# first cqz-audit publish cannot use OIDC — see docs/RENAME.md.
+#
 # Release after that (no workspaces here, so bump inside cli/):
 #   cd cli && npm version patch --no-git-tag-version && cd ..
 #   git commit -am "Release 2.3.4"
@@ -88,11 +93,11 @@ jobs:
         working-directory: cli
         run: |
           set -euo pipefail
-          test "$(node dist/cqs.js --version)" = "$(node -p "require('./package.json').version")"
+          test "$(node dist/cqz.js --version)" = "$(node -p "require('./package.json').version")"
           printf '%s\n' \
             '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' \
             '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
-            | node dist/cqs-mcp.js | grep -q cqs_report
+            | node dist/cqz-mcp.js | grep -q cqz_report
           echo "CLI and MCP server both start from the built bundles"
 
       - name: Verify the tag matches the version being published
@@ -111,10 +116,10 @@ jobs:
         working-directory: cli
         run: |
           npm pack
-          tar -tzf "cqs-audit-$(node -p "require('./package.json').version").tgz"
+          tar -tzf "cqz-audit-$(node -p "require('./package.json').version").tgz"
 
       # A prerelease version (2.7.0-rc.1) publishes under the `next` dist-tag,
-      # so `npm i -g cqs-audit` is untouched and only testers who ask for
+      # so `npm i -g cqz-audit` is untouched and only testers who ask for
       # @next get it. The product is live; a bad release should not reach
       # people who did not opt in.
       - name: Decide the dist-tag
@@ -140,9 +145,9 @@ jobs:
         run: |
           if [ "${{ steps.disttag.outputs.tag }}" = "next" ]; then
             echo "Prerelease published. Test it with:"
-            echo "  npm install -g cqs-audit@next"
+            echo "  npm install -g cqz-audit@next"
             echo "Promote it to latest when happy:"
-            echo "  npm dist-tag add cqs-audit@$(node -p "require('./cli/package.json').version") latest"
+            echo "  npm dist-tag add cqz-audit@$(node -p "require('./cli/package.json').version") latest"
           else
-            echo "Published to latest: npm install -g cqs-audit@latest"
+            echo "Published to latest: npm install -g cqz-audit@latest"
           fi

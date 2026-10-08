@@ -1,7 +1,7 @@
 /**
  * Optional add-ons, installed on request.
  *
- * `cqs-ai` is a separate package on purpose: the audit CLI is live, and a
+ * `cqz-ai` is a separate package on purpose: the audit CLI is live, and a
  * 100 MB classifier with a native ONNX dependency should not be able to break
  * an install that only wanted 530 deterministic rules. But "separate package"
  * should not mean "go and read a README" — the studio can offer it as a
@@ -10,12 +10,12 @@
  * ── What this deliberately does not do ────────────────────────────────────
  *
  * It never takes a package name from the request. The endpoint is
- * `POST /addons/cqs-ai/install`, not `POST /addons/install {name}` — a local
+ * `POST /addons/cqz-ai/install`, not `POST /addons/install {name}` — a local
  * server that installs whatever a web page names is a remote code execution
  * hole wearing a friendly label, and no amount of token checking makes that
  * design safe. The set below is the entire set.
  *
- * Nothing is installed globally either. Everything lands in ~/.cqs/addons,
+ * Nothing is installed globally either. Everything lands in ~/.cqz/addons,
  * which needs no sudo, cannot collide with the user's own global packages,
  * and can be removed by deleting a directory.
  */
@@ -26,20 +26,20 @@ import { homedir } from "os";
 
 /** The complete set. Adding to it is a code change, by design. */
 export const ADDONS = {
-  "cqs-ai": {
-    name: "cqs-ai",
+  "cqz-ai": {
+    name: "cqz-ai",
     label: "Local AI",
     blurb: "An offline classifier that judges the fuzzy half of test quality — fragile selectors, test scope, assertion strength. No API key.",
     // What it costs, stated up front rather than discovered afterwards.
     installSize: "~90 MB (package + ONNX runtime)",
     modelSize: "~104 MB, downloaded on first use",
     port: 4100,
-    bin: "dist/cqs-ai.js",
+    bin: "dist/cqz-ai.js",
   },
 };
 
 export function addonsRoot() {
-  return process.env.CQS_ADDONS_DIR || join(homedir(), ".cqs", "addons");
+  return process.env.CQZ_ADDONS_DIR || join(homedir(), ".cqz", "addons");
 }
 
 function addonDir(id) {
@@ -144,14 +144,14 @@ function npm(args, { onLine } = {}) {
 /**
  * Install the add-on.
  *
- * CQS_AI_PACKAGE lets this point at a tarball or directory instead of the
+ * CQZ_AI_PACKAGE lets this point at a tarball or directory instead of the
  * registry, which is how it gets tested before the package is published.
  */
 export async function installAddon(id, { onLine } = {}) {
   const spec = ADDONS[id];
   if (!spec) return { ok: false, error: `Unknown add-on: ${id}` };
 
-  const source = (id === "cqs-ai" && process.env.CQS_AI_PACKAGE) || id;
+  const source = (id === "cqz-ai" && process.env.CQZ_AI_PACKAGE) || id;
   const res = await npm(["install", "--no-fund", "--no-audit", "--prefix", ".", source], { onLine });
 
   if (!res.ok) {
@@ -179,11 +179,11 @@ export async function removeAddon(id, { purgeModels = false } = {}) {
   }
 
   let purged = false;
-  if (purgeModels && id === "cqs-ai") {
+  if (purgeModels && id === "cqz-ai") {
     // Weights are expensive to re-fetch, so this is opt-in: removing the
     // package and re-adding it later should not cost another 104 MB unless
     // the user actually wanted the disk space back.
-    const cache = process.env.CQS_MODEL_CACHE || join(homedir(), ".cache", "cqs-models");
+    const cache = process.env.CQZ_MODEL_CACHE || join(homedir(), ".cache", "cqz-models");
     try { if (existsSync(cache)) { rmSync(cache, { recursive: true, force: true }); purged = true; } }
     catch { /* leave it */ }
   }
@@ -193,7 +193,7 @@ export async function removeAddon(id, { purgeModels = false } = {}) {
 
 // ── Sidecar lifecycle ────────────────────────────────────────────────────────
 //
-// An installed add-on is not a running one. `cqs serve` starts it on request,
+// An installed add-on is not a running one. `cqz serve` starts it on request,
 // captures the token it prints, proxies to it, and kills it on shutdown — so
 // from the browser's point of view there is one origin and one token, and from
 // the machine's point of view there is nothing left behind.
@@ -263,7 +263,7 @@ export async function stopAddon(id) {
   return { ok: true, stopped: true };
 }
 
-/** Stop everything. Called when `cqs serve` shuts down. */
+/** Stop everything. Called when `cqz serve` shuts down. */
 export async function stopAllAddons() {
   await Promise.all([...running.keys()].map(stopAddon));
 }
@@ -291,7 +291,7 @@ export async function callAddon(id, path, body, { timeoutMs = 180_000 } = {}) {
   try {
     const res = await fetch(`http://127.0.0.1:${entry.port}${path}`, {
       method: "POST",
-      headers: { "content-type": "application/json", "x-cqs-token": entry.token },
+      headers: { "content-type": "application/json", "x-cqz-token": entry.token },
       body: JSON.stringify(body ?? {}),
       signal: ctl.signal,
     });

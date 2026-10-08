@@ -131,7 +131,7 @@ Three things make this more than a regex:
   the second kind is permanent.
 - **Suppressions belong in the report**, counted and listed. A score that
   improves because findings were suppressed is not an improvement, and the
-  baseline (`cqs-baseline.json`) already makes the honest version of that
+  baseline (`cqz-baseline.json`) already makes the honest version of that
   trade-off available.
 
 Worth pairing with a `--no-suppressions` flag so CI can see the unsuppressed

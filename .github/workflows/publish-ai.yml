@@ -1,0 +1,152 @@
+name: Publish cqz-ai to npm
+
+# Trusted publishing (OIDC) — no npm token, no one-time password.
+#
+# A SECOND Trusted Publisher entry is required: npm configures this per
+# package, so the one that publishes cqs-audit does not cover this package.
+#
+# One-time setup on npmjs.com, after the first version exists:
+#   Package settings -> Trusted Publisher
+#     Provider:    GitHub Actions
+#     Owner:       mv-vasanth
+#     Repository:  code-quality-studio
+#     Workflow:    publish-ai.yml      <- note: not publish.yml
+#     Environment: (leave blank)
+#
+# Chicken-and-egg: a package that does not exist yet has no settings page, so
+# the very first publish has to come from an account that can authenticate
+# another way. Options, in order of preference:
+#   1. `npm publish` from a machine logged in with a granular access token
+#      that has "publish" for this package name.
+#   2. Publish a 0.0.0 placeholder, configure the Trusted Publisher, then let
+#      this workflow take over from 0.1.0 onwards.
+#
+# Releases after that are namespaced so they cannot trigger the cqs-audit
+# workflow, which fires on v*:
+#   cd ai && npm version 0.1.1 --no-git-tag-version && cd ..
+#   git commit -am "cqz-ai 0.1.1"
+#   git tag ai-v0.1.1 && git push && git push --tags
+
+on:
+  push:
+    tags: ["ai-v*"]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Pack and verify without publishing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write # required to mint the OIDC token
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # registry-url is required: without it npm never starts the OIDC
+      # exchange and reports ENEEDAUTH. It writes an .npmrc referencing
+      # NODE_AUTH_TOKEN — that variable must stay unset for this job.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Ensure npm supports trusted publishing
+        run: |
+          npm install -g npm@latest
+          echo "npm $(npm --version)  (trusted publishing needs >= 11.5.1)"
+          echo "OIDC request URL present: ${ACTIONS_ID_TOKEN_REQUEST_URL:+yes}${ACTIONS_ID_TOKEN_REQUEST_URL:-NO}"
+
+      - name: Build
+        working-directory: ai
+        run: |
+          npm ci
+          npm run build
+
+      # The whole point of this package is that it works offline with no key.
+      # The static half of that is testable in CI without downloading 104 MB
+      # of weights: the gate must fire on bad code and the model must be
+      # skipped, not attempted.
+      - name: Smoke test the built artifact
+        working-directory: ai
+        run: |
+          set -euo pipefail
+          test "$(node dist/cqz-ai.js --version)" = "$(node -p "require('./package.json').version")"
+          node dist/cqz-ai.js --help | grep -q "offline AI layer"
+          node dist/cqz-ai.js where | grep -q cqz-models
+
+          mkdir -p /tmp/smoke
+          cat > /tmp/smoke/bad.spec.ts <<'SPEC'
+          test('x', async ({ page }) => {
+            await page.waitForTimeout(3000);
+            await page.click('//div[@id="b"]/span[2]');
+          });
+          SPEC
+          # Exit 1 is the *correct* outcome here — the fixture is full of
+          # criticals and the CLI gates on them, same as cqs does. Under
+          # `pipefail` that would fail the build, so take the output and judge
+          # it on content rather than on the exit code.
+          OUT="$(node dist/cqz-ai.js /tmp/smoke/bad.spec.ts --json || true)"
+          echo "$OUT" | node -e '
+            const d = JSON.parse(require("fs").readFileSync(0, "utf8"));
+            const f = d.files[0];
+            const ids = f.findings.map(x => x.ruleId);
+            if (!ids.includes("LOCAL-STATIC-001")) throw new Error("hard wait not reported: " + ids);
+            if (!ids.includes("LOCAL-STATIC-003")) throw new Error("xpath not reported: " + ids);
+            if (f.model.ran) throw new Error("model ran on a file the gate already condemned");
+            console.log("static gate fires and the model is correctly skipped");
+          '
+
+      - name: Verify the tag matches the version being published
+        if: startsWith(github.ref, 'refs/tags/ai-v')
+        working-directory: ai
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#ai-v}"
+          PKG="$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match ai/package.json version $PKG" >&2
+            exit 1
+          fi
+
+      - name: Pack and inspect
+        working-directory: ai
+        run: |
+          npm pack
+          NAME="$(node -p "require('./package.json').name")"
+          V="$(node -p "require('./package.json').version")"
+          tar -tzf "${NAME}-${V}.tgz"
+
+      # 0.x is still a prerelease in spirit: publish under `next` until the
+      # version reaches 1.0.0, so nobody gets it by typing `npm i -g <name>`
+      # before it has been used in anger.
+      - name: Decide the dist-tag
+        id: disttag
+        working-directory: ai
+        run: |
+          set -euo pipefail
+          V="$(node -p "require('./package.json').version")"
+          case "$V" in
+            *-*)  TAG=next ;;      # 0.2.0-rc.1
+            0.*)  TAG=next ;;      # 0.x — opt-in only
+            *)    TAG=latest ;;
+          esac
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Publishing $V under dist-tag: $TAG"
+
+      - name: Publish
+        if: ${{ !inputs.dry_run }}
+        working-directory: ai
+        run: npm publish --tag ${{ steps.disttag.outputs.tag }}
+
+      - name: How to install this release
+        if: ${{ !inputs.dry_run }}
+        working-directory: ai
+        run: |
+          NAME="$(node -p "require('./package.json').name")"
+          echo "  npm install -g ${NAME}@${{ steps.disttag.outputs.tag }}"
+          echo "  …or from the studio: cqs serve --open -> Files -> Add-ons -> Install"

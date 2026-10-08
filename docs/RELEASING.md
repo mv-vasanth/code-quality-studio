@@ -1,7 +1,7 @@
 # Releasing
 
 The package is live, so the default path puts changes in front of testers
-before they reach anyone running `npm install -g cqs-audit`.
+before they reach anyone running `npm install -g cqz-audit`.
 
 Three gates, each cheaper than the one after it.
 
@@ -15,15 +15,15 @@ is a genuine test of the release rather than an approximation of it.
 ```bash
 cd cli
 npm run build:all          # build the app at the repo root first
-npm pack                   # cqs-audit-X.Y.Z.tgz
+npm pack                   # cqz-audit-X.Y.Z.tgz
 ```
 
 Install it somewhere clean and use it like a stranger would:
 
 ```bash
-npm install --prefix /tmp/trycqs ./cqs-audit-X.Y.Z.tgz
-/tmp/trycqs/node_modules/cqs-audit/dist/cqs.js --version
-cd ~/your-suite && /tmp/trycqs/node_modules/cqs-audit/dist/cqs.js ./tests
+npm install --prefix /tmp/trycqz ./cqz-audit-X.Y.Z.tgz
+/tmp/trycqs/node_modules/cqz-audit/dist/cqz.js --version
+cd ~/your-suite && /tmp/trycqs/node_modules/cqz-audit/dist/cqz.js ./tests
 ```
 
 Hand that `.tgz` to a colleague and they can do the same — no registry
@@ -34,7 +34,7 @@ involved, nothing published, nothing to undo.
 ## Gate 2 — UAT on npm, under the `next` tag
 
 Publish a prerelease. It goes to the `next` dist-tag, so `npm install -g
-cqs-audit` is completely unaffected and only people who ask for `@next`
+cqz-audit` is completely unaffected and only people who ask for `@next`
 receive it.
 
 ```bash
@@ -50,13 +50,13 @@ CI picks the dist-tag from the version: anything containing a hyphen
 Testers install it with:
 
 ```bash
-npm install -g cqs-audit@next
+npm install -g cqz-audit@next
 ```
 
 And return to the stable build with:
 
 ```bash
-npm install -g cqs-audit@latest
+npm install -g cqz-audit@latest
 ```
 
 ---
@@ -68,7 +68,7 @@ Two ways, and the difference matters.
 **Promote the exact build that was tested** — same bytes, no rebuild:
 
 ```bash
-npm dist-tag add cqs-audit@2.7.0-rc.1 latest
+npm dist-tag add cqz-audit@2.7.0-rc.1 latest
 ```
 
 The version keeps its `-rc.1` suffix, which some tooling treats as a
@@ -91,7 +91,7 @@ you want certainty that what you tested is what shipped.
 ## If a release turns out to be bad
 
 ```bash
-npm dist-tag add cqs-audit@<last-good-version> latest
+npm dist-tag add cqz-audit@<last-good-version> latest
 ```
 
 That repoints `latest` immediately; new installs get the good build. It is
@@ -100,7 +100,7 @@ much faster than publishing a fix, and reversible.
 Then deprecate the bad one so nobody pins to it by accident:
 
 ```bash
-npm deprecate cqs-audit@2.7.0 "Broken: <what breaks>. Use 2.6.0 or later."
+npm deprecate cqz-audit@2.7.0 "Broken: <what breaks>. Use 2.6.0 or later."
 ```
 
 Unpublishing only works within 72 hours of publishing and is rarely the right
@@ -114,7 +114,7 @@ Every release, prerelease or not, must pass:
 
 - the golden master across all 18 stacks
 - the security rules, in both directions
-- a smoke test of the **built artifacts** — `dist/cqs.js --version` matching
+- a smoke test of the **built artifacts** — `dist/cqz.js --version` matching
   package.json, and the MCP server answering a `tools/list` over stdio
 - the tag matching `cli/package.json`, so `v2.7.0` cannot publish 2.6.0
 

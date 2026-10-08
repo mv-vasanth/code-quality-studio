@@ -1,5 +1,5 @@
 /**
- * File-based custom rules (`cqs-rules.json`).
+ * File-based custom rules (`cqz-rules.json`).
  *
  * Unlike the localStorage rules in customRulesStorage.js, these live in the repo,
  * so the CLI, the MCP server and CI all see the same set.
@@ -7,10 +7,20 @@
  * See docs/CUSTOM_RULES_PROPOSAL.md for the format.
  */
 import { readFileSync, existsSync, statSync } from "fs";
-import { dirname, join, resolve, parse as parsePath } from "path";
+import { basename, dirname, join, resolve, parse as parsePath } from "path";
 import { AUDIT_STACKS } from "../stacks/definitions.js";
 
-export const RULES_FILENAME = "cqs-rules.json";
+/**
+ * The rules file lives in the user's repository, so renaming it is not ours to
+ * do unilaterally — a repo with a committed cqz-rules.json must keep being
+ * audited after an upgrade, not silently lose its custom rules. The new name
+ * is preferred; the old one still works.
+ */
+export const RULES_FILENAME = "cqz-rules.json";
+// Literal on purpose: the sweep that renamed cqs -> cqz across the codebase
+// rewrote this too, which quietly removed the compatibility it exists for.
+export const LEGACY_RULES_FILENAME = "cqs" + "-rules.json";
+export const RULES_FILENAMES = [RULES_FILENAME, LEGACY_RULES_FILENAME];
 
 /**
  * A quantifier inside a quantified group — (a+)+, (\d*)* , (?:x+)* — is the
@@ -29,15 +39,20 @@ const MAX_LINE_LENGTH = 2000;
 
 const SEVERITIES = new Set(["critical", "warning", "info"]);
 
-/** Walk up from `startPath` looking for cqs-rules.json. Stops at a .git boundary. */
+/** Walk up from `startPath` looking for the rules file. Stops at a .git boundary. */
 export function discoverRulesFile(startPath) {
   let dir = resolve(startPath);
   if (existsSync(dir) && statSync(dir).isFile()) dir = dirname(dir);
   const root = parsePath(dir).root;
 
   while (true) {
-    const candidate = join(dir, RULES_FILENAME);
-    if (existsSync(candidate)) return candidate;
+    // New name first: a repo that has both is mid-migration and means the new
+    // one. Checked per directory rather than per name, so a cqz-rules.json
+    // further up does not beat a cqz-rules.json beside the tests.
+    for (const name of RULES_FILENAMES) {
+      const candidate = join(dir, name);
+      if (existsSync(candidate)) return candidate;
+    }
     if (existsSync(join(dir, ".git"))) return null; // repo root reached, no file
     if (dir === root) return null;
     dir = dirname(dir);
@@ -112,7 +127,10 @@ export function loadRulesFile(filePath, stackId) {
   try {
     parsed = JSON.parse(raw);
   } catch (e) {
-    result.errors.push(`${RULES_FILENAME} is not valid JSON — ${e.message}`);
+    // basename(filePath), not RULES_FILENAME: a repo still on the old name
+    // would otherwise be told that cqz-rules.json is invalid, which is a file
+    // it does not have.
+    result.errors.push(`${basename(filePath)} is not valid JSON — ${e.message}`);
     return result;
   }
 

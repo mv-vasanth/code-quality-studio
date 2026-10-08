@@ -18,6 +18,7 @@
  * auditing and rude an hour later.
  */
 
+import { existsSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 
@@ -42,7 +43,15 @@ const MAX_CHARS = 4000;
  * reinstalls and can be found and deleted deliberately.
  */
 export function defaultCacheDir() {
-  return process.env.CQS_MODEL_CACHE || join(homedir(), ".cache", "cqs-models");
+  if (process.env.CQZ_MODEL_CACHE) return process.env.CQZ_MODEL_CACHE;
+
+  const current = join(homedir(), ".cache", "cqz-models");
+  // The package was briefly called cqs-ai and cached under cqs-models. Weights
+  // are 104 MB; re-downloading them because a name changed would be a poor
+  // trade for tidiness, so an existing legacy cache keeps being used.
+  const legacy = join(homedir(), ".cache", "cqs-models");
+  if (!existsSync(current) && existsSync(legacy)) return legacy;
+  return current;
 }
 
 let state = null;   // { promise, pipe, model, idleTimer, loadedAt }
@@ -62,7 +71,7 @@ async function loadLibrary() {
   } catch (cause) {
     const err = new Error(
       "Local AI is enabled but @huggingface/transformers is not installed.\n" +
-      "  Install it where cqs runs:  npm install @huggingface/transformers\n" +
+      "  Install it where cqz runs:  npm install @huggingface/transformers\n" +
       "  It is optional on purpose — without it nothing is downloaded and the\n" +
       "  static rules are unaffected.",
     );

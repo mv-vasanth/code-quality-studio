@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>cqs CLI — Cheat Sheet</title>
+<title>cqz CLI — Cheat Sheet</title>
 <style>
   @page { size: A4 landscape; margin: 12mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -209,18 +209,18 @@
 <div class="page">
 <div class="page-header">
   <div>
-    <h1>⚡ cqs — Code Quality Studio CLI</h1>
+    <h1>⚡ cqz — Code Quality Zone CLI</h1>
     <div class="sub">18 stacks · 533 rules · offline · CI-ready · Node 18+</div>
   </div>
   
   <div style="background:#0d9488;border-radius:8px;padding:8px 18px;text-align:center">
     <div style="font-size:10px;color:#ccfbf1;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">Install from npm (anywhere)</div>
-    <div style="font-family:monospace;font-size:14px;font-weight:800;color:#fff;letter-spacing:.3px">npm install -g cqs-audit</div>
-    <div style="font-size:10px;color:#ccfbf1;margin-top:3px">npmjs.com/package/cqs-audit</div>
+    <div style="font-family:monospace;font-size:14px;font-weight:800;color:#fff;letter-spacing:.3px">npm install -g cqz-audit</div>
+    <div style="font-size:10px;color:#ccfbf1;margin-top:3px">npmjs.com/package/cqz-audit</div>
   </div>
   <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
     <div class="verify-box">
-      ✅ Verify: <code>cqs --version</code>
+      ✅ Verify: <code>cqz --version</code>
     </div>
     <div class="badge">v2.6.0</div>
   </div>
@@ -235,15 +235,16 @@
     <div class="card-body">
       <div class="code-block">
         <span class="cmt"># Install globally from npm registry</span><br>
-        <span class="cmd">npm install -g cqs-audit</span><br><br>
+        <span class="cmd">npm install -g cqz-audit</span><br><br>
         <span class="cmt"># Verify what you actually got</span><br>
-        <span class="cmd">cqs --version</span><br><br>
+        <span class="cmd">cqz --version</span><br><br>
+        <span class="cmt"># Renamed from cqs-audit — the `cqs` command still works</span><br>
         <span class="cmt"># Upgrade later</span><br>
-        <span class="cmd">npm install -g cqs-audit@latest</span><br><br>
+        <span class="cmd">npm install -g cqz-audit@latest</span><br><br>
         <span class="cmt"># nvm users: globals are per Node version</span><br>
-        <span class="cmd">node --version &amp;&amp; cqs --version</span>
+        <span class="cmd">node --version &amp;&amp; cqz --version</span>
       </div>
-      <div style="font-size:10.5px;color:#475569;margin-top:6px">📦 Package: <strong>cqs-audit</strong> on <a href="https://www.npmjs.com/package/cqs-audit" style="color:#0d9488">npmjs.com/package/cqs-audit</a></div>
+      <div style="font-size:10.5px;color:#475569;margin-top:6px">📦 Package: <strong>cqz-audit</strong> on <a href="https://www.npmjs.com/package/cqz-audit" style="color:#0d9488">npmjs.com/package/cqz-audit</a></div>
     </div>
   </div>
 
@@ -255,10 +256,10 @@
           <tr><td><strong>Baseline</strong></td><td class="desc">A real suite starts with debt. <code>--baseline-write</code> accepts today, <code>--baseline</code> fails only on <em>new</em> findings — so it can gate CI from day one.</td></tr>
           <tr><td><strong>Only what changed</strong></td><td class="desc"><code>--changed</code> audits just the files this branch touched (committed, staged, unstaged, untracked). <code>--since &lt;ref&gt;</code> picks the base.</td></tr>
           <tr><td><strong>Report opens by default</strong></td><td class="desc">No <code>--open</code> needed. Skipped automatically for <code>--output json</code>/<code>summary</code> and when piped, so CI stays clean. <code>--no-report</code> opts out.</td></tr>
-          <tr><td><strong>Every stack is audited</strong></td><td class="desc"><code>cqs .</code> used to pick one stack and silently ignore the rest. A repo with specs, frontend and Java code now reports all three.</td></tr>
+          <tr><td><strong>Every stack is audited</strong></td><td class="desc"><code>cqz .</code> used to pick one stack and silently ignore the rest. A repo with specs, frontend and Java code now reports all three.</td></tr>
           <tr><td><strong>Files routed by import</strong></td><td class="desc">A <code>.ts</code> file importing <code>@playwright/test</code> gets Playwright rules whatever it is named — so page objects are no longer scored as plain TypeScript.</td></tr>
           <tr><td><strong>Unaudited files are reported</strong></td><td class="desc">Anything with no matching stack is listed at the end instead of vanishing.</td></tr>
-          <tr><td><strong><code>cqs-mcp</code> is a real command</strong></td><td class="desc">The MCP server ships as its own binary; <code>cqs mcp-config</code> prints the client config for you.</td></tr>
+          <tr><td><strong><code>cqz-mcp</code> is a real command</strong></td><td class="desc">The MCP server ships as its own binary; <code>cqz mcp-config</code> prints the client config for you.</td></tr>
         </tbody>
       </table>
     </div>
@@ -271,28 +272,28 @@
       <table>
         <thead><tr><th>Command</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>cqs .</code></td><td class="desc">Analyse current folder — routes <strong>every</strong> stack it finds</td></tr>
-          <tr><td><code>cqs ./tests/</code></td><td class="desc">Analyse a specific folder</td></tr>
-          <tr><td><code>cqs ./tests/ --stack playwright</code></td><td class="desc">Force a specific stack</td></tr>
-          <tr><td><code>cqs ./tests/ --severity critical</code></td><td class="desc">Show only critical findings</td></tr>
-          <tr><td><code>cqs ./tests/ --output json > report.json</code></td><td class="desc">Save JSON report for CI or sharing</td></tr>
-          <tr><td><code>cqs ./tests/ --output summary</code></td><td class="desc">One-line status — great for CI logs</td></tr>
-          <tr><td><code>cqs ./tests/ --open</code></td><td class="desc">Force the report even when piped or in CI</td></tr>
-          <tr><td><code>cqs ./tests/ --no-report</code></td><td class="desc">Terminal output only — skip the browser report</td></tr>
-          <tr><td><code>cqs ./tests/ --category reliability</code></td><td class="desc">Filter to one category</td></tr>
-          <tr><td><code>cqs --read-report report.json</code></td><td class="desc">Print summary of a saved JSON report</td></tr>
-          <tr><td><code>cqs --read-report report.json --open</code></td><td class="desc">Open saved report as HTML in browser</td></tr>
-          <tr><td><code>cqs --list-stacks</code></td><td class="desc">Show all 18 available stacks + IDs</td></tr>
-          <tr><td><code>cqs ./tests/ --baseline-write .cqs-baseline.json</code></td><td class="desc">Record current findings as accepted</td></tr>
-          <tr><td><code>cqs ./tests/ --baseline .cqs-baseline.json</code></td><td class="desc">Fail only on findings beyond the baseline</td></tr>
-          <tr><td><code>cqs --changed</code></td><td class="desc">Audit only files changed vs <code>origin/main</code></td></tr>
-          <tr><td><code>cqs --changed --since develop</code></td><td class="desc">Choose the base ref to compare against</td></tr>
-          <tr><td><code>cqs --version</code></td><td class="desc">Print the installed version (also <code>-v</code>)</td></tr>
-          <tr><td><code>cqs serve --open</code></td><td class="desc">Start the local server <strong>and</strong> open the studio, already signed in</td></tr>
-          <tr><td><code>cqs serve --port 4005</code></td><td class="desc">Use another port when 4000 is taken</td></tr>
-          <tr><td><code>cqs serve --allow-write</code></td><td class="desc">Permit the agents to edit files — off by default</td></tr>
-          <tr><td><code>cqs mcp-config cursor</code></td><td class="desc">Print ready-to-paste MCP config (or <code>claude</code>)</td></tr>
-          <tr><td><code>cqs --help</code></td><td class="desc">Show help text and version number</td></tr>
+          <tr><td><code>cqz .</code></td><td class="desc">Analyse current folder — routes <strong>every</strong> stack it finds</td></tr>
+          <tr><td><code>cqz ./tests/</code></td><td class="desc">Analyse a specific folder</td></tr>
+          <tr><td><code>cqz ./tests/ --stack playwright</code></td><td class="desc">Force a specific stack</td></tr>
+          <tr><td><code>cqz ./tests/ --severity critical</code></td><td class="desc">Show only critical findings</td></tr>
+          <tr><td><code>cqz ./tests/ --output json > report.json</code></td><td class="desc">Save JSON report for CI or sharing</td></tr>
+          <tr><td><code>cqz ./tests/ --output summary</code></td><td class="desc">One-line status — great for CI logs</td></tr>
+          <tr><td><code>cqz ./tests/ --open</code></td><td class="desc">Force the report even when piped or in CI</td></tr>
+          <tr><td><code>cqz ./tests/ --no-report</code></td><td class="desc">Terminal output only — skip the browser report</td></tr>
+          <tr><td><code>cqz ./tests/ --category reliability</code></td><td class="desc">Filter to one category</td></tr>
+          <tr><td><code>cqz --read-report report.json</code></td><td class="desc">Print summary of a saved JSON report</td></tr>
+          <tr><td><code>cqz --read-report report.json --open</code></td><td class="desc">Open saved report as HTML in browser</td></tr>
+          <tr><td><code>cqz --list-stacks</code></td><td class="desc">Show all 18 available stacks + IDs</td></tr>
+          <tr><td><code>cqz ./tests/ --baseline-write .cqz-baseline.json</code></td><td class="desc">Record current findings as accepted</td></tr>
+          <tr><td><code>cqz ./tests/ --baseline .cqz-baseline.json</code></td><td class="desc">Fail only on findings beyond the baseline</td></tr>
+          <tr><td><code>cqz --changed</code></td><td class="desc">Audit only files changed vs <code>origin/main</code></td></tr>
+          <tr><td><code>cqz --changed --since develop</code></td><td class="desc">Choose the base ref to compare against</td></tr>
+          <tr><td><code>cqz --version</code></td><td class="desc">Print the installed version (also <code>-v</code>)</td></tr>
+          <tr><td><code>cqz serve --open</code></td><td class="desc">Start the local server <strong>and</strong> open the studio, already signed in</td></tr>
+          <tr><td><code>cqz serve --port 4005</code></td><td class="desc">Use another port when 4000 is taken</td></tr>
+          <tr><td><code>cqz serve --allow-write</code></td><td class="desc">Permit the agents to edit files — off by default</td></tr>
+          <tr><td><code>cqz mcp-config cursor</code></td><td class="desc">Print ready-to-paste MCP config (or <code>claude</code>)</td></tr>
+          <tr><td><code>cqz --help</code></td><td class="desc">Show help text and version number</td></tr>
         </tbody>
       </table>
     </div>
@@ -353,7 +354,7 @@
         <span class="cmd">echo 'export ANTHROPIC_API_KEY=sk-ant-xxx' &gt;&gt; ~/.zshrc</span><br>
         <span class="cmd">source ~/.zshrc</span><br>
         <span class="cmt"># 3. Run — key picked up automatically</span><br>
-        <span class="cmd">cqs ./tests/ --ai anthropic</span>
+        <span class="cmd">cqz ./tests/ --ai anthropic</span>
       </div>
       <div style="font-size:10px;font-weight:700;color:#7c3aed;margin:6px 0 3px">OPENAI (GPT)</div>
       <div class="code-block" style="font-size:10px">
@@ -361,7 +362,7 @@
         <span class="cmd">echo 'export OPENAI_API_KEY=sk-xxx' &gt;&gt; ~/.zshrc</span><br>
         <span class="cmd">source ~/.zshrc</span><br>
         <span class="cmt"># 2. Run (default model gpt-4o-mini)</span><br>
-        <span class="cmd">cqs ./tests/ --ai openai</span>
+        <span class="cmd">cqz ./tests/ --ai openai</span>
       </div>
       <div style="font-size:10px;color:#475569;margin-top:5px">
         Set the key <strong>once</strong> — every later run reads it from the environment.
@@ -377,7 +378,7 @@
         <span class="cmd">echo 'export AWS_ACCESS_KEY_ID=AKIAxxx' &gt;&gt; ~/.zshrc</span><br>
         <span class="cmd">echo 'export AWS_SECRET_ACCESS_KEY=xxx' &gt;&gt; ~/.zshrc</span><br>
         <span class="cmd">source ~/.zshrc</span><br>
-        <span class="cmd">cqs ./tests/ --ai bedrock</span>
+        <span class="cmd">cqz ./tests/ --ai bedrock</span>
       </div>
       <div style="font-size:10px;font-weight:700;color:#7c3aed;margin:6px 0 3px">GOOGLE VERTEX AI</div>
       <div class="code-block" style="font-size:10px">
@@ -386,15 +387,15 @@
         <span class="cmd">echo 'export VERTEX_LOCATION=us-central1' &gt;&gt; ~/.zshrc</span><br>
         <span class="cmd">echo 'export GOOGLE_APPLICATION_CREDENTIALS=~/sa.json' &gt;&gt; ~/.zshrc</span><br>
         <span class="cmd">source ~/.zshrc</span><br>
-        <span class="cmd">cqs ./tests/ --ai vertex</span>
+        <span class="cmd">cqz ./tests/ --ai vertex</span>
       </div>
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 3px">INLINE (CI — no env var)</div>
       <div class="code-block" style="font-size:9px">
-        <span class="cmd">cqs ./tests/ --ai anthropic --api-key sk-ant-xxx</span><br>
-        <span class="cmd">cqs ./tests/ --ai openai --api-key sk-xxx</span><br>
-        <span class="cmd">cqs ./tests/ --ai bedrock --aws-region us-east-1 \</span><br>
+        <span class="cmd">cqz ./tests/ --ai anthropic --api-key sk-ant-xxx</span><br>
+        <span class="cmd">cqz ./tests/ --ai openai --api-key sk-xxx</span><br>
+        <span class="cmd">cqz ./tests/ --ai bedrock --aws-region us-east-1 \</span><br>
         &nbsp;&nbsp;<span class="cmd">--aws-access-key KEY --aws-secret-key SECRET</span><br>
-        <span class="cmd">cqs ./tests/ --ai vertex --vertex-project proj \</span><br>
+        <span class="cmd">cqz ./tests/ --ai vertex --vertex-project proj \</span><br>
         &nbsp;&nbsp;<span class="cmd">--vertex-location us-central1 --vertex-key-file sa.json</span>
       </div>
     </div>
@@ -404,23 +405,23 @@
     <div class="card-body">
       <div class="code-block" style="font-size:10px">
         <span class="cmt"># Audit with AI second-eye review</span><br>
-        <span class="cmd">cqs ./tests/ --stack playwright --ai anthropic</span><br>
-        <span class="cmd">cqs ./tests/ --stack playwright --ai openai</span><br>
-        <span class="cmd">cqs ./tests/ --stack playwright --ai bedrock</span><br>
-        <span class="cmd">cqs ./tests/ --stack playwright --ai vertex</span>
+        <span class="cmd">cqz ./tests/ --stack playwright --ai anthropic</span><br>
+        <span class="cmd">cqz ./tests/ --stack playwright --ai openai</span><br>
+        <span class="cmd">cqz ./tests/ --stack playwright --ai bedrock</span><br>
+        <span class="cmd">cqz ./tests/ --stack playwright --ai vertex</span>
       </div>
       <div class="code-block" style="font-size:10px">
         <span class="cmt"># Review only the critical files</span><br>
-        <span class="cmd">cqs ./tests/ --ai anthropic --severity critical</span><br><br>
+        <span class="cmd">cqz ./tests/ --ai anthropic --severity critical</span><br><br>
         <span class="cmt"># AI review + open HTML report</span><br>
-        <span class="cmd">cqs ./tests/ --ai anthropic --open</span><br><br>
+        <span class="cmd">cqz ./tests/ --ai anthropic --open</span><br><br>
         <span class="cmt"># AI review + save JSON</span><br>
-        <span class="cmd">cqs ./tests/ --ai anthropic --output json &gt; r.json</span>
+        <span class="cmd">cqz ./tests/ --ai anthropic --output json &gt; r.json</span>
       </div>
       <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:3px">PICK A STRONGER MODEL</div>
       <div class="code-block" style="font-size:10px">
-        <span class="cmd">cqs ./tests/ --ai anthropic --model claude-sonnet-5</span><br>
-        <span class="cmd">cqs ./tests/ --ai openai --model gpt-4o</span>
+        <span class="cmd">cqz ./tests/ --ai anthropic --model claude-sonnet-5</span><br>
+        <span class="cmd">cqz ./tests/ --ai openai --model gpt-4o</span>
       </div>
       <div style="font-size:10px;color:#475569;margin-top:5px">
         AI review runs <strong>after</strong> the offline rules and only on files that already have critical or warning findings.
@@ -443,25 +444,25 @@
       <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">ADOPTING ON AN EXISTING SUITE (recommended)</div>
       <div class="code-block">
         <span class="cmt"># once — accept today's debt, commit the file</span><br>
-        <span class="cmd">cqs ./tests/ --baseline-write .cqs-baseline.json</span><br><br>
+        <span class="cmd">cqz ./tests/ --baseline-write .cqz-baseline.json</span><br><br>
         <span class="cmt"># every PR — fails only if this branch makes it worse</span><br>
-        <span class="cmd">cqs --changed --baseline .cqs-baseline.json</span>
+        <span class="cmd">cqz --changed --baseline .cqz-baseline.json</span>
       </div>
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">GITHUB ACTIONS</div>
       <div class="code-block">
         <span class="kw">- name:</span> <span class="str">Audit test quality</span><br>
-        &nbsp;&nbsp;<span class="kw">run:</span> <span class="cmd">cqs --changed --baseline .cqs-baseline.json</span><br>
-        &nbsp;&nbsp;<span class="cmt"># or: cqs ./tests/ --output summary (gates on ALL criticals)</span>
+        &nbsp;&nbsp;<span class="kw">run:</span> <span class="cmd">cqz --changed --baseline .cqz-baseline.json</span><br>
+        &nbsp;&nbsp;<span class="cmt"># or: cqz ./tests/ --output summary (gates on ALL criticals)</span>
       </div>
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">GITLAB CI</div>
       <div class="code-block">
         <span class="kw">quality-gate:</span><br>
-        &nbsp;&nbsp;<span class="kw">script:</span> <span class="cmd">cqs ./tests/ --output json > r.json</span><br>
+        &nbsp;&nbsp;<span class="kw">script:</span> <span class="cmd">cqz ./tests/ --output json > r.json</span><br>
         &nbsp;&nbsp;<span class="kw">artifacts:</span> <span class="str">{ paths: [r.json] }</span>
       </div>
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">PRE-COMMIT HOOK</div>
       <div class="code-block">
-        <span class="cmd">cqs . --severity critical --output summary || exit 1</span>
+        <span class="cmd">cqz . --severity critical --output summary || exit 1</span>
       </div>
     </div>
   </div>
@@ -472,18 +473,18 @@
       <table>
         <thead><tr><th>What you want to check</th><th>Command</th></tr></thead>
         <tbody>
-          <tr><td>No hard waits / deterministic waits</td><td><code>cqs ./tests/ --category reliability</code></td></tr>
-          <tr><td>Page Object separation, no shared state</td><td><code>cqs ./tests/ --category structure</code></td></tr>
-          <tr><td>Assertion quality (no bare truthy checks)</td><td><code>cqs ./tests/ --category assertions</code></td></tr>
-          <tr><td>Locator strategy</td><td><code>cqs ./tests/ --category selectors</code></td></tr>
-          <tr><td>Secrets, TLS, credentials</td><td><code>cqs ./tests/ --category security</code></td></tr>
-          <tr><td>baseURL, retries, tracing, <code>.only</code></td><td><code>cqs ./tests/ --category ci_config</code></td></tr>
-          <tr><td>Duplicated tests and setup blocks</td><td><code>cqs ./tests/</code> — reported as <code>DUP-*</code></td></tr>
-          <tr><td>Only what this branch changed</td><td><code>cqs --changed --baseline .cqs-baseline.json</code></td></tr>
+          <tr><td>No hard waits / deterministic waits</td><td><code>cqz ./tests/ --category reliability</code></td></tr>
+          <tr><td>Page Object separation, no shared state</td><td><code>cqz ./tests/ --category structure</code></td></tr>
+          <tr><td>Assertion quality (no bare truthy checks)</td><td><code>cqz ./tests/ --category assertions</code></td></tr>
+          <tr><td>Locator strategy</td><td><code>cqz ./tests/ --category selectors</code></td></tr>
+          <tr><td>Secrets, TLS, credentials</td><td><code>cqz ./tests/ --category security</code></td></tr>
+          <tr><td>baseURL, retries, tracing, <code>.only</code></td><td><code>cqz ./tests/ --category ci_config</code></td></tr>
+          <tr><td>Duplicated tests and setup blocks</td><td><code>cqz ./tests/</code> — reported as <code>DUP-*</code></td></tr>
+          <tr><td>Only what this branch changed</td><td><code>cqz --changed --baseline .cqz-baseline.json</code></td></tr>
         </tbody>
       </table>
       <div style="padding:8px 12px;font-size:10px;color:#475569">
-        Team standards a built-in rule does not cover go in <strong>cqs-rules.json</strong> at the repo root —
+        Team standards a built-in rule does not cover go in <strong>cqz-rules.json</strong> at the repo root —
         for example retries capped at 1, quarantined tests needing a ticket, or no staging URLs in tests.
         Validate one before committing it: ask your assistant <em>“would this rule catch anything in ./tests?”</em>
       </div>
@@ -501,14 +502,14 @@
       <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">ADVANCED COMMANDS</div>
       <div class="code-block">
         <span class="cmt"># Filter by category</span><br>
-        <span class="cmd">cqs ./tests/ --category reliability</span><br><br>
+        <span class="cmd">cqz ./tests/ --category reliability</span><br><br>
         <span class="cmt"># Multiple paths</span><br>
-        <span class="cmd">cqs ./src/tests/ ./e2e/ --stack playwright</span><br><br>
+        <span class="cmd">cqz ./src/tests/ ./e2e/ --stack playwright</span><br><br>
         <span class="cmt"># Plain text (no ANSI — for log files)</span><br>
-        <span class="cmd">cqs ./tests/ --no-color</span><br><br>
+        <span class="cmd">cqz ./tests/ --no-color</span><br><br>
         <span class="cmt"># Save + open later</span><br>
-        <span class="cmd">cqs ./tests/ --output json > r.json</span><br>
-        <span class="cmd">cqs --read-report r.json --open</span>
+        <span class="cmd">cqz ./tests/ --output json > r.json</span><br>
+        <span class="cmd">cqz --read-report r.json --open</span>
       </div>
     </div>
   </div>
@@ -520,31 +521,31 @@
 <div class="page">
 <div class="section-bar">
   <h2>4 · IDE &amp; AI Agent Integration</h2>
-  <span class="step">Run cqs from Cursor, or expose it as a tool your AI agent can call</span>
+  <span class="step">Run cqz from Cursor, or expose it as a tool your AI agent can call</span>
 </div>
 <div class="grid">
 <div class="card theme-rose">
-    <div class="card-head">🖱️ Using cqs with Cursor IDE</div>
+    <div class="card-head">🖱️ Using cqz with Cursor IDE</div>
     <div class="card-body">
       <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">OPTION 1 — Terminal inside Cursor</div>
       <div class="code-block">
         <span class="cmt"># Open terminal in Cursor (Ctrl+`), then run normally</span><br>
-        <span class="cmd">cqs ./tests/ --stack playwright --open</span><br>
+        <span class="cmd">cqz ./tests/ --stack playwright --open</span><br>
         <span class="cmt"># HTML report opens in your default browser</span>
       </div>
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:5px 0 4px">OPTION 2 — Cursor Task (tasks.json)</div>
       <div class="code-block" style="font-size:9.5px">
         <span class="cmt">// .vscode/tasks.json</span><br>
         <span class="str">"tasks"</span>: [{<br>
-        &nbsp;&nbsp;<span class="str">"label"</span>: <span class="str">"cqs audit"</span>,<br>
+        &nbsp;&nbsp;<span class="str">"label"</span>: <span class="str">"cqz audit"</span>,<br>
         &nbsp;&nbsp;<span class="str">"type"</span>: <span class="str">"shell"</span>,<br>
-        &nbsp;&nbsp;<span class="str">"command"</span>: <span class="str">"cqs ${workspaceFolder}/tests/ --open"</span>,<br>
+        &nbsp;&nbsp;<span class="str">"command"</span>: <span class="str">"cqz ${workspaceFolder}/tests/ --open"</span>,<br>
         &nbsp;&nbsp;<span class="str">"group"</span>: <span class="str">"test"</span><br>
         }]
       </div>
-      <div style="font-size:10px;font-weight:700;color:#64748b;margin:5px 0 4px">OPTION 3 — Cursor AI + cqs together</div>
+      <div style="font-size:10px;font-weight:700;color:#64748b;margin:5px 0 4px">OPTION 3 — Cursor AI + cqz together</div>
       <div style="font-size:10.5px;color:#475569">
-        1. Run: <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px;color:#be123c">cqs ./tests/ --output json > r.json</code><br>
+        1. Run: <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px;color:#be123c">cqz ./tests/ --output json > r.json</code><br>
         2. Open <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px;color:#be123c">r.json</code> in Cursor<br>
         3. Ask Cursor AI: <em>"Fix the critical findings in this report"</em><br>
         4. Cursor reads the JSON + your test files and applies fixes
@@ -552,23 +553,23 @@
     </div>
   </div>
 <div class="card" style="border-top:3px solid #6366f1;background:#fafafa;">
-    <div class="card-head" style="background:#6366f1;color:#fff;">⚡ MCP Server — cqs as an AI Tool</div>
+    <div class="card-head" style="background:#6366f1;color:#fff;">⚡ MCP Server — cqz as an AI Tool</div>
     <div class="card-body">
       <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">BUILD THE MCP SERVER</div>
       <div class="code-block">
-        <span class="cmt"># From the cqs CLI source directory</span><br>
+        <span class="cmt"># From the cqz CLI source directory</span><br>
         <span class="cmd">cd code-quality-studio/cli</span><br>
         <span class="cmd">node build-mcp.mjs</span><br>
-        <span class="cmt"># → produces dist/cqs-mcp.js</span>
+        <span class="cmt"># → produces dist/cqz-mcp.js</span>
       </div>
 
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">CONFIG — SAME JSON FOR BOTH CLIENTS</div>
       <div class="code-block" style="font-size:9.5px">
         {<br>
         &nbsp;&nbsp;<span class="str">"mcpServers"</span>: {<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"cqs"</span>: {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"cqz"</span>: {<br>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"command"</span>: <span class="str">"node"</span>,<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"args"</span>: [<span class="str">"/abs/path/dist/cqs-mcp.js"</span>]<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"args"</span>: [<span class="str">"/abs/path/dist/cqz-mcp.js"</span>]<br>
         &nbsp;&nbsp;&nbsp;&nbsp;}<br>
         &nbsp;&nbsp;}<br>
         }
@@ -580,32 +581,32 @@
 
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">MCP TOOLS EXPOSED</div>
       <div style="font-size:10.5px;color:#475569">
-        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace;margin-bottom:3px">cqs_audit</span> — audit a path, returns findings<br>
-        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace;margin-bottom:3px">cqs_list_stacks</span> — list all 18 supported stacks<br>
-        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace">cqs_read_report</span> — summarise a JSON report file
+        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace;margin-bottom:3px">cqz_audit</span> — audit a path, returns findings<br>
+        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace;margin-bottom:3px">cqz_list_stacks</span> — list all 18 supported stacks<br>
+        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace">cqz_read_report</span> — summarise a JSON report file
       </div>
       <div style="margin-top:6px;font-size:10.5px;color:#475569">
-        Once registered, ask the AI: <em>"Audit my tests folder"</em> — the AI calls cqs_audit automatically.
+        Once registered, ask the AI: <em>"Audit my tests folder"</em> — the AI calls cqz_audit automatically.
       </div>
     </div>
   </div>
 <div class="card" style="border-top:3px solid #0d9488;background:#fafafa;">
-    <div class="card-head" style="background:#0d9488;color:#fff;">🧠 Claude Code /cqs Skill</div>
+    <div class="card-head" style="background:#0d9488;color:#fff;">🧠 Claude Code /cqz Skill</div>
     <div class="card-body">
       <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">INSTALL THE SKILL (one-time)</div>
       <div class="code-block">
         <span class="cmt"># Create the skill directory</span><br>
-        <span class="cmd">mkdir -p ~/.claude/skills/cqs</span><br><br>
-        <span class="cmt"># Copy SKILL.md from the cqs repo</span><br>
-        <span class="cmd">cp cli/bin/cqs-skill.md ~/.claude/skills/cqs/SKILL.md</span><br><br>
-        <span class="cmt"># Or download directly (if cqs-audit is installed globally)</span><br>
-        <span class="cmd">cqs --version  # verify cqs is working</span>
+        <span class="cmd">mkdir -p ~/.claude/skills/cqz</span><br><br>
+        <span class="cmt"># Copy SKILL.md from the cqz repo</span><br>
+        <span class="cmd">cp cli/bin/cqz-skill.md ~/.claude/skills/cqz/SKILL.md</span><br><br>
+        <span class="cmt"># Or download directly (if cqz-audit is installed globally)</span><br>
+        <span class="cmd">cqz --version  # verify cqz is working</span>
       </div>
 
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">USE IN CLAUDE CODE SESSION</div>
       <div class="code-block">
         <span class="cmt"># In any Claude Code session, just type:</span><br>
-        <span class="cmd">/cqs</span><br><br>
+        <span class="cmd">/cqz</span><br><br>
         <span class="cmt"># Claude will ask you for the path, then run the audit</span><br>
         <span class="cmt"># and summarise findings directly in the conversation</span>
       </div>
@@ -613,14 +614,14 @@
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">EXAMPLE PROMPTS WITH SKILL</div>
       <div style="font-size:10.5px;color:#475569;line-height:1.8">
         <em>"Audit my tests and fix all critical issues"</em><br>
-        <em>"Run cqs on ./e2e/ and summarise what's wrong"</em><br>
+        <em>"Run cqz on ./e2e/ and summarise what's wrong"</em><br>
         <em>"Check my Playwright tests for quality issues"</em><br>
         <em>"Review ./tests/ with AI — use Anthropic"</em>
       </div>
 
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">SKILL FILE LOCATION</div>
       <div class="code-block" style="font-size:10px">
-        <span class="cmd">~/.claude/skills/cqs/SKILL.md</span>
+        <span class="cmd">~/.claude/skills/cqz/SKILL.md</span>
       </div>
       <div style="margin-top:6px;font-size:10.5px;color:#475569">
         Claude Code auto-loads skills from <code style="background:#f1f5f9;padding:1px 4px;border-radius:3px">~/.claude/skills/</code> — no restart needed after adding SKILL.md.
@@ -634,7 +635,7 @@
 <div class="page">
 <div class="section-bar">
   <h2>5 · Agents — automated fixing &amp; PR review</h2>
-  <span class="step">AI writes the fix, cqs decides whether to keep it</span>
+  <span class="step">AI writes the fix, cqz decides whether to keep it</span>
 </div>
 <div class="grid">
 
@@ -646,16 +647,16 @@
       </div>
       <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">PREVIEW FIRST</div>
       <div class="code-block" style="font-size:10px">
-        <span class="cmd">cqs remediate ./tests/ --ai anthropic \</span><br>
+        <span class="cmd">cqz remediate ./tests/ --ai anthropic \</span><br>
         &nbsp;&nbsp;<span class="cmd">--dry-run</span><br>
         <span class="cmt"># prints the diff, writes nothing</span>
       </div>
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">APPLY</div>
       <div class="code-block" style="font-size:10px">
-        <span class="cmd">cqs remediate ./tests/ --ai anthropic</span><br><br>
+        <span class="cmd">cqz remediate ./tests/ --ai anthropic</span><br><br>
         <span class="cmt"># apply on a branch and commit</span><br>
-        <span class="cmd">cqs remediate ./tests/ --ai anthropic \</span><br>
-        &nbsp;&nbsp;<span class="cmd">--branch fix/cqs --commit</span>
+        <span class="cmd">cqz remediate ./tests/ --ai anthropic \</span><br>
+        &nbsp;&nbsp;<span class="cmd">--branch fix/cqz --commit</span>
       </div>
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">FLAGS</div>
       <div style="font-size:10.5px;color:#475569;line-height:1.75">
@@ -675,13 +676,13 @@
       </div>
       <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">IN GITHUB ACTIONS — NO FLAGS</div>
       <div class="code-block" style="font-size:10px">
-        <span class="cmd">cqs pr-review --stack playwright \</span><br>
+        <span class="cmd">cqz pr-review --stack playwright \</span><br>
         &nbsp;&nbsp;<span class="cmd">--threshold 80</span><br>
         <span class="cmt"># repo, PR and token come from the env</span>
       </div>
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">MANUALLY, AGAINST ANY PR</div>
       <div class="code-block" style="font-size:9.5px">
-        <span class="cmd">cqs pr-review --repo owner/name --pr 42 \</span><br>
+        <span class="cmd">cqz pr-review --repo owner/name --pr 42 \</span><br>
         &nbsp;&nbsp;<span class="cmd">--token ghp_xxx --dry-run</span>
       </div>
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">WORKFLOW PERMISSION</div>
@@ -733,7 +734,7 @@
 </div>
 <div class="grid">
 <div class="card" style="border-top:3px solid #0d9488;background:#f8fffe;">
-    <div class="card-head" style="background:#0d9488;color:#fff;">🖥️ cqs serve — the studio on your machine</div>
+    <div class="card-head" style="background:#0d9488;color:#fff;">🖥️ cqz serve — the studio on your machine</div>
     <div class="card-body">
       <div style="font-size:10px;color:#475569;margin-bottom:5px">
         One command starts a local server <em>and</em> the full web studio it serves. The page arrives
@@ -743,11 +744,11 @@
       <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:3px">START · STOP</div>
       <div class="code-block" style="font-size:9.5px">
         <span class="cmt"># start it in the suite you want to scan</span><br>
-        <span class="cmd">cd ~/my-project &amp;&amp; cqs serve --open</span><br>
+        <span class="cmd">cd ~/my-project &amp;&amp; cqz serve --open</span><br>
         <span class="cmt"># → Open  http://127.0.0.1:4000</span><br>
         <br>
         <span class="cmt"># stop: Ctrl-C. still busy? an older one is up:</span><br>
-        <span class="cmd">pkill -f "cqs serve"</span>
+        <span class="cmd">pkill -f "cqz serve"</span>
       </div>
       <div style="font-size:9.5px;color:#475569;margin:3px 0 5px">
         Omit <code style="background:#f1f5f9;padding:0 3px;border-radius:3px">--open</code> for the API alone (SSH, <code style="background:#f1f5f9;padding:0 3px;border-radius:3px">curl</code>).
@@ -773,30 +774,30 @@
     </div>
   </div>
 <div class="card" style="border-top:3px solid #7c3aed;background:#faf5ff;">
-    <div class="card-head" style="background:#7c3aed;color:#fff;">🧩 Offline AI — the cqs-ai add-on</div>
+    <div class="card-head" style="background:#7c3aed;color:#fff;">🧩 Offline AI — the cqz-ai add-on</div>
     <div class="card-body">
       <div style="font-size:10px;color:#475569;margin-bottom:5px">
         A ~104 MB classifier that runs on your machine. <strong>No API key, no network.</strong>
-        A separate package on purpose — if it fails to install, <code style="background:#f1f5f9;padding:0 3px;border-radius:3px">cqs</code> is unaffected.
+        A separate package on purpose — if it fails to install, <code style="background:#f1f5f9;padding:0 3px;border-radius:3px">cqz</code> is unaffected.
       </div>
 
       <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:3px">FROM THE STUDIO (EASIEST)</div>
       <div class="code-block" style="font-size:9.5px">
-        <span class="cmd">cqs serve --open</span><br>
+        <span class="cmd">cqz serve --open</span><br>
         <span class="cmt"># Files → Add-ons → Local AI → Install</span><br>
         <span class="cmt"># then ▶ Run on N files</span>
       </div>
       <div style="font-size:9.5px;color:#475569;margin:3px 0 5px">
-        Installs to <code style="background:#f1f5f9;padding:0 3px;border-radius:3px">~/.cqs/addons</code> — no sudo.
+        Installs to <code style="background:#f1f5f9;padding:0 3px;border-radius:3px">~/.cqz/addons</code> — no sudo.
         <strong>Stop</strong> frees its ~500 MB; <strong>Remove</strong> uninstalls it.
       </div>
 
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:0 0 3px">OR THE TERMINAL</div>
       <div class="code-block" style="font-size:9.5px">
-        <span class="cmd">npm install -g cqs-ai</span><br>
-        <span class="cmd">cqs-ai ./tests/login.spec.ts</span><br>
-        <span class="cmd">cqs-ai warm</span> <span class="cmt"># fetch model now</span><br>
-        <span class="cmd">cqs-ai serve</span> <span class="cmt"># port 4100</span>
+        <span class="cmd">npm install -g cqz-ai</span><br>
+        <span class="cmd">cqz-ai ./tests/login.spec.ts</span><br>
+        <span class="cmd">cqz-ai warm</span> <span class="cmt"># fetch model now</span><br>
+        <span class="cmd">cqz-ai serve</span> <span class="cmt"># port 4100</span>
       </div>
 
       <div style="font-size:9.5px;color:#475569;margin-top:5px;line-height:1.5">
@@ -811,7 +812,7 @@
 </div>
 
 <div class="footer">
-  cqs v2.6.0 &nbsp;·&nbsp; <strong>npm install -g cqs-audit</strong> &nbsp;·&nbsp; AI: anthropic | openai | bedrock | vertex &nbsp;·&nbsp; MCP: cqs_audit | cqs_report | cqs_list_stacks | cqs_list_rules | cqs_validate_rules | cqs_test_rule | cqs_read_report &nbsp;·&nbsp; Skill: /cqs &nbsp;·&nbsp; Offline AI: <strong>npm i -g cqs-ai</strong> &nbsp;·&nbsp; Agents: remediate | pr-review &nbsp;·&nbsp; Packaging → <strong>cqs-admin-cheatsheet.pdf</strong>
+  cqz v2.6.0 &nbsp;·&nbsp; <strong>npm install -g cqz-audit</strong> &nbsp;·&nbsp; AI: anthropic | openai | bedrock | vertex &nbsp;·&nbsp; MCP: cqz_audit | cqz_report | cqz_list_stacks | cqz_list_rules | cqz_validate_rules | cqz_test_rule | cqz_read_report &nbsp;·&nbsp; Skill: /cqz &nbsp;·&nbsp; Offline AI: <strong>npm i -g cqz-ai</strong> &nbsp;·&nbsp; Agents: remediate | pr-review &nbsp;·&nbsp; Packaging → <strong>cqz-admin-cheatsheet.pdf</strong>
 </div>
 </div>
 

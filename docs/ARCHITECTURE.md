@@ -1,4 +1,4 @@
-# Code Quality Studio — Architecture
+# Code Quality Zone — Architecture
 
 > Authoritative engineering reference for this codebase. Written from a read of the
 > source (not aspirational). Last reviewed: 2026-07-28.
@@ -65,10 +65,10 @@ flowchart TB
   VITE --> GCP[Google Cloud Vertex AI]
 
   UI -.->|same-origin, token injected| SERVE
-  subgraph Machine["This machine — only when `cqs serve` is running"]
-    SERVE[cqs serve<br/>cli/bin/localServer.js<br/>127.0.0.1:4000]
+  subgraph Machine["This machine — only when `cqz serve` is running"]
+    SERVE[cqz serve<br/>cli/bin/localServer.js<br/>127.0.0.1:4000]
     ADDONS[Add-on manager<br/>cli/bin/addons.js]
-    AI[cqs-ai serve<br/>127.0.0.1:4100]
+    AI[cqz-ai serve<br/>127.0.0.1:4100]
     WORKER[model worker<br/>ONNX, ~500 MB]
     DISK[(Working tree<br/>read, and written only<br/>with --allow-write)]
 
@@ -82,12 +82,12 @@ flowchart TB
 Key property: **local rules and browser-key AI providers need no server at all** — a static
 `vite build` is fully functional for them. Only Vertex requires `npm run dev`.
 
-Three processes, deliberately. `cqs serve` holds no model; `cqs-ai` is a *separate npm package*
+Three processes, deliberately. `cqz serve` holds no model; `cqz-ai` is a *separate npm package*
 so that a native ONNX dependency cannot break the audit CLI; and the model sits in a child of
 that, because killing a process is the only way to reliably return its memory (measured:
 `dispose()` in-process returns 119 MB of 470 MB; killing the worker returns all of it).
 
-The browser only ever talks to **one origin with one token** — `cqs serve` proxies `/ai-audit`
+The browser only ever talks to **one origin with one token** — `cqz serve` proxies `/ai-audit`
 to the add-on, so the add-on's port and token never reach the page.
 
 ---
@@ -175,20 +175,20 @@ server/
   vertexAudit.mjs              Vite dev middleware for POST /api/vertex/audit
 
 vite.config.js                 Wires react() + the Vertex middleware plugin (port 4001;
-                               4000 is `cqs serve`, and the pair being adjacent makes
+                               4000 is `cqz serve`, and the pair being adjacent makes
                                it obvious they belong together)
 
 cli/
-  bin/cqs.entry.js             ★ The CLI. Bundled by esbuild into one file with no
+  bin/cqz.entry.js             ★ The CLI. Bundled by esbuild into one file with no
                                runtime dependencies; the built web app is inlined.
-  bin/localServer.js           `cqs serve` — HTTP API + serves the embedded app
+  bin/localServer.js           `cqz serve` — HTTP API + serves the embedded app
   bin/addons.js                Install / start / stop / proxy optional add-ons
-  bin/cqs-mcp.entry.js         MCP server (7 tools)
+  bin/cqz-mcp.entry.js         MCP server (7 tools)
   embedApp.mjs                 Reads dist/assets into the bundle; fails the build on
                                any import that will not exist at runtime
   build.mjs / build-mcp.mjs
 
-ai/                            ★ cqs-ai — a SEPARATE npm package, not a subfolder of the
+ai/                            ★ cqz-ai — a SEPARATE npm package, not a subfolder of the
                                CLI's build. Nothing in cli/ imports it.
   src/auditTestCode.js         The hybrid: static gate, then the model
   src/staticChecks.js          The fast gate — only rules with an unambiguous signature
@@ -196,7 +196,7 @@ ai/                            ★ cqs-ai — a SEPARATE npm package, not a subf
   src/backend.js               Model loading, cache dir, idle unload
   src/isolated.js              Child-process manager — the memory story
   src/worker.mjs               The child's message loop
-  bin/cqs-ai.entry.js          Its own CLI + its own server on 4100
+  bin/cqz-ai.entry.js          Its own CLI + its own server on 4100
 ```
 
 ★ = the load-bearing modules. Start here when onboarding.
@@ -425,14 +425,27 @@ This keeps data flow easy to follow but concentrates risk — see §12.
 
 | Data | Mechanism | Key |
 |------|-----------|-----|
-| AI settings (keys, models, enabled flags) | `localStorage` | `cqs-ai-settings-v1` |
-| Per-stack rule enable/disable + notes | `localStorage` | `cqs-rule-settings-<stackId>` |
-| Best-practice checklist state | `localStorage` | `cqs-<stack>-practices` (per stack) |
-| Active stack (session) | `sessionStorage` | `cqs-active-stack` |
+| AI settings (keys, models, enabled flags) | `localStorage` | `cqz-ai-settings-v1` |
+| Per-stack rule enable/disable + notes | `localStorage` | `cqz-rule-settings-<stackId>` |
+| Custom rules (per stack) | `localStorage` | `cqz-custom-rules-<stackId>` |
+| Best-practice checklist state | `localStorage` | `cqz-<stack>-practices` (per stack) |
+| Active stack (session) | `sessionStorage` | `cqz-active-stack` |
+| Local-server token (session) | `sessionStorage` | `cqz-local-server` |
 | Working session (files + results) | `IndexedDB` | db `cqs-workspace-v1`, store `meta`, key `current` |
 
 Settings are **migrated on load** (`migrateAiSettings`) to add newer fields (multi-provider
 `enabledProviders`, Google `authMode`) to older saved blobs.
+
+### Renames and saved state
+
+The key prefix is the product's short name, so each rename invalidates every key at once.
+`migrateLegacyStorage` runs before the app mounts and walks the chain — `pqs-` → `cqs-` →
+`cqz-` — copying anything that does not already exist under the newer name. It copies rather
+than moves, so downgrading still finds the old data.
+
+The **IndexedDB database keeps its `cqs-workspace-v1` name on purpose.** Renaming it would mean
+writing a store-to-store data migration to avoid discarding saved workspaces, and the name is
+never surfaced to anyone. A cosmetic rename is not worth a migration that can lose a session.
 
 ---
 
@@ -454,7 +467,7 @@ Honest assessment — this is a **local developer tool**, and the trust model re
 - `.env` is git-ignored (`VITE_ANTHROPIC_API_KEY`, `VITE_ANALYSIS_MODE` are read by
   `localAnalyzer.shouldUseLocalAnalysis`, a legacy path).
 
-### 11.1 The local server (`cqs serve`)
+### 11.1 The local server (`cqz serve`)
 
 This process can read the working tree, and with `--allow-write` edit it. Any page you visit can
 issue requests to `127.0.0.1` — the same-origin policy stops it *reading* the response without
@@ -466,7 +479,7 @@ execution hole that any site could poke. Four defences, all required:
    injected into the page the server itself serves, so the user never handles it.
 3. **An Origin allowlist**, including the server's own origin (browsers send `Origin` on
    same-origin POSTs too — omitting it broke the app the server was serving).
-4. **Writes are opt-in** at startup. `cqs serve` with no flags can audit and nothing else.
+4. **Writes are opt-in** at startup. `cqz serve` with no flags can audit and nothing else.
 
 The served page carries the token, so it is sent with `nosniff`, `X-Frame-Options: DENY` and
 `Cross-Origin-Resource-Policy: same-origin` — a remote page can neither frame it to probe for a
@@ -479,9 +492,9 @@ installable add-ons is a constant in `cli/bin/addons.js`. A local server that in
 web page names is a remote code execution hole wearing a friendly label, and no amount of token
 checking makes that design safe.
 
-Add-ons install into `~/.cqs/addons` (no sudo, no collision with the user's global packages) and
+Add-ons install into `~/.cqz/addons` (no sudo, no collision with the user's global packages) and
 run as child processes that cannot outlive the server: `detached: false`, SIGTERM then SIGKILL on
-shutdown. Verified: killing `cqs serve` leaves zero orphans holding the model's ~500 MB.
+shutdown. Verified: killing `cqz serve` leaves zero orphans holding the model's ~500 MB.
 
 ---
 
@@ -507,7 +520,7 @@ Ranked roughly by severity.
 5. **Duplicated concepts / drifting sources of truth.** `SEV` and `grade` are defined in
    `shared/theme.js` and re-exported by `shared/grade.js`; older copies (`constants/categories.js`,
    `shared/severity.js`) were moved to `_archive/` during cleanup. Keep a single source per concept.
-6. **Naming drift.** The app is "Code Quality Studio" and multi-stack, but the shell component,
+6. **Naming drift.** The app is "Code Quality Zone" and multi-stack, but the shell component,
    package name, and many `cqs-`/`playwright` identifiers still say Playwright. Cosmetic, but confusing.
 7. **Hardcoded model defaults age out.** Default model ids live in `aiSettingsDefaults.js`
    (`claude-sonnet-4-6`, `gemini-1.5-flash`, a Bedrock Claude 3.5 id). These will drift from

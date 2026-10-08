@@ -1,14 +1,14 @@
 {
-  "name": "cqs-ai",
+  "name": "cqz-ai",
   "version": "0.1.0",
-  "description": "Offline AI layer for Code Quality Studio \u2014 a ~100 MB local classifier that judges the fuzzy half of test quality. No API key, no network at run time.",
+  "description": "Offline AI layer for Code Quality Zone \u2014 a ~100 MB local classifier that judges the fuzzy half of test quality. No API key, no network at run time.",
   "type": "module",
   "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "node": ">=20"
   },
   "bin": {
-    "cqs-ai": "dist/cqs-ai.js"
+    "cqz-ai": "dist/cqz-ai.js"
   },
   "main": "./src/index.js",
   "exports": {

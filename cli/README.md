@@ -1,4 +1,4 @@
-# cqs — Code Quality Studio CLI
+# cqz — Code Quality Zone CLI
 
 Audit your test and application code from the terminal. **530 rules across 18
 stacks** — Playwright, Cypress, Selenium, Appium, TOSCA, REST Assured, Karate,
@@ -11,25 +11,25 @@ No API key, no network, no telemetry. Every rule runs locally.
 ## Install
 
 ```bash
-npm install -g cqs-audit
-cqs --help
+npm install -g cqz-audit
+cqz --help
 ```
 
 ### Upgrade to the latest
 
 ```bash
-npm install -g cqs-audit@latest
+npm install -g cqz-audit@latest
 ```
 
 Check what you're on, and what's published:
 
 ```bash
-cqs --help | head -2          # your installed version
-npm view cqs-audit version    # latest on npm
+cqz --help | head -2          # your installed version
+npm view cqz-audit version    # latest on npm
 ```
 
 > **Using nvm?** Global packages are installed **per Node version**. If you
-> switch versions and `cqs` disappears or looks out of date, re-run the install
+> switch versions and `cqz` disappears or looks out of date, re-run the install
 > under that version. `node --version` tells you which one you're on.
 
 ### Build from source
@@ -44,7 +44,7 @@ npm run build:all                # bundles the CLI and the MCP server
 npm install -g .
 ```
 
-Build the web app first. The CLI inlines it so `cqs --open` can emit a working
+Build the web app first. The CLI inlines it so `cqz --open` can emit a working
 copy; without it, reports fall back to a flat HTML document.
 
 ---
@@ -52,7 +52,7 @@ copy; without it, reports fall back to a flat HTML document.
 ## Quick start
 
 ```bash
-cqs ./tests/
+cqz ./tests/
 ```
 
 That's it. You get findings in the terminal **and** a full report opens in your
@@ -62,7 +62,7 @@ browser automatically.
 
 ## The report
 
-`cqs` writes the entire Code Quality Studio UI into **one self-contained HTML
+`cqz` writes the entire Code Quality Zone UI into **one self-contained HTML
 file** — no server, no internet. Email it to a colleague and it works on their
 machine.
 
@@ -70,9 +70,9 @@ It carries every view: Overview, Files, Findings, Rule Settings, Coverage
 Radar, Roadmap and the practices checklist.
 
 ```bash
-cqs ./tests/                 # report opens automatically
-cqs ./tests/ --no-report     # terminal output only
-cqs ./tests/ --open          # force it even when piped or in CI
+cqz ./tests/                 # report opens automatically
+cqz ./tests/ --no-report     # terminal output only
+cqz ./tests/ --open          # force it even when piped or in CI
 ```
 
 Reports are skipped automatically for `--output json` / `--output summary` and
@@ -83,9 +83,9 @@ when output isn't a terminal, so pipelines stay clean.
 ## Usage
 
 ```
-cqs [path...] [options]
-cqs remediate [path...]      AI-fix findings, verifying each fix before keeping it
-cqs pr-review                Review a pull request with inline GitHub comments
+cqz [path...] [options]
+cqz remediate [path...]      AI-fix findings, verifying each fix before keeping it
+cqz pr-review                Review a pull request with inline GitHub comments
 ```
 
 | Option | Description |
@@ -96,7 +96,7 @@ cqs pr-review                Review a pull request with inline GitHub comments
 | `-o, --output <fmt>` | `pretty` (default) · `json` · `summary` |
 | `--open` | Force the report even when piped or in CI |
 | `--no-report` | Skip the report for this run |
-| `--rules <file>` | Use a specific `cqs-rules.json` |
+| `--rules <file>` | Use a specific `cqz-rules.json` |
 | `--no-rules` | Ignore any project rules file |
 | `--no-color` | Disable ANSI colours |
 | `--list-stacks` | Print all stack IDs and exit |
@@ -109,25 +109,25 @@ cqs pr-review                Review a pull request with inline GitHub comments
 
 ```bash
 # Analyse the current folder (auto-detects the stack)
-cqs .
+cqz .
 
 # Force a stack
-cqs ./tests/ --stack cypress
+cqz ./tests/ --stack cypress
 
 # Only the things that matter today
-cqs ./e2e/ --severity critical
+cqz ./e2e/ --severity critical
 
 # One category
-cqs ./tests/ --category reliability
+cqz ./tests/ --category reliability
 
 # Machine-readable, for CI artefacts
-cqs ./tests/ --output json > report.json
+cqz ./tests/ --output json > report.json
 
 # One line, for CI logs
-cqs ./tests/ --output summary
+cqz ./tests/ --output summary
 
 # Several paths at once
-cqs ./src/tests/ ./e2e/ --stack playwright
+cqz ./src/tests/ ./e2e/ --stack playwright
 ```
 
 Filters apply to every output mode, including `summary`.
@@ -141,10 +141,10 @@ Two agents go beyond reporting. Both need an AI provider key.
 ```bash
 # Fix critical findings automatically. Every edit is re-audited before it is
 # kept — an edit that introduces a new critical is rejected.
-cqs remediate ./tests/ --ai anthropic --dry-run
+cqz remediate ./tests/ --ai anthropic --dry-run
 
 # Review a pull request, leaving inline comments on the changed lines
-cqs pr-review --repo owner/name --pr 42 --token "$GITHUB_TOKEN" --ai anthropic
+cqz pr-review --repo owner/name --pr 42 --token "$GITHUB_TOKEN" --ai anthropic
 ```
 
 Add `--commit` to have `remediate` commit its accepted fixes, `--max-files` to
@@ -159,11 +159,11 @@ An MCP server ships in the same package, so Claude Desktop, Claude Code or
 Cursor can run audits for you:
 
 ```bash
-claude mcp add cqs node "$(npm root -g)/cqs-audit/dist/cqs-mcp.js"
+claude mcp add cqz node "$(npm root -g)/cqz-audit/dist/cqz-mcp.js"
 ```
 
-Seven tools: `cqs_audit`, `cqs_report`, `cqs_list_stacks`, `cqs_list_rules`,
-`cqs_validate_rules`, `cqs_test_rule`, `cqs_read_report`. `cqs_report` writes
+Seven tools: `cqz_audit`, `cqz_report`, `cqz_list_stacks`, `cqz_list_rules`,
+`cqz_validate_rules`, `cqz_test_rule`, `cqz_read_report`. `cqz_report` writes
 the same self-contained report the CLI does.
 
 A full walkthrough for every client ships with the source, in
@@ -180,9 +180,9 @@ outnumbers the tests several times over — one has 926 test files against
 came for.
 
 ```bash
-cqs .              # test automation only (default)
-cqs . --app        # tests plus application code
-cqs . --app-only   # application code only
+cqz .              # test automation only (default)
+cqz . --app        # tests plus application code
+cqz . --app-only   # application code only
 ```
 
 Skipped files are reported rather than hidden, so you always know what was
@@ -192,7 +192,7 @@ left out:
 3176 application file(s) not audited (TypeScript · Frontend (React), …) — add --app to include them.
 ```
 
-Naming a stack explicitly always wins: `cqs ./src --stack ts_frontend`.
+Naming a stack explicitly always wins: `cqz ./src --stack ts_frontend`.
 
 ## Adopting it on an existing suite
 
@@ -200,8 +200,8 @@ A real suite does not start clean. Gate on *new* findings instead of all of
 them:
 
 ```bash
-cqs ./tests --baseline-write .cqs-baseline.json   # accept today's reality
-cqs ./tests --baseline .cqs-baseline.json         # fails only on new findings
+cqz ./tests --baseline-write .cqz-baseline.json   # accept today's reality
+cqz ./tests --baseline .cqz-baseline.json         # fails only on new findings
 ```
 
 Commit the baseline file. Existing debt stays visible but non-blocking; the
@@ -215,29 +215,29 @@ hard wait, but not which occurrence is new.
 ### Audit only what changed
 
 ```bash
-cqs --changed                     # vs origin/main
-cqs --changed --since develop
+cqz --changed                     # vs origin/main
+cqz --changed --since develop
 ```
 
 Covers committed, staged, unstaged and untracked files. Pairs naturally with
 the baseline for a pull-request gate:
 
 ```bash
-cqs --changed --baseline .cqs-baseline.json
+cqz --changed --baseline .cqz-baseline.json
 ```
 
 ## CI integration
 
-`cqs` exits `1` when critical findings exist, so it plugs straight in:
+`cqz` exits `1` when critical findings exist, so it plugs straight in:
 
 ```yaml
 - name: Audit test quality
-  run: cqs ./tests/ --output summary
+  run: cqz ./tests/ --output summary
 ```
 
 ```bash
 # Pre-commit hook (.git/hooks/pre-commit)
-cqs . --severity critical --output summary || exit 1
+cqz . --severity critical --output summary || exit 1
 ```
 
 Filtering the display never hides a failing build: criticals set the exit code
@@ -247,7 +247,7 @@ even when you filter the output to something else.
 
 ## Project rules
 
-Drop a `cqs-rules.json` beside your tests to add team-specific checks. `cqs`
+Drop a `cqz-rules.json` beside your tests to add team-specific checks. `cqz`
 discovers it by walking up from the audited path, stopping at `.git`.
 
 ```json
@@ -264,14 +264,14 @@ discovers it by walking up from the audited path, stopping at `.git`.
 }
 ```
 
-Validate and try rules before committing them with `cqs_validate_rules` and
-`cqs_test_rule` over MCP.
+Validate and try rules before committing them with `cqz_validate_rules` and
+`cqz_test_rule` over MCP.
 
 ---
 
 ## Stacks
 
-`cqs --list-stacks` prints them all.
+`cqz --list-stacks` prints them all.
 
 | ID | Stack |
 |---|---|
@@ -303,18 +303,18 @@ Validate and try rules before committing them with `cqs_validate_rules` and
 **`json`** — `{ stack, files, avgScore, summary, results[] }`.
 
 **`summary`** — one line:
-`cqs 🎭 Playwright (TS / JS) · 76 files · score 90 · 288 critical · 60 warning`
+`cqz 🎭 Playwright (TS / JS) · 76 files · score 90 · 288 critical · 60 warning`
 
 ---
 
 ## Documentation
 
 Shipped inside the package, so they are available offline after install — look
-in `node_modules/cqs-audit/docs/`, or read them on GitHub:
+in `node_modules/cqz-audit/docs/`, or read them on GitHub:
 
 | Guide | Covers |
 |---|---|
-| [MCP_GUIDE.md](https://github.com/mv-vasanth/code-quality-studio/blob/main/docs/MCP_GUIDE.md) | Driving cqs from an AI assistant, written from scratch |
+| [MCP_GUIDE.md](https://github.com/mv-vasanth/code-quality-studio/blob/main/docs/MCP_GUIDE.md) | Driving cqz from an AI assistant, written from scratch |
 | [CURSOR_SETUP.md](https://github.com/mv-vasanth/code-quality-studio/blob/main/docs/CURSOR_SETUP.md) | Step-by-step Cursor setup, with the nvm and PATH traps |
 | [SCORING.md](https://github.com/mv-vasanth/code-quality-studio/blob/main/docs/SCORING.md) | How scores and category scores are calculated |
 | [MULTI_STACK.md](https://github.com/mv-vasanth/code-quality-studio/blob/main/docs/MULTI_STACK.md) | How files are routed to stacks in a polyglot repo |
@@ -327,7 +327,7 @@ not shipped in the package to keep the install small.
 To find the docs after installing:
 
 ```bash
-ls "$(npm root -g)/cqs-audit/docs"
+ls "$(npm root -g)/cqz-audit/docs"
 ```
 
 ## Links

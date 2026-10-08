@@ -1,7 +1,7 @@
 {
-  "name": "cqs-audit",
+  "name": "cqz-audit",
   "version": "2.6.0-rc.2",
-  "description": "Code Quality Studio — CLI for auditing test files (Playwright, Cypress, Selenium, Appium, TOSCA and more)",
+  "description": "Code Quality Zone \u2014 CLI for auditing test files (Playwright, Cypress, Selenium, Appium, TOSCA and more)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mv-vasanth/code-quality-studio.git"
@@ -12,8 +12,10 @@
   },
   "type": "module",
   "bin": {
-    "cqs": "dist/cqs.js",
-    "cqs-mcp": "dist/cqs-mcp.js"
+    "cqz": "dist/cqz.js",
+    "cqz-mcp": "dist/cqz-mcp.js",
+    "cqs": "dist/cqz.js",
+    "cqs-mcp": "dist/cqz-mcp.js"
   },
   "scripts": {
     "build": "node build.mjs",
@@ -36,10 +38,10 @@
     "LICENSE",
     "README.md",
     "docs/",
-    "dist/cqs.js",
-    "dist/cqs-mcp.js"
+    "dist/cqz.js",
+    "dist/cqz-mcp.js"
   ],
-  "author": "Code Quality Studio",
+  "author": "Code Quality Zone",
   "license": "SEE LICENSE IN LICENSE",
   "devDependencies": {
     "esbuild": "^0.21.5",

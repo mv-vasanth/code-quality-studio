@@ -27,7 +27,7 @@ function safeJson(value) {
  * The app, inlined into one HTML document, with arbitrary globals injected.
  *
  * Two callers want this with different payloads: the report writer injects a
- * finished workspace and marks the page offline, while `cqs serve` injects a
+ * finished workspace and marks the page offline, while `cqz serve` injects a
  * session token and leaves the app live. The only difference is what lands on
  * `window`, so the template lives here once.
  *
@@ -37,7 +37,7 @@ function safeJson(value) {
  * @param {object} [opts.globals]  Injected onto `window` before the app boots.
  * @param {string} [opts.title]
  */
-export function buildAppShellHtml({ appJs, appCss, globals = {}, title = "Code Quality Studio" }) {
+export function buildAppShellHtml({ appJs, appCss, globals = {}, title = "Code Quality Zone" }) {
   if (!appJs) throw new Error("buildAppShellHtml: appJs is required");
 
   const injected = Object.entries(globals)
@@ -71,7 +71,7 @@ ${appJs}
  * @param {object}  opts.workspace  Same shape saveWorkspace persists.
  * @param {string} [opts.title]
  */
-export function buildAppHtmlReport({ appJs, appCss, workspace, title = "Code Quality Studio" }) {
+export function buildAppHtmlReport({ appJs, appCss, workspace, title = "Code Quality Zone" }) {
   if (!appJs) throw new Error("buildAppHtmlReport: appJs is required");
   return buildAppShellHtml({
     appJs,
@@ -79,9 +79,9 @@ export function buildAppHtmlReport({ appJs, appCss, workspace, title = "Code Qua
     title,
     globals: {
       // Picked up by loadWorkspace() before it reaches IndexedDB.
-      __CQS_WORKSPACE__: workspace,
+      __CQZ_WORKSPACE__: workspace,
       // Offline copy: no dev server, so nothing should try to reach one.
-      __CQS_OFFLINE__: true,
+      __CQZ_OFFLINE__: true,
     },
   });
 }

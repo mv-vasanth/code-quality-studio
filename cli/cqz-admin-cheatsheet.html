@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>cqs CLI — Admin &amp; Packaging Cheat Sheet</title>
+<title>cqz CLI — Admin &amp; Packaging Cheat Sheet</title>
 <style>
   @page { size: A4 landscape; margin: 12mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -202,16 +202,16 @@
 <div class="page">
 <div class="page-header">
   <div>
-    <h1>🔧 cqs — Admin &amp; Packaging Cheat Sheet</h1>
-    <div class="sub">For maintainers: build, package, publish, and distribute cqs offline</div>
+    <h1>🔧 cqz — Admin &amp; Packaging Cheat Sheet</h1>
+    <div class="sub">For maintainers: build, package, publish, and distribute cqz offline</div>
   </div>
   <div style="background:#b45309;border-radius:8px;padding:8px 18px;text-align:center">
     <div style="font-size:10px;color:#fef3c7;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px">Offline install artefact</div>
-    <div style="font-family:monospace;font-size:14px;font-weight:800;color:#fff">cqs-audit-2.1.0.tgz</div>
+    <div style="font-family:monospace;font-size:14px;font-weight:800;color:#fff">cqz-audit-2.1.0.tgz</div>
     <div style="font-size:10px;color:#fef3c7;margin-top:3px">npm pack → copy → install</div>
   </div>
   <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-    <div class="verify-box">✅ Verify: <code>cqs --list-stacks</code></div>
+    <div class="verify-box">✅ Verify: <code>cqz --list-stacks</code></div>
     <div class="badge">v2.1.0</div>
   </div>
 </div>
@@ -234,7 +234,7 @@
         <span class="cmd">npm install -g .</span><br><br>
         <span class="cmt"># Create shareable tarball</span><br>
         <span class="cmd">npm run build &amp;&amp; npm pack</span><br>
-        <span class="cmt"># → cqs-audit-2.1.0.tgz</span><br><br>
+        <span class="cmt"># → cqz-audit-2.1.0.tgz</span><br><br>
         <span class="cmt"># Publish to npm (bump version first)</span><br>
         <span class="cmd">npm run build &amp;&amp; npm publish --access public</span>
       </div>
@@ -247,13 +247,13 @@
     <div class="card-body">
       <div class="code-block">
         <span class="cmt"># With admin rights</span><br>
-        <span class="cmd">sudo npm install -g ./cqs-audit-2.1.0.tgz</span><br><br>
+        <span class="cmd">sudo npm install -g ./cqz-audit-2.1.0.tgz</span><br><br>
         <span class="cmt"># Without admin (no sudo)</span><br>
-        <span class="cmd">npm install -g ./cqs-audit-2.1.0.tgz --prefix ~/.npm-global</span><br>
+        <span class="cmd">npm install -g ./cqz-audit-2.1.0.tgz --prefix ~/.npm-global</span><br>
         <span class="cmd">echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.zshrc</span><br>
         <span class="cmd">source ~/.zshrc</span><br><br>
         <span class="cmt"># Windows</span><br>
-        <span class="cmd">npm install -g .\cqs-audit-2.1.0.tgz</span>
+        <span class="cmd">npm install -g .\cqz-audit-2.1.0.tgz</span>
       </div>
     </div>
   </div>
@@ -270,8 +270,8 @@
       </div>
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">ARTEFACTS PRODUCED</div>
       <div style="font-size:10.5px;color:#475569;line-height:1.9">
-        <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;color:#0d9488">dist/cqs.js</code> — the CLI (self-contained)<br>
-        <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;color:#0d9488">dist/cqs-mcp.js</code> — the MCP server
+        <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;color:#0d9488">dist/cqz.js</code> — the CLI (self-contained)<br>
+        <code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;color:#0d9488">dist/cqz-mcp.js</code> — the MCP server
       </div>
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">VERSION IS AUTOMATIC</div>
       <div style="font-size:10.5px;color:#475569">
@@ -291,7 +291,7 @@
 <div class="page">
 <div class="section-bar">
   <h2>B · Standalone Binaries, Local Dev &amp; Project Rules</h2>
-  <span class="step">Ship cqs to machines with no Node · run the web app · enforce team rules in CI</span>
+  <span class="step">Ship cqz to machines with no Node · run the web app · enforce team rules in CI</span>
 </div>
 <div class="grid">
 
@@ -302,7 +302,7 @@
       <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px">BUILD FOR THIS MACHINE</div>
       <div class="code-block" style="font-size:10px">
         <span class="cmd">npm run build:binary</span><br>
-        <span class="cmt"># → dist/bin/cqs-&lt;platform&gt;-&lt;arch&gt;  (~107 MB)</span>
+        <span class="cmt"># → dist/bin/cqz-&lt;platform&gt;-&lt;arch&gt;  (~107 MB)</span>
       </div>
 
       <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:6px 9px;margin-bottom:6px">
@@ -368,7 +368,7 @@
 
   <!-- PROJECT RULES -->
   <div class="card" style="border-top:3px solid #6366f1;">
-    <div class="card-head" style="background:#6366f1;color:#fff;">📋 Project Rules (cqs-rules.json)</div>
+    <div class="card-head" style="background:#6366f1;color:#fff;">📋 Project Rules (cqz-rules.json)</div>
     <div class="card-body">
       <div style="font-size:10.5px;color:#475569;margin-bottom:5px">
         Committed next to your tests and discovered by walking up to the repo root — so CI and teammates get the same rules.
@@ -391,15 +391,15 @@
 
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">CLI FLAGS</div>
       <div class="code-block" style="font-size:10px">
-        <span class="cmd">cqs ./tests/ --rules ./team-rules.json</span><br>
-        <span class="cmd">cqs ./tests/ --no-rules</span>
+        <span class="cmd">cqz ./tests/ --rules ./team-rules.json</span><br>
+        <span class="cmd">cqz ./tests/ --no-rules</span>
       </div>
 
       <div style="font-size:10px;font-weight:700;color:#64748b;margin:6px 0 4px">MCP TOOLS FOR RULES</div>
       <div style="font-size:10.5px;color:#475569;line-height:1.7">
-        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace">cqs_list_rules</span> — check coverage first<br>
-        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace">cqs_validate_rules</span> — lint the file<br>
-        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace">cqs_test_rule</span> — dry-run, show real matches
+        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace">cqz_list_rules</span> — check coverage first<br>
+        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace">cqz_validate_rules</span> — lint the file<br>
+        <span style="display:inline-block;background:#ede9fe;color:#7c3aed;padding:1px 6px;border-radius:4px;font-family:monospace">cqz_test_rule</span> — dry-run, show real matches
       </div>
       <div style="font-size:10px;color:#64748b;margin-top:5px">
         Invalid rules are reported and skipped — a typo never aborts the audit.
@@ -409,7 +409,7 @@
 
 </div>
 <div class="footer">
-  cqs v2.1.0 — admin sheet &nbsp;·&nbsp; Day-to-day usage → <strong>cqs-cheatsheet.pdf</strong> &nbsp;·&nbsp; Node.js 18+ to build · none to run the binary
+  cqz v2.1.0 — admin sheet &nbsp;·&nbsp; Day-to-day usage → <strong>cqz-cheatsheet.pdf</strong> &nbsp;·&nbsp; Node.js 18+ to build · none to run the binary
 </div>
 </div>
 

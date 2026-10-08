@@ -1,6 +1,6 @@
 /**
- * cqs MCP Server bundler
- * Produces dist/cqs-mcp.js — a self-contained MCP server with no runtime deps.
+ * cqz MCP Server bundler
+ * Produces dist/cqz-mcp.js — a self-contained MCP server with no runtime deps.
  *
  * Usage:  node build-mcp.mjs
  */
@@ -41,15 +41,15 @@ const totalRules = Object.values(builtinRules).reduce((n, a) => n + a.length, 0)
 mkdirSync(join(__dirname, "dist"), { recursive: true });
 
 const result = await build({
-  entryPoints: [join(__dirname, "bin/cqs-mcp.entry.js")],
+  entryPoints: [join(__dirname, "bin/cqz-mcp.entry.js")],
   bundle: true,
   platform: "node",
   target: "node18",
   format: "esm",
-  outfile: join(__dirname, "dist/cqs-mcp.js"),
+  outfile: join(__dirname, "dist/cqz-mcp.js"),
   define: {
     ...appDefines(readBuiltApp({ quiet: true })),
-    __CQS_VERSION__: JSON.stringify(version),
+    __CQZ_VERSION__: JSON.stringify(version),
     __CQS_BUILTIN_RULES__: JSON.stringify(builtinRules),
   },
   external: ["fs", "path", "process", "url", "os", "crypto", "stream", "util", "events"],
@@ -58,12 +58,12 @@ const result = await build({
   sourcemap: false,
   metafile: true,
   banner: {
-    js: `#!/usr/bin/env node\n// cqs-mcp v${version} — Code Quality Studio MCP Server\n`,
+    js: `#!/usr/bin/env node\n// cqz-mcp v${version} — Code Quality Zone MCP Server\n`,
   },
   logLevel: "info",
 });
 
-const outPath = join(__dirname, "dist/cqs-mcp.js");
+const outPath = join(__dirname, "dist/cqz-mcp.js");
 chmodSync(outPath, 0o755);
 
 // Same guard as the CLI: a stray package import breaks startup.
@@ -77,4 +77,4 @@ for (const [file, info] of outputs) {
 
 console.log(`\n  built-in rules indexed: ${totalRules} across ${Object.keys(builtinRules).length} stacks`);
 console.log("\n  Done! Run the MCP server with:\n");
-console.log("    node dist/cqs-mcp.js\n");
+console.log("    node dist/cqz-mcp.js\n");

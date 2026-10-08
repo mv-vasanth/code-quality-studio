@@ -1,5 +1,5 @@
 /**
- * Code Quality Studio — design tokens (app + exported reports).
+ * Code Quality Zone — design tokens (app + exported reports).
  * Slate neutrals + indigo primary; semantic severity aligned with WCAG-friendly contrast.
  */
 export const theme = {

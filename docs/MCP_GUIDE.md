@@ -1,4 +1,4 @@
-# Using cqs from your AI assistant (MCP) — a guide from scratch
+# Using cqz from your AI assistant (MCP) — a guide from scratch
 
 This guide assumes **no prior knowledge**. If you can install an app and edit a
 text file, you can finish this in about five minutes.
@@ -7,11 +7,11 @@ text file, you can finish this in about five minutes.
 
 ## 1. What problem does this solve?
 
-You already have the `cqs` command. It audits your test files and tells you
+You already have the `cqz` command. It audits your test files and tells you
 what's wrong with them. But you have to remember the commands and read the
 output yourself.
 
-MCP lets your **AI assistant** run `cqs` for you. Instead of typing commands,
+MCP lets your **AI assistant** run `cqz` for you. Instead of typing commands,
 you say:
 
 > "Audit the tests in my project and show me the report."
@@ -37,7 +37,7 @@ screen and handing them the keyboard — for one specific program.
 ```mermaid
 flowchart LR
     U["👤 You<br/><i>'audit my tests'</i>"] --> A["🤖 AI assistant<br/>Claude Desktop,<br/>Claude Code, Cursor…"]
-    A -->|"asks the tool<br/>to run"| M["🔌 cqs MCP server<br/><i>on your machine</i>"]
+    A -->|"asks the tool<br/>to run"| M["🔌 cqz MCP server<br/><i>on your machine</i>"]
     M -->|"reads"| F["📁 Your test files"]
     M -->|"findings +<br/>report path"| A
     A -->|"plain-English<br/>explanation"| U
@@ -53,7 +53,7 @@ flowchart LR
 | | |
 |---|---|
 | **It runs on your computer** | Your code is never uploaded anywhere. The server reads local files and hands results back. |
-| **It only does what it's built for** | The cqs server can audit files and write reports. It cannot delete, send email, or browse the web. |
+| **It only does what it's built for** | The cqz server can audit files and write reports. It cannot delete, send email, or browse the web. |
 | **You stay in control** | The assistant asks before running tools, and you can unplug the server at any time. |
 
 ---
@@ -65,13 +65,13 @@ assistant picks the right one.
 
 | Tool | What it does | You'd say… |
 |---|---|---|
-| `cqs_audit` | Finds problems in your test files | "What's wrong with my tests?" |
-| `cqs_report` | Writes a full visual report you can open in a browser | "Show me a report I can share" |
-| `cqs_list_stacks` | Lists the 18 supported frameworks | "Which frameworks are supported?" |
-| `cqs_list_rules` | Lists the rules for a framework | "What does it check for Playwright?" |
-| `cqs_validate_rules` | Checks your custom rules file is valid | "Is my cqs-rules.json correct?" |
-| `cqs_test_rule` | Tries a rule before you commit it | "Would this rule catch anything?" |
-| `cqs_read_report` | Summarises a saved JSON report | "Summarise last week's report" |
+| `cqz_audit` | Finds problems in your test files | "What's wrong with my tests?" |
+| `cqz_report` | Writes a full visual report you can open in a browser | "Show me a report I can share" |
+| `cqz_list_stacks` | Lists the 18 supported frameworks | "Which frameworks are supported?" |
+| `cqz_list_rules` | Lists the rules for a framework | "What does it check for Playwright?" |
+| `cqz_validate_rules` | Checks your custom rules file is valid | "Is my cqz-rules.json correct?" |
+| `cqz_test_rule` | Tries a rule before you commit it | "Would this rule catch anything?" |
+| `cqz_read_report` | Summarises a saved JSON report | "Summarise last week's report" |
 
 ---
 
@@ -91,14 +91,14 @@ found", install Node from [nodejs.org](https://nodejs.org) first.
 ## 5. Step 1 — Install cqs
 
 ```bash
-npm install -g cqs-audit
+npm install -g cqz-audit
 ```
 
 The `-g` means "make this available everywhere on my computer". Confirm it
 worked:
 
 ```bash
-cqs --help
+cqz --help
 ```
 
 You should see the help text. If you get "command not found", see
@@ -111,13 +111,13 @@ You should see the help text. If you get "command not found", see
 The MCP server was installed alongside the command. You need its full path.
 
 ```bash
-echo "$(npm root -g)/cqs-audit/dist/cqs-mcp.js"
+echo "$(npm root -g)/cqz-audit/dist/cqz-mcp.js"
 ```
 
 This prints something like:
 
 ```
-/Users/yourname/.nvm/versions/node/v24.20.0/lib/node_modules/cqs-audit/dist/cqs-mcp.js
+/Users/yourname/.nvm/versions/node/v24.20.0/lib/node_modules/cqz-audit/dist/cqz-mcp.js
 ```
 
 **Copy that line.** You'll paste it in the next step. It will look different on
@@ -143,7 +143,7 @@ Pick whichever you use.
     "cqs": {
       "command": "node",
       "args": [
-        "/Users/yourname/.nvm/versions/node/v24.20.0/lib/node_modules/cqs-audit/dist/cqs-mcp.js"
+        "/Users/yourname/.nvm/versions/node/v24.20.0/lib/node_modules/cqz-audit/dist/cqz-mcp.js"
       ]
     }
   }
@@ -162,7 +162,7 @@ Pick whichever you use.
 One command, no file editing:
 
 ```bash
-claude mcp add cqs node "$(npm root -g)/cqs-audit/dist/cqs-mcp.js"
+claude mcp add cqz node "$(npm root -g)/cqz-audit/dist/cqz-mcp.js"
 ```
 
 ### Cursor
@@ -176,7 +176,7 @@ then restart Cursor.
 
 Ask your assistant:
 
-> "What cqs tools do you have?"
+> "What cqz tools do you have?"
 
 It should list the seven tools from the table above. Then try it for real:
 
@@ -184,22 +184,22 @@ It should list the seven tools from the table above. Then try it for real:
 
 And the one most people want:
 
-> "Generate a cqs report for ./tests and give me the file path."
+> "Generate a cqz report for ./tests and give me the file path."
 
-You'll get back a path like `/var/folders/.../cqs-report-1790350130849.html`.
+You'll get back a path like `/var/folders/.../cqz-report-1790350130849.html`.
 Open it in any browser.
 
 ---
 
 ## 9. What the report gives you
 
-`cqs_report` doesn't write a plain page — it writes **the whole Code Quality
+`cqz_report` doesn't write a plain page — it writes **the whole Code Quality
 Studio app into a single file**. No server, no internet, no install. Send it to
 a colleague by email and it works on their machine.
 
 ```mermaid
 flowchart TD
-    A["🤖 You ask for a report"] --> B["🔌 cqs MCP server<br/>audits your files"]
+    A["🤖 You ask for a report"] --> B["🔌 cqz MCP server<br/>audits your files"]
     B --> C["📄 One .html file<br/><i>~900 KB, self-contained</i>"]
     C --> D["🌐 Opens in any browser"]
     D --> E["📊 Overview"]
@@ -231,7 +231,7 @@ install again after `nvm use`:
 
 ```bash
 node --version
-npm install -g cqs-audit
+npm install -g cqz-audit
 ```
 
 **The assistant doesn't see the tools**
@@ -253,10 +253,10 @@ extra comma — and no servers will load.
 This proves the server itself works, independently of any app:
 
 ```bash
-printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}' '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | node "$(npm root -g)/cqs-audit/dist/cqs-mcp.js"
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}' '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | node "$(npm root -g)/cqz-audit/dist/cqz-mcp.js"
 ```
 
-A wall of JSON containing `cqs_audit` and `cqs_report` means the server is
+A wall of JSON containing `cqz_audit` and `cqz_report` means the server is
 healthy, and the problem is in your config or your restart.
 
 **"This build has no embedded app"**
@@ -280,13 +280,13 @@ matching — no network calls, no API keys needed.
 Not for any of this. Keys are only for the optional AI second-opinion review,
 which is a separate feature.
 
-**Is this different from the `cqs` command?**
+**Is this different from the `cqz` command?**
 Same engine, same 530 rules, same report. MCP just means your assistant can
 run it for you instead of you typing commands.
 
 **How do I remove it?**
 Delete the `"cqs"` block from your config and restart. To uninstall entirely:
-`npm uninstall -g cqs-audit`.
+`npm uninstall -g cqz-audit`.
 
 ---
 

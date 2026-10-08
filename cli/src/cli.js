@@ -122,7 +122,7 @@ async function runCheck(inputPath, opts) {
     process.exit(0);
   }
 
-  console.log(`\n${BOLD}⚡ Code Quality Studio${RESET} ${GRAY}— ${stackDef.name}${RESET}`);
+  console.log(`\n${BOLD}⚡ Code Quality Zone${RESET} ${GRAY}— ${stackDef.name}${RESET}`);
   console.log(`${GRAY}   ${specFiles.length} files · threshold ${threshold} · ${new Date().toLocaleString()}${RESET}\n`);
 
   // Analyse files

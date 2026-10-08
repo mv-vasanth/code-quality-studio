@@ -1,4 +1,4 @@
-# Code Quality Studio
+# Code Quality Zone
 
 A single-page React app (Vite) that audits **Playwright**, **Java API**, and **TypeScript**
 code against a catalog of standard rules, with optional **multi-provider AI review**
@@ -9,8 +9,8 @@ code against a catalog of standard rules, with optional **multi-provider AI revi
 Installed from npm, one command gives you the whole studio:
 
 ```bash
-npm install -g cqs-audit
-cqs serve --open
+npm install -g cqz-audit
+cqz serve --open
 ```
 
 That starts a local companion on `http://127.0.0.1:4000` and opens the app it
@@ -49,7 +49,7 @@ AI review and report export are optional layers on top.
 
 | Doc | Topic |
 |-----|-------|
-| [ai/README.md](ai/README.md) | `cqs-ai` — the optional offline AI layer (separate package) |
+| [ai/README.md](ai/README.md) | `cqz-ai` — the optional offline AI layer (separate package) |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System context, layers, data flow, security boundaries |
 | [docs/SOURCE_LAYOUT.md](docs/SOURCE_LAYOUT.md) | Where feature code lives in `src/` |
 | [docs/MULTI_STACK.md](docs/MULTI_STACK.md) | Stack plug-in model + how to add a stack |

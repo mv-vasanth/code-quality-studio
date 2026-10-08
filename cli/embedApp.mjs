@@ -1,5 +1,5 @@
 /**
- * Read the built web app so the CLI can inline it into `cqs --open` reports.
+ * Read the built web app so the CLI can inline it into `cqz --open` reports.
  *
  * Shared by build.mjs and build-binary.mjs — both need the identical defines,
  * and a binary that silently shipped without the app would be hard to spot.
@@ -35,8 +35,8 @@ export function readBuiltApp({ quiet = false } = {}) {
 /** esbuild `define` entries for the embedded app. */
 export function appDefines(app) {
   return {
-    __CQS_APP_JS__: JSON.stringify(app.js),
-    __CQS_APP_CSS__: JSON.stringify(app.css),
+    __CQZ_APP_JS__: JSON.stringify(app.js),
+    __CQZ_APP_CSS__: JSON.stringify(app.css),
   };
 }
 

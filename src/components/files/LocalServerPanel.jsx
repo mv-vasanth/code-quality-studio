@@ -3,7 +3,7 @@ import { detect, auditPath, recall, forget } from "../../services/localServerCli
 import AddonsPanel from "./AddonsPanel.jsx";
 
 /**
- * Scan a directory through `cqs serve`.
+ * Scan a directory through `cqz serve`.
  *
  * Only rendered when a companion is actually listening — offering a control
  * that cannot work is worse than not offering it. Everything stays available
@@ -12,7 +12,7 @@ import AddonsPanel from "./AddonsPanel.jsx";
 export default function LocalServerPanel({ stackId, onResults, offline, fileCount = 0, onRunLocalAi }) {
   const [server, setServer] = useState(null);
   const [token, setToken] = useState(() => recall()?.token ?? "");
-  // Served by `cqs serve`: the token came with the page, so there is nothing
+  // Served by `cqz serve`: the token came with the page, so there is nothing
   // to ask for. Showing an empty field the user cannot usefully fill is worse
   // than showing no field at all.
   const injected = Boolean(server?.injected);
@@ -65,13 +65,13 @@ export default function LocalServerPanel({ stackId, onResults, offline, fileCoun
           {injected ? "Connected to this machine" : "Local server connected"}
         </strong>
         <span style={{ fontSize: 11, color: "#0369a1" }}>
-          cqs {server.version} · port {server.port}
+          cqz {server.version} · port {server.port}
           {server.allowWrite ? " · writes enabled" : ""}
         </span>
       </div>
       <p style={{ fontSize: 11, color: "#0c4a6e", margin: "0 0 8px" }}>
         Scan a folder on disk instead of picking files. Paths are relative to
-        where <code>cqs serve</code> was started ({server.cwd}).
+        where <code>cqz serve</code> was started ({server.cwd}).
       </p>
 
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
@@ -84,7 +84,7 @@ export default function LocalServerPanel({ stackId, onResults, offline, fileCoun
         {!injected && (
           <input
             value={token} onChange={(e) => setToken(e.target.value)}
-            placeholder="token from `cqs serve`" type="password"
+            placeholder="token from `cqz serve`" type="password"
             style={{ flex: "1 1 180px", minWidth: 140, fontSize: 12, padding: "6px 8px",
                      border: "1px solid #7dd3fc", borderRadius: 6 }}
           />

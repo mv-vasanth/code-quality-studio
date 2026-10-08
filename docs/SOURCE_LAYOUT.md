@@ -49,8 +49,8 @@ src/
 
 | Path | What it is |
 |---|---|
-| `cli/` | The `cqs` CLI, MCP server and `cqs serve`. Bundled by esbuild into single files with **no runtime dependencies** — a stray package import once shipped in three releases and killed every command, so `embedApp.mjs` fails the build on one. |
-| `ai/` | `cqs-ai`, a **separate npm package**. The offline classifier and its ONNX dependency live here so they cannot break the audit CLI. Nothing in `cli/` imports it; the server installs it into `~/.cqs/addons` and talks to it over HTTP. |
+| `cli/` | The `cqz` CLI, MCP server and `cqz serve`. Bundled by esbuild into single files with **no runtime dependencies** — a stray package import once shipped in three releases and killed every command, so `embedApp.mjs` fails the build on one. |
+| `ai/` | `cqz-ai`, a **separate npm package**. The offline classifier and its ONNX dependency live here so they cannot break the audit CLI. Nothing in `cli/` imports it; the server installs it into `~/.cqz/addons` and talks to it over HTTP. |
 | `server/` | Vite dev middleware for Vertex only. |
 
 Both `cli/` and `ai/` import freely from `src/` — the rule engine is shared, and duplicating it

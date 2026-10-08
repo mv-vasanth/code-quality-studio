@@ -1,6 +1,6 @@
 # Java API / core best practices
 
-Reference for the **Java** stack in Code Quality Studio. Use with the in-app checklist and local rules.
+Reference for the **Java** stack in Code Quality Zone. Use with the in-app checklist and local rules.
 
 ## API design
 - RESTful resources, correct HTTP status codes, `ResponseEntity` / DTOs at the boundary

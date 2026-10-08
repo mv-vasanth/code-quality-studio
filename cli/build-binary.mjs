@@ -51,7 +51,7 @@ const FUSE = "NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2";
 // ── 1. Bundle to CommonJS (SEA does not accept an ESM entry point) ───────────
 const entry = join(WORK, "cqs-sea.cjs");
 await build({
-  entryPoints: [join(__dirname, "bin/cqs.entry.js")],
+  entryPoints: [join(__dirname, "bin/cqz.entry.js")],
   bundle: true,
   platform: "node",
   target: "node20",
