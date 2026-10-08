@@ -49,6 +49,7 @@ import { buildFindingsReportPayload } from "../../src/report/buildPayload.js";
 import { buildCompleteHtmlReport } from "../../src/report/buildCompleteReport.js";
 import { buildAppHtmlReport, workspaceFromResults } from "../../src/report/buildAppReport.js";
 import { applyCrossFileAnalysis } from "../../src/analyzers/applyCrossFile.js";
+import { startLocalServer } from "./localServer.js";
 import { classifyFile, routeFileList, routeFilesByStack as routeByStack, detectDominantStack }
   from "../../src/analyzers/routeFiles.js";
 import { countFindings, mergeCounts, buildBaseline, diffAgainstBaseline } from "../../src/rules/baseline.js";
@@ -99,7 +100,7 @@ function parseArgs(argv) {
     paths: [], stack: null, severity: "all", category: null, output: "pretty",
     help: false, version: false, listStacks: false,
     baseline: null, baselineWrite: null, changed: false, since: null,
-    app: false, appOnly: false, readReport: null, open: false, noReport: false,
+    app: false, appOnly: false, port: null, allowWrite: false, readReport: null, open: false, noReport: false,
     rulesFile: null, noRules: false,
     command: null, dryRun: false, commit: false, branch: null, maxFiles: 10, force: false,
     repo: null, pr: null, token: null, threshold: null, maxComments: 30, onlyAdded: false,
@@ -112,6 +113,7 @@ function parseArgs(argv) {
   if (argv[0] === "remediate") { args.command = "remediate"; args.severity = "critical"; i = 1; }
   if (argv[0] === "pr-review") { args.command = "pr-review"; i = 1; }
   if (argv[0] === "mcp-config") { args.command = "mcp-config"; i = 1; }
+  if (argv[0] === "serve") { args.command = "serve"; i = 1; }
   while (i < argv.length) {
     const a = argv[i];
     if (a === "--help" || a === "-h")        { args.help = true; }
@@ -125,6 +127,8 @@ function parseArgs(argv) {
     else if ((a === "--read-report" || a === "-r") && argv[i+1]) { args.readReport = argv[++i]; }
     else if (a === "--open")                                      { args.open = true; }
     else if (a === "--no-report" || a === "--no-open")            { args.noReport = true; }
+    else if (a === "--port" && argv[i+1])                         { args.port = parseInt(argv[++i], 10); }
+    else if (a === "--allow-write")                               { args.allowWrite = true; }
     else if (a === "--app" || a === "--include-app")              { args.app = true; }
     else if (a === "--app-only")                                  { args.appOnly = true; }
     else if (a === "--changed")                                   { args.changed = true; }
@@ -287,6 +291,8 @@ ${b("USAGE")}
   cqs --read-report <file>        Print summary of a saved JSON report
   cqs remediate [path...]         AI-fix findings, verifying each fix before keeping it
   cqs pr-review                   Review a pull request with inline GitHub comments
+  cqs serve [--port 4000]         Local API so the web app can run the agents
+                                  (add --allow-write to let it edit files)
   cqs mcp-config [client]         Print MCP client config with correct paths
                                   (client: cursor | claude)
 
@@ -606,6 +612,84 @@ function printMcpConfig(which) {
     console.log(`  ${dim("Claude Code users can skip the file entirely:")}`);
     console.log(`    claude mcp add cqs ${process.execPath} ${server}\n`);
   }
+}
+
+/**
+ * Run the local companion API.
+ *
+ * Audit is read-only and always available. Remediate dry-runs by default and
+ * refuses to write unless the server was started with --allow-write, because
+ * a long-lived local process that can edit your working tree deserves more
+ * than one gate.
+ */
+async function runServe(args) {
+  const handlers = {
+    async audit({ path, stack, app, appOnly }) {
+      const paths = [path ?? "."];
+      const byStack = stack
+        ? new Map([[stack, collectFiles(paths[0], stack)]])
+        : routeFilesByStack(paths);
+      const wanted = (id) => appOnly ? !isTestAutomationStack(id)
+                            : app     ? true
+                            :           isTestAutomationStack(id);
+      const out = [];
+      for (const [id, files] of byStack) {
+        if (!stack && !wanted(id)) continue;
+        const runner = RUNNERS[id];
+        if (!runner) continue;
+        const results = files.map((file) => {
+          const content = readFileSync(file, "utf8");
+          return { file, result: runner(basename(file), content, { disabledRuleIds: new Set() }) };
+        });
+        const findings = results.flatMap((r) => r.result.findings ?? []);
+        out.push({
+          stack: { id, name: AUDIT_STACKS[id].name, icon: AUDIT_STACKS[id].icon },
+          files: results.length,
+          summary: {
+            critical: findings.filter((f) => f.severity === "critical").length,
+            warning:  findings.filter((f) => f.severity === "warning").length,
+            info:     findings.filter((f) => f.severity === "info").length,
+          },
+          results: results.map(({ file, result }) => ({
+            file, overallScore: result.overallScore,
+            categoryScores: result.categoryScores, findings: result.findings,
+          })),
+        });
+      }
+      return { stacks: out };
+    },
+
+    async remediate({ path, dryRun }) {
+      // Deliberately not implemented yet: the fix loop needs an AI provider
+      // and a verified-edit cycle, and shipping a half-wired write path to a
+      // browser is how working trees get mangled.
+      return {
+        error: "Not implemented yet",
+        detail: dryRun
+          ? "Use `cqs remediate <path> --ai <provider> --dry-run` from a terminal for now."
+          : "Writing from the browser is not wired up. Use the CLI.",
+      };
+    },
+  };
+
+  const { port, token } = await startLocalServer(handlers, {
+    port: args.port ?? undefined,
+    allowWrite: args.allowWrite,
+    version: CQS_VERSION,
+    cwd: process.cwd(),
+  });
+
+  console.log(`\n  ${b("cqs serve")} ${dim(`v${CQS_VERSION}`)}`);
+  console.log(`  ${dim("listening on")} http://127.0.0.1:${port} ${dim("(this machine only)")}`);
+  console.log(`  ${dim("writes:")} ${args.allowWrite ? C.yellow() + "enabled" + C.reset() : "disabled " + dim("(--allow-write to enable)")}`);
+  console.log(`\n  ${dim("Token for this run \u2014 required on every request:")}`);
+  console.log(`    ${token}\n`);
+  console.log(`  ${dim("Try it:")}`);
+  console.log(`    curl -s http://127.0.0.1:${port}/health`);
+  console.log(`    curl -s -X POST http://127.0.0.1:${port}/audit \\`);
+  console.log(`      -H "x-cqs-token: ${token}" -H "content-type: application/json" \\`);
+  console.log(`      -d '{"path":"./tests"}'\n`);
+  console.log(dim("  Ctrl-C to stop.\n"));
 }
 
 // ── HTML Report Generator ─────────────────────────────────────────────────────
@@ -1354,6 +1438,7 @@ async function main() {
   if (args.command === "pr-review") { await runPrReview(args); return; }
   if (args.listStacks) { printStacks(); process.exit(0); }
   if (args.command === "mcp-config") { printMcpConfig(args.paths[0]); process.exit(0); }
+  if (args.command === "serve")      { await runServe(args); return; }
   if (args.readReport) {
     const report = printReportSummary(args.readReport);
     if (args.open && report) {
