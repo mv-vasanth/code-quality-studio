@@ -30,6 +30,18 @@ export const STACK_PRIORITY = [
  * plain service class gets judged as a Selenium test.
  */
 const STACK_MARKERS = {
+  // Playwright claims .ts/.js/.tsx/.jsx, which is most of the JavaScript
+  // world. Without a marker it was the default owner of any test file that
+  // imported nothing recognisable — so a Node unit test in some unrelated
+  // package was told to add an accessibility scan and a mobile viewport.
+  // The import is the clearest evidence, but plenty of suites import `test`
+  // from a local fixture wrapper and never name the package. So the API
+  // counts too: `page.goto`, `test.describe`, a destructured `{ page }`
+  // fixture. None of those appear in a mocha/jest unit test, which is the
+  // case this marker exists to exclude.
+  playwright:        /@playwright\/test|from\s+["\x27]playwright["\x27]|require\(\s*["\x27]@?playwright|\bpage\.(goto|locator|getBy|click|fill|waitFor)\s*\(|\btest\.(describe|beforeEach|afterEach|step|use)\s*\(|async\s*\(\s*\{[^}]*\bpage\b/,
+  // Likewise React: .tsx is not evidence of a component.
+  ts_frontend:       /from\s+["\x27]react(-dom)?["\x27]|require\(\s*["\x27]react(-dom)?["\x27]|<\/?[A-Z][A-Za-z0-9]*[\s/>]/,
   playwright_java:   /com\.microsoft\.playwright/,
   selenium_java:     /org\.openqa\.selenium/,
   appium_java:       /io\.appium/,
@@ -63,10 +75,19 @@ export function classifyFile(file, readHead) {
   if (byContent && AUDIT_STACKS[byContent]) return byContent;
 
   const candidates = STACK_PRIORITY.filter((id) => AUDIT_STACKS[id]?.filePattern?.test(name));
-  if (candidates.length <= 1) return candidates[0] ?? null;
+  if (!candidates.length) return null;
 
+  // Markers are checked even when there is only one candidate. The old code
+  // short-circuited on a single match, which is exactly how an unmarked
+  // `index.test.js` became a Playwright file: Playwright was the only stack
+  // claiming that name, so nothing ever asked whether Playwright was present.
   const viable = candidates.filter((id) => !STACK_MARKERS[id] || STACK_MARKERS[id].test(head));
-  return viable[0] ?? candidates[candidates.length - 1];
+  if (viable.length) return viable[0];
+
+  // Every candidate wanted evidence and none of it is here. Reporting the file
+  // as unaudited is honest; guessing produces findings about a UI the file
+  // does not have, which is worse than silence.
+  return null;
 }
 
 /** Group an explicit list of files by the stack that owns each. */
