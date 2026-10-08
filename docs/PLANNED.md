@@ -74,3 +74,34 @@ does, and leave the ambiguous cases to the AI agent.
 
 Keep it conservative. A codemod that removes a wait which was load-bearing
 turns a slow test into a flaky one, which is worse.
+
+---
+
+## One combined HTML report for a polyglot repo
+
+**Status:** planned. Mitigated, not solved.
+
+A repo with several stacks produces one report per stack. Today only the
+largest opens in a browser and the rest print their paths, named by stack —
+which stops six tabs appearing but still leaves six files.
+
+The obstacle is structural rather than cosmetic. The report embeds the web
+app, and the app's workspace carries a single `stackId`; its category rows,
+coverage radar, roadmap and practices checklist all come from that one
+stack's category set. Two stacks in one workspace would render blank
+category rows for whichever files do not match — the same failure that
+stopped per-file stack routing being silent in the app.
+
+Doing it properly means either:
+
+- the workspace holds several stacks and the app gains a stack switcher, with
+  each view scoped to the selected one; or
+- the report renders one section per stack, each with its own categories, and
+  the overview aggregates across them.
+
+The second is less invasive and probably right: a report is a document, and
+documents can repeat a section. The first is better if the app itself should
+ever open a polyglot workspace.
+
+Not urgent. It only affects repos with more than one stack, and the per-stack
+reports are each complete and correct.

@@ -1011,13 +1011,30 @@ function resolveAiConfig(args) {
   process.exit(1);
 }
 
-function openHtmlReport(htmlContent) {
-  const tmp = join(tmpdir(), `cqs-report-${Date.now()}.html`);
+/**
+ * Write the report, and open it unless the caller only wants the path.
+ *
+ * A polyglot repo produces one report per stack — the embedded app carries a
+ * single stackId, so its category rows, radar and roadmap all belong to one
+ * stack and several cannot be merged into one file yet (see docs/PLANNED.md).
+ * Opening six browser tabs because a repo has six stacks is worse than
+ * printing six paths, so only the largest stack opens.
+ *
+ * Named by stack rather than by timestamp: six files called
+ * cqs-report-1791475576139.html are indistinguishable.
+ */
+function openHtmlReport(htmlContent, { stackId = null, open = true } = {}) {
+  const label = stackId ? `-${stackId}` : "";
+  const tmp = join(tmpdir(), `cqs-report${label}-${Date.now()}.html`);
   writeFileSync(tmp, htmlContent, "utf8");
-  const cmd = process.platform === "win32" ? `start "" "${tmp}"` :
-               process.platform === "darwin" ? `open "${tmp}"` : `xdg-open "${tmp}"`;
-  try { execSync(cmd); } catch { /* ignore */ }
-  console.log(`\n  ${dim("HTML report:")} ${tmp}\n`);
+  if (open) {
+    const cmd = process.platform === "win32" ? `start "" "${tmp}"` :
+                 process.platform === "darwin" ? `open "${tmp}"` : `xdg-open "${tmp}"`;
+    try { execSync(cmd); } catch { /* ignore */ }
+  }
+  const stack = stackId ? AUDIT_STACKS[stackId] : null;
+  const who = stack ? `${stack.icon} ${stack.name}` : "";
+  console.log(`  ${dim(open ? "HTML report:" : "also written:")} ${tmp}${who ? dim("  " + who) : ""}`);
   return tmp;
 }
 
@@ -1480,7 +1497,7 @@ async function main() {
     for (const [id, files] of ordered) {
       analysed.push(...files);
       const res = await runStack(id, files, args, inputPaths,
-        { label: ordered.length > 1, emit: !aggregate });
+        { label: ordered.length > 1, emit: !aggregate, openReport: id === ordered[0][0] });
       if (res.some((r) => r.result.findings?.some((f) => f.severity === "critical"))) anyCritical = true;
       if (aggregate) perStack.push([id, res]);
     }
@@ -1530,7 +1547,7 @@ async function main() {
  * Extracted from main so a polyglot repo can run it once per detected stack
  * instead of silently reporting only the winner.
  */
-async function runStack(stackId, allFiles, args, inputPaths, { label = false, emit = true } = {}) {
+async function runStack(stackId, allFiles, args, inputPaths, { label = false, emit = true, openReport = true } = {}) {
   if (label && args.output === "pretty") {
     const st = AUDIT_STACKS[stackId];
     console.log(`\n${b(`\u2500\u2500 ${st.icon} ${st.name}`)} ${dim(`(${allFiles.length} file${allFiles.length === 1 ? "" : "s"})`)}`);
@@ -1654,8 +1671,10 @@ async function runStack(stackId, allFiles, args, inputPaths, { label = false, em
     };
     // The app carries every view; the flat report is the fallback when it
     // was not embedded, and is still what --report html produces.
-    openHtmlReport(aiResults.length ? renderWebReport(stackId, results, { aiResults })
-                                    : (renderAppReport(stackId, results) || renderWebReport(stackId, results)));
+    openHtmlReport(
+      aiResults.length ? renderWebReport(stackId, results, { aiResults })
+                       : (renderAppReport(stackId, results) || renderWebReport(stackId, results)),
+      { stackId, open: openReport });
   }
 
   // Exit with non-zero if any criticals found (useful for CI)
