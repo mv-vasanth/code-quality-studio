@@ -39,6 +39,7 @@ import { analyseSeleniumCsharpLocally }from "../../src/analyzers/seleniumCsharp.
 import { analyseCypressLocally }       from "../../src/analyzers/cypress.js";
 import { analyseAppiumJavaLocally }    from "../../src/analyzers/appiumJava.js";
 import { analyseToscaXmlLocally }      from "../../src/analyzers/toscaXml.js";
+import { isTestAutomationStack } from "../../src/stacks/definitions.js";
 import { AUDIT_STACKS }                from "../../src/stacks/definitions.js";
 import { RULES_FILENAME, discoverRulesFile, loadRulesFile, runFileRules } from "../../src/rules/fileRules.js";
 import { buildFixPrompt, extractCode, evaluateFix, lineDiff } from "../../src/rules/remediate.js";
@@ -95,7 +96,8 @@ function parseArgs(argv) {
   const args = {
     paths: [], stack: null, severity: "all", category: null, output: "pretty",
     help: false, version: false, listStacks: false,
-    baseline: null, baselineWrite: null, changed: false, since: null, readReport: null, open: false, noReport: false,
+    baseline: null, baselineWrite: null, changed: false, since: null,
+    app: false, appOnly: false, readReport: null, open: false, noReport: false,
     rulesFile: null, noRules: false,
     command: null, dryRun: false, commit: false, branch: null, maxFiles: 10, force: false,
     repo: null, pr: null, token: null, threshold: null, maxComments: 30, onlyAdded: false,
@@ -121,6 +123,8 @@ function parseArgs(argv) {
     else if ((a === "--read-report" || a === "-r") && argv[i+1]) { args.readReport = argv[++i]; }
     else if (a === "--open")                                      { args.open = true; }
     else if (a === "--no-report" || a === "--no-open")            { args.noReport = true; }
+    else if (a === "--app" || a === "--include-app")              { args.app = true; }
+    else if (a === "--app-only")                                  { args.appOnly = true; }
     else if (a === "--changed")                                   { args.changed = true; }
     else if (a === "--since" && argv[i+1])                        { args.since = argv[++i]; }
     else if (a === "--baseline" && argv[i+1])                     { args.baseline = argv[++i]; }
@@ -410,6 +414,8 @@ ${b("OPTIONS")}
   -r, --read-report <file>        Read a saved JSON report and print summary
       --open                      Force the report even when piped or in CI
       --no-report                 Skip the report for this run (alias: --no-open)
+      --app                       Also audit application code (off by default)
+      --app-only                  Audit only application code, not tests
       --changed                   Audit only files changed on this branch
       --since <ref>               Base ref for --changed (default: origin/main)
       --baseline-write <file>     Record current findings as accepted
@@ -1481,14 +1487,33 @@ async function main() {
       console.error(`  No supported files found in: ${inputPaths.join(", ")}`);
       process.exit(1);
     }
+    // Application code is opt-in. On a real monorepo it outnumbers the tests
+    // several times over, so auditing it by default buries the test findings
+    // people came for. --app adds it back, --app-only inverts the filter.
+    const wantsStack = (id) =>
+      args.appOnly ? !isTestAutomationStack(id)
+      : args.app    ? true
+      :               isTestAutomationStack(id);
+
+    const excluded = [...byStack.entries()].filter(([id]) => !wantsStack(id));
+    for (const [id] of excluded) byStack.delete(id);
+
     const ordered = [...byStack.entries()].sort((a, b) => b[1].length - a[1].length);
+
+    if (ordered.length === 0 && excluded.length) {
+      const n = excluded.reduce((t, [, f]) => t + f.length, 0);
+      console.log(dim(`  No test automation found. ${n} file(s) of application code were skipped — add --app to audit them.`));
+      return;
+    }
     if (ordered.length > 1 && args.output === "pretty") {
       console.log(dim(`  Detected ${ordered.length} stacks: ${ordered.map(([id, f]) => `${id} (${f.length})`).join(", ")}`));
     } else if (args.output === "pretty") {
       console.log(dim(`  Auto-detected stack: ${ordered[0][0]}`));
     }
     let anyCritical = false;
-    const analysed = [];
+    // Files excluded by --app are reported separately; they must not also be
+    // counted as "no matching stack", which they plainly have.
+    const analysed = excluded.flatMap(([, files]) => files);
     // json must stay one parseable document however many stacks were found,
     // so aggregate instead of letting each stack print its own.
     const aggregate = args.output === "json" && ordered.length > 1;
@@ -1506,6 +1531,12 @@ async function main() {
 
     // Say what was not looked at. A clean report over half a repo is worse
     // than no report, because it reads as a clean bill of health.
+    if (args.output === "pretty" && excluded.length) {
+      const n = excluded.reduce((t, [, f]) => t + f.length, 0);
+      const names = excluded.map(([id]) => AUDIT_STACKS[id]?.name ?? id).join(", ");
+      console.log(dim(`\n  ${n} application file(s) not audited (${names}) — add ${b("--app")}${dim(" to include them.")}`));
+    }
+
     if (args.output === "pretty" && !args.changed) {
       const skipped = unsupportedExtensions(inputPaths, analysed);
       if (skipped.size) {

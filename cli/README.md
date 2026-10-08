@@ -171,6 +171,29 @@ A full walkthrough for every client ships with the source, in
 
 ---
 
+## What gets audited
+
+This is a test-quality tool, so **test automation is audited by default** and
+application code is opt-in. On a real monorepo the application code
+outnumbers the tests several times over — one has 926 test files against
+3,176 application files — and auditing everything buries the findings you
+came for.
+
+```bash
+cqs .              # test automation only (default)
+cqs . --app        # tests plus application code
+cqs . --app-only   # application code only
+```
+
+Skipped files are reported rather than hidden, so you always know what was
+left out:
+
+```
+3176 application file(s) not audited (TypeScript · Frontend (React), …) — add --app to include them.
+```
+
+Naming a stack explicitly always wins: `cqs ./src --stack ts_frontend`.
+
 ## Adopting it on an existing suite
 
 A real suite does not start clean. Gate on *new* findings instead of all of

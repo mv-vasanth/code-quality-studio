@@ -588,3 +588,28 @@ export function getStacksByPersona(personaId) {
   }
   return groups;
 }
+
+/**
+ * Which stacks are test automation, and which are the application code that
+ * happens to sit beside it.
+ *
+ * This tool is for test quality. On a real monorepo the application code
+ * outnumbers the tests several times over — one here has 926 test files and
+ * 3,176 application files — so auditing everything by default buries the
+ * findings people actually came for. The CLI uses this to make application
+ * code opt-in.
+ *
+ * Derived from `group` rather than repeated on each stack, so adding a stack
+ * to an existing group needs no change here.
+ */
+const TEST_AUTOMATION_GROUPS = new Set([
+  "UI automation",
+  "Mobile automation",
+  "Model-based",
+  "API testing",
+]);
+
+export function isTestAutomationStack(stackId) {
+  const group = AUDIT_STACKS[stackId]?.group;
+  return group ? TEST_AUTOMATION_GROUPS.has(group) : false;
+}
