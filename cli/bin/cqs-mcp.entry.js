@@ -20,6 +20,7 @@ import { resolve, basename, join } from "path";
 
 // ── Analyzers (same direct imports as the CLI) ────────────────────────────────
 import { buildAppHtmlReport, workspaceFromResults } from "../../src/report/buildAppReport.js";
+import { routeFilesByStack as routeByStack, detectDominantStack } from "../../src/analyzers/routeFiles.js";
 import { analysePlaywright }            from "../../src/analyzers/playwright.js";
 import { analyseJavaApiLocally }        from "../../src/analyzers/javaApi.js";
 import { analyseTypeScriptLocally }     from "../../src/analyzers/typescript.js";
@@ -104,12 +105,27 @@ function grade(score) {
   return score >= 90 ? "A" : score >= 75 ? "B" : score >= 60 ? "C" : score >= 40 ? "D" : "F";
 }
 
-function runAudit(inputPath, stackId, severity = "all", category = null, rulesFileOpt = undefined) {
-  let files = collectFiles(inputPath, stackId ?? "playwright");
-  if (!stackId) stackId = detectStack(files);
-  if (!RUNNERS[stackId]) throw new Error(`Unknown stack: "${stackId}". Run cqs_list_stacks to see valid IDs.`);
+const readHead = (f) => {
+  try { return readFileSync(f, "utf8").slice(0, 4000); } catch { return ""; }
+};
 
-  files = collectFiles(inputPath, stackId);
+function runAudit(inputPath, stackId, severity = "all", category = null, rulesFileOpt = undefined) {
+  let files;
+  if (stackId) {
+    files = collectFiles(inputPath, stackId);
+  } else {
+    // Route by what files import, not what they are called — the same router
+    // the CLI uses. Detecting a single stack by filename made this tool fail
+    // with "no .ts files found" on a repo full of Java and Python tests.
+    const byStack = routeByStack([inputPath], { collectFiles, readHead });
+    if (byStack.size === 0) {
+      throw new Error(`No supported files found in: ${inputPath}. Run cqs_list_stacks to see what is supported.`);
+    }
+    const [best] = [...byStack.entries()].sort((a, b) => b[1].length - a[1].length);
+    stackId = best[0];
+    files = best[1];
+  }
+  if (!RUNNERS[stackId]) throw new Error(`Unknown stack: "${stackId}". Run cqs_list_stacks to see valid IDs.`);
   if (files.length === 0) throw new Error(`No ${AUDIT_STACKS[stackId].fileAccept} files found in: ${inputPath}`);
 
   // Project rules: explicit path, or discovered by walking up from the audited path
@@ -379,7 +395,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       let stackId = args.stack ?? null;
       let files = collectFiles(target, stackId ?? "playwright");
-      if (!stackId) { stackId = detectStack(files); files = collectFiles(target, stackId); }
+      if (!stackId) { stackId = detectDominantStack(files, readHead); files = collectFiles(target, stackId); }
 
       const res = testRuleAgainstFiles(candidate, files);
       const lines = [

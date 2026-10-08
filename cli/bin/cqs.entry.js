@@ -48,7 +48,8 @@ import { buildReview, reviewSummary } from "../../src/rules/prReview.js";
 import { buildFindingsReportPayload } from "../../src/report/buildPayload.js";
 import { buildCompleteHtmlReport } from "../../src/report/buildCompleteReport.js";
 import { buildAppHtmlReport, workspaceFromResults } from "../../src/report/buildAppReport.js";
-import { detectStackFromContent } from "../../src/analyzers/detectStackFromContent.js";
+import { classifyFile, routeFileList, routeFilesByStack as routeByStack, detectDominantStack }
+  from "../../src/analyzers/routeFiles.js";
 import { countFindings, mergeCounts, buildBaseline, diffAgainstBaseline } from "../../src/rules/baseline.js";
 
 // ── Runner map ────────────────────────────────────────────────────────────────
@@ -251,130 +252,12 @@ const IGNORED_EXTS = new Set([
  * cannot decide — .java and .py are used by several stacks — sniff the file
  * for the framework's own imports.
  */
-const STACK_PRIORITY = [
-  "playwright", "cypress", "playwright_java", "playwright_python",
-  "selenium_java", "selenium_csharp", "appium_java", "restassured",
-  "karate", "pytest_api", "postman", "tosca_xml",
-  "ts_frontend", "typescript", "java_api", "java_frontend",
-  "python_api", "python_frontend",
-];
-
-// Markers that identify a test file whose extension is shared with other stacks.
-const STACK_MARKERS = {
-  playwright_java:   /com\.microsoft\.playwright/,
-  selenium_java:     /org\.openqa\.selenium/,
-  appium_java:       /io\.appium/,
-  restassured:       /io\.restassured/,
-  playwright_python: /playwright\.(sync|async)_api/,
-  pytest_api:        /\b(import\s+pytest|from\s+pytest)\b/,
-  cypress:           /\bcy\.[a-z]|from\s+["\x27]cypress["\x27]/,
+// Reading the head of a file is Node-specific; the router stays portable.
+const readHead = (f) => {
+  try { return readFileSync(f, "utf8").slice(0, 4000); } catch { return ""; }
 };
+const routeFilesByStack = (paths) => routeByStack(paths, { collectFiles, readHead });
 
-function classifyFile(file) {
-  const name = basename(file);
-
-  // The baseline is a record of findings, not source. Left in, it is picked
-  // up as a Postman collection and reports findings about itself.
-  if (/(^|[.-])cqs-baseline\.json$/i.test(name)) return null;
-
-  // What a file imports beats what it is called. Shared with the web app so
-  // the two cannot disagree about which stack owns a file.
-  let head = "";
-  try { head = readFileSync(file, "utf8").slice(0, 4000); } catch { /* unreadable */ }
-  const byContent = detectStackFromContent(name, head);
-  if (byContent && AUDIT_STACKS[byContent]) return byContent;
-
-  const candidates = STACK_PRIORITY.filter((id) => AUDIT_STACKS[id]?.filePattern?.test(name));
-  if (candidates.length <= 1) return candidates[0] ?? null;
-
-  // Stacks listed in STACK_MARKERS claim a broad extension (.java, .py) that
-  // several stacks share, so they only win if the file actually imports their
-  // framework. Without that, a plain service class would be judged as a
-  // Selenium test. Stacks not listed have an intrinsically narrow pattern
-  // (`*.spec.ts`) and need no proof.
-  const viable = candidates.filter((id) => !STACK_MARKERS[id] || STACK_MARKERS[id].test(head));
-
-  // First viable candidate wins: STACK_PRIORITY runs most specific first.
-  return viable[0] ?? candidates[candidates.length - 1];
-}
-
-/** Map of stackId -> files, for every file under the given paths. */
-function routeFilesByStack(inputPaths) {
-  const seen = new Set();
-  const byStack = new Map();
-  for (const id of STACK_PRIORITY) {
-    let files = [];
-    for (const p of inputPaths) {
-      try { files.push(...collectFiles(p, id)); } catch { /* path handled elsewhere */ }
-    }
-    for (const f of files) {
-      if (seen.has(f)) continue;
-      const owner = classifyFile(f);
-      if (!owner) continue;
-      seen.add(f);
-      if (!byStack.has(owner)) byStack.set(owner, []);
-      byStack.get(owner).push(f);
-    }
-  }
-  return byStack;
-}
-
-
-/** Group an explicit list of files by the stack that owns each. */
-function routeFileList(files) {
-  const byStack = new Map();
-  for (const f of files) {
-    const owner = classifyFile(f);
-    if (!owner) continue;
-    if (!byStack.has(owner)) byStack.set(owner, []);
-    byStack.get(owner).push(f);
-  }
-  return byStack;
-}
-
-/**
- * Files this branch changed, for --changed.
- *
- * Includes committed, staged and unstaged changes, because the useful
- * question before a push is "what have I touched", not "what have I
- * committed". Deleted files are dropped — auditing a file that no longer
- * exists is noise.
- */
-function gitChangedFiles(sinceRef) {
-  const run = (cmd) => {
-    try { return execSync(cmd, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim(); }
-    catch { return ""; }
-  };
-  if (!run("git rev-parse --is-inside-work-tree")) {
-    console.error("  --changed needs a git repository.");
-    process.exit(1);
-  }
-  // Pick a base that exists: what the user asked for, else the usual suspects.
-  const candidates = sinceRef ? [sinceRef] : ["origin/main", "origin/master", "main", "master"];
-  const base = candidates.find((r) => run(`git rev-parse --verify --quiet ${r}`)) ?? "HEAD";
-
-  const sets = [
-    run(`git diff --name-only ${base}...HEAD`),   // committed on this branch
-    run("git diff --name-only HEAD"),             // unstaged
-    run("git diff --name-only --cached"),         // staged
-    run("git ls-files --others --exclude-standard"), // new, untracked
-  ];
-  const files = [...new Set(sets.join("\n").split("\n").filter(Boolean))]
-    .map((f) => resolve(f))
-    .filter((f) => existsSync(f));
-  return { base, files };
-}
-
-function detectStack(files) {
-  // Score each stack by how many files match its pattern
-  const scores = {};
-  for (const [id, stack] of Object.entries(AUDIT_STACKS)) {
-    if (!stack.filePattern) continue;
-    scores[id] = files.filter(f => stack.filePattern.test(basename(f))).length;
-  }
-  const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
-  return best && best[1] > 0 ? best[0] : "playwright";
-}
 
 // ── Grade helper ──────────────────────────────────────────────────────────────
 function grade(score) {
@@ -1174,8 +1057,25 @@ async function runRemediate(args) {
   // Collect + audit
   let stackId = args.stack;
   let allFiles = [];
-  for (const p of inputPaths) allFiles.push(...collectFiles(p, stackId ?? "playwright"));
-  if (!stackId) { stackId = detectStack(allFiles); allFiles = []; for (const p of inputPaths) allFiles.push(...collectFiles(p, stackId)); }
+  if (stackId) {
+    for (const p of inputPaths) allFiles.push(...collectFiles(p, stackId));
+  } else {
+    // Route by content, not filename. Page objects are not named *.spec.ts,
+    // so the old filename scorer judged them as plain TypeScript — and this
+    // agent edits files, so the wrong rule set does real damage.
+    const byStack = routeFilesByStack(inputPaths);
+    if (byStack.size === 0) {
+      console.error(`  No supported files found in: ${inputPaths.join(", ")}`);
+      process.exit(1);
+    }
+    const [best] = [...byStack.entries()].sort((a, b) => b[1].length - a[1].length);
+    stackId = best[0];
+    allFiles = best[1];
+    if (byStack.size > 1) {
+      const others = [...byStack.keys()].filter((id) => id !== stackId);
+      console.error(`  ${dim(`Fixing ${AUDIT_STACKS[stackId].name} only; also found: ${others.map((id) => AUDIT_STACKS[id].name).join(", ")}. Use --stack to choose another.`)}`);
+    }
+  }
   if (!RUNNERS[stackId]) { console.error(`  Unknown stack: ${stackId}`); process.exit(1); }
 
   let ruleSet = { rules: [], disabled: [], errors: [], path: null };
@@ -1345,7 +1245,14 @@ async function runPrReview(args) {
 
   // 2. audit each, preferring the local checkout
   let stackId = args.stack;
-  if (!stackId) stackId = detectStack(live.map((f) => f.filename));
+  if (!stackId) {
+    // Changed files may exist only in the PR, so read from the local checkout
+    // where present and fall back to the filename alone where not.
+    stackId = detectDominantStack(
+      live.map((f) => f.filename),
+      (f) => { try { return readFileSync(f, "utf8").slice(0, 4000); } catch { return ""; } },
+    );
+  }
   const runner = RUNNERS[stackId];
   if (!runner) { console.error(`  Unknown stack: ${stackId}`); process.exit(1); }
 
@@ -1475,7 +1382,7 @@ async function main() {
       if (args.output === "pretty") {
         console.log(dim(`  ${files.length} changed file(s) vs ${base}`));
       }
-      byStack = routeFileList(files);
+      byStack = routeFileList(files, readHead);
       if (byStack.size === 0) {
         console.log(dim(`  ${files.length} file(s) changed, none in a supported stack.`));
         return;
