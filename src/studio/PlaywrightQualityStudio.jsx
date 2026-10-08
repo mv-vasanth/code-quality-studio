@@ -12,6 +12,7 @@ import AiSettingsModal from "../components/settings/AiSettingsModal.jsx";
 import { sanitizeClientError } from "../services/ai/safeErrors.js";
 import { runFileAnalysis } from "../services/runFileAnalysis.js";
 import { runCrossFileAnalysis } from "../analyzers/crossFileAnalyzer.js";
+import { withCrossFileFindings } from "../analyzers/applyCrossFile.js";
 import { scoreFromFindings } from "../analyzers/analyzerUtils.js";
 import { generateAiFix } from "../services/ai/generateFix.js";
 import { fixAllCritical } from "../services/ai/fixAllCritical.js";
@@ -243,21 +244,9 @@ export default function PlaywrightQualityStudio() {
         const extra = crossFindings[f.name];
         if (!extra?.length || !f.resultLocal) return f;
 
-        // Strip any previous cross-file findings to avoid duplicates on rerun
-        const base = (f.resultLocal.findings || []).filter((fi) => !fi._crossFile);
-        const findings = [...base, ...extra];
-
-        const categoryScores = Object.fromEntries(
-          categoryIds.map((id) => [id, scoreFromFindings(findings, id)]),
-        );
-        const overallScore = Math.round(
-          categoryIds.reduce((sum, id) => sum + categoryScores[id], 0) / categoryIds.length,
-        );
-
-        return {
-          ...f,
-          resultLocal: { ...f.resultLocal, findings, categoryScores, overallScore },
-        };
+        // Same merge the CLI and the MCP server use, so the three cannot
+        // disagree about scores once duplicates are folded in.
+        return { ...f, resultLocal: withCrossFileFindings(f.resultLocal, extra, categoryIds) };
       });
     });
   }, [stack]);

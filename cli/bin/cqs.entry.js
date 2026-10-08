@@ -48,6 +48,7 @@ import { buildReview, reviewSummary } from "../../src/rules/prReview.js";
 import { buildFindingsReportPayload } from "../../src/report/buildPayload.js";
 import { buildCompleteHtmlReport } from "../../src/report/buildCompleteReport.js";
 import { buildAppHtmlReport, workspaceFromResults } from "../../src/report/buildAppReport.js";
+import { applyCrossFileAnalysis } from "../../src/analyzers/applyCrossFile.js";
 import { classifyFile, routeFileList, routeFilesByStack as routeByStack, detectDominantStack }
   from "../../src/analyzers/routeFiles.js";
 import { countFindings, mergeCounts, buildBaseline, diffAgainstBaseline } from "../../src/rules/baseline.js";
@@ -1520,6 +1521,21 @@ async function runStack(stackId, allFiles, args, inputPaths, { label = false, em
     // Tag each finding with its source file for later grouping
     for (const f of result.findings ?? []) f._file = file;
     results.push({ file, result });
+  }
+
+  // Duplicate detection across the files just analysed. Needs the whole set,
+  // so it runs after the per-file loop rather than inside it.
+  {
+    const categoryIds = (AUDIT_STACKS[stackId]?.categories ?? []).map((c) => c.id);
+    const { results: merged, duplicateCount } =
+      applyCrossFileAnalysis(results, (f) => fileContents[f], categoryIds);
+    if (duplicateCount) {
+      results.length = 0;
+      results.push(...merged);
+      if (args.output === "pretty") {
+        console.log(dim(`  ${duplicateCount} cross-file duplicate finding(s)`));
+      }
+    }
   }
 
   // Baseline. Handled per stack so a polyglot repo accumulates into one file;

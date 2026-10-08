@@ -21,6 +21,7 @@ import { resolve, basename, join } from "path";
 // ── Analyzers (same direct imports as the CLI) ────────────────────────────────
 import { buildAppHtmlReport, workspaceFromResults } from "../../src/report/buildAppReport.js";
 import { routeFilesByStack as routeByStack, detectDominantStack } from "../../src/analyzers/routeFiles.js";
+import { applyCrossFileAnalysis } from "../../src/analyzers/applyCrossFile.js";
 import { analysePlaywright }            from "../../src/analyzers/playwright.js";
 import { analyseJavaApiLocally }        from "../../src/analyzers/javaApi.js";
 import { analyseTypeScriptLocally }     from "../../src/analyzers/typescript.js";
@@ -138,14 +139,27 @@ function runAudit(inputPath, stackId, severity = "all", category = null, rulesFi
 
   const runner = RUNNERS[stackId];
   const results = [];
+  const fileContents = {};   // kept for cross-file duplicate detection
   for (const file of files) {
     const content = readFileSync(file, "utf8");
+    fileContents[file] = content;
     const result = runner(basename(file), content, { disabledRuleIds });
     const custom = runFileRules(ruleSet.rules, basename(file), content, { disabledRuleIds });
     if (custom.length) result.findings = [...(result.findings ?? []), ...custom];
     for (const f of result.findings ?? []) f._file = file;
     results.push({ file, result });
   }
+  // Duplicate detection across the audited set — the CLI and the web app both
+  // report these, so the MCP server must too or an assistant gets a different
+  // answer from the same engine.
+  {
+    const categoryIds = (AUDIT_STACKS[stackId]?.categories ?? []).map((c) => c.id);
+    const { results: merged } = applyCrossFileAnalysis(
+      results, (f) => fileContents[f] ?? "", categoryIds);
+    results.length = 0;
+    results.push(...merged);
+  }
+
 
   const allFindings = results.flatMap(r => r.result.findings ?? []).filter(f =>
     (severity === "all" || f.severity === severity) &&
