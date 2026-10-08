@@ -13,6 +13,10 @@ import process from "process";
 const CQS_VERSION = typeof __CQS_VERSION__ !== "undefined" ? __CQS_VERSION__ : "1.0.0";
 // The built web app, inlined at bundle time. Empty when the CLI was built
 // without `npm run build` having produced dist/assets — see build.mjs.
+// Set by runStack in --baseline mode; the exit code must reflect findings
+// beyond the baseline, not every finding in the repo.
+let baselineNewCriticals = 0;
+
 const CQS_APP_JS  = typeof __CQS_APP_JS__  !== "undefined" ? __CQS_APP_JS__  : "";
 const CQS_APP_CSS = typeof __CQS_APP_CSS__ !== "undefined" ? __CQS_APP_CSS__ : "";
 
@@ -44,6 +48,7 @@ import { buildFindingsReportPayload } from "../../src/report/buildPayload.js";
 import { buildCompleteHtmlReport } from "../../src/report/buildCompleteReport.js";
 import { buildAppHtmlReport, workspaceFromResults } from "../../src/report/buildAppReport.js";
 import { detectStackFromContent } from "../../src/analyzers/detectStackFromContent.js";
+import { countFindings, mergeCounts, buildBaseline, diffAgainstBaseline } from "../../src/rules/baseline.js";
 
 // ── Runner map ────────────────────────────────────────────────────────────────
 const RUNNERS = {
@@ -89,7 +94,8 @@ const dim = (s) => `${C.dim()}${s}${C.reset()}`;
 function parseArgs(argv) {
   const args = {
     paths: [], stack: null, severity: "all", category: null, output: "pretty",
-    help: false, version: false, listStacks: false, readReport: null, open: false, noReport: false,
+    help: false, version: false, listStacks: false,
+    baseline: null, baselineWrite: null, readReport: null, open: false, noReport: false,
     rulesFile: null, noRules: false,
     command: null, dryRun: false, commit: false, branch: null, maxFiles: 10, force: false,
     repo: null, pr: null, token: null, threshold: null, maxComments: 30, onlyAdded: false,
@@ -115,6 +121,8 @@ function parseArgs(argv) {
     else if ((a === "--read-report" || a === "-r") && argv[i+1]) { args.readReport = argv[++i]; }
     else if (a === "--open")                                      { args.open = true; }
     else if (a === "--no-report" || a === "--no-open")            { args.noReport = true; }
+    else if (a === "--baseline" && argv[i+1])                     { args.baseline = argv[++i]; }
+    else if (a === "--baseline-write" && argv[i+1])               { args.baselineWrite = argv[++i]; }
     else if (a === "--rules")                                     { args.rulesFile = argv[++i]; }
     else if (a === "--no-rules")                                  { args.noRules = true; }
     else if (a === "--dry-run")                                   { args.dryRun = true; }
@@ -350,6 +358,8 @@ ${b("OPTIONS")}
   -r, --read-report <file>        Read a saved JSON report and print summary
       --open                      Force the report even when piped or in CI
       --no-report                 Skip the report for this run (alias: --no-open)
+      --baseline-write <file>     Record current findings as accepted
+      --baseline <file>           Fail only on findings beyond the baseline
       --rules <file>              Use this cqs-rules.json (default: discovered by walking up)
       --no-rules                  Ignore any cqs-rules.json found
       --no-color                  Disable ANSI colours
@@ -1418,7 +1428,9 @@ async function main() {
         console.log(dim("  Run cqs --list-stacks to see what is supported."));
       }
     }
-    if (anyCritical && args.severity !== "info" && args.severity !== "warning") process.exitCode = 1;
+    if (args.baselineWrite) return;              // recording, never a failure
+    const failed = args.baseline ? baselineNewCriticals > 0 : anyCritical;
+    if (failed && args.severity !== "info" && args.severity !== "warning") process.exitCode = 1;
     return;
   }
 
@@ -1432,8 +1444,11 @@ async function main() {
     process.exit(1);
   }
   const res = await runStack(args.stack, forcedFiles, args, inputPaths);
-  if (res.some((r) => r.result.findings?.some((f) => f.severity === "critical"))
-      && args.severity !== "info" && args.severity !== "warning") {
+  if (args.baselineWrite) return;
+  const failed = args.baseline
+    ? baselineNewCriticals > 0
+    : res.some((r) => r.result.findings?.some((f) => f.severity === "critical"));
+  if (failed && args.severity !== "info" && args.severity !== "warning") {
     process.exitCode = 1;
   }
 }
@@ -1479,6 +1494,44 @@ async function runStack(stackId, allFiles, args, inputPaths, { label = false, em
     // Tag each finding with its source file for later grouping
     for (const f of result.findings ?? []) f._file = file;
     results.push({ file, result });
+  }
+
+  // Baseline. Handled per stack so a polyglot repo accumulates into one file;
+  // each stack merges its own files in rather than overwriting the others.
+  if (args.baselineWrite) {
+    const root = resolve(inputPaths[0] ?? ".");
+    const file = resolve(args.baselineWrite);
+    let existing = {};
+    try { existing = JSON.parse(readFileSync(file, "utf8")).files ?? {}; } catch { /* first stack */ }
+    const merged = mergeCounts(existing, countFindings(results, root));
+    writeFileSync(file, JSON.stringify(buildBaseline(merged, { cqsVersion: CQS_VERSION }), null, 2) + "\n");
+    const total = Object.values(merged).reduce((n, r) => n + Object.values(r).reduce((a, b) => a + b, 0), 0);
+    console.log(`  ${C.green()}Baseline written${C.reset()} ${dim(`${total} accepted finding(s) across ${Object.keys(merged).length} file(s) -> ${file}`)}`);
+    return results;
+  }
+
+  if (args.baseline) {
+    const root = resolve(inputPaths[0] ?? ".");
+    let base;
+    try { base = JSON.parse(readFileSync(resolve(args.baseline), "utf8")); }
+    catch { console.error(`  Cannot read baseline: ${resolve(args.baseline)}`); process.exit(1); }
+
+    const { newFindings, fixed, acceptedTotal } = diffAgainstBaseline(results, base, root);
+    baselineNewCriticals += newFindings.filter((f) => f.severity === "critical").length;
+    const stack = AUDIT_STACKS[stackId];
+    if (newFindings.length === 0) {
+      console.log(`  ${C.green()}No new findings${C.reset()} ${dim(`${stack.icon} ${stack.name} — ${acceptedTotal} accepted in baseline`)}` +
+        (fixed ? ` ${C.green()}${fixed} fixed since${C.reset()}` : ""));
+    } else {
+      console.log(`\n  ${C.bold()}${C.red()}${newFindings.length} new finding(s)${C.reset()} ${dim(`beyond the baseline — ${stack.icon} ${stack.name}`)}` +
+        (fixed ? dim(`  (${fixed} fixed since)`) : ""));
+      for (const f of newFindings.slice(0, 30)) {
+        console.log(`    ${sevBadge(f.severity)} ${f.title} ${dim(`[${f.ruleId}]`)} ${C.cyan()}${relative(process.cwd(), f._file)}${f.line ? ":" + f.line : ""}${C.reset()}`);
+      }
+      if (newFindings.length > 30) console.log(dim(`    …and ${newFindings.length - 30} more`));
+      console.log(dim(`\n    Accept these too:  cqs ${inputPaths.join(" ")} --baseline-write ${args.baseline}\n`));
+    }
+    return results;
   }
 
   // Output. Suppressed when the caller is aggregating several stacks into one
