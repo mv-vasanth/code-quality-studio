@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { detect, auditPath, recall, forget } from "../../services/localServerClient.js";
-import AddonsPanel from "./AddonsPanel.jsx";
 
 /**
  * Scan a directory through `cqz serve`.
@@ -109,15 +108,6 @@ export default function LocalServerPanel({ stackId, onResults, offline, fileCoun
         </div>
       )}
 
-      {/* Optional extras this server can install. Shares the detected server
-          and its token rather than probing again. */}
-      <div style={{ marginTop: 10 }}>
-        <AddonsPanel
-          server={{ ...server, token: token.trim() || server?.token }}
-          fileCount={fileCount}
-          onRun={onRunLocalAi}
-        />
-      </div>
     </div>
   );
 }

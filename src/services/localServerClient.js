@@ -208,6 +208,28 @@ export function aiAudit({ code, path, threshold, only }, opts = {}) {
   });
 }
 
+// ── Model management ─────────────────────────────────────────────────────────
+
+/** List all available models with install status and which is active. */
+export async function listModels(opts = {}) {
+  return addonCall("/ai-models", { ...opts, method: "POST", body: {} });
+}
+
+/** Switch the active model (persisted to ~/.cqz/ai-config.json). */
+export async function switchModel(id, opts = {}) {
+  return addonCall("/ai-models/use", { ...opts, body: { id } });
+}
+
+/** Download a model's weights. Slow — callers should show progress state. */
+export async function installModel(id, opts = {}) {
+  return addonCall("/ai-models/install", { ...opts, body: { id } });
+}
+
+/** Delete a model's weights from cache. */
+export async function removeModel(id, opts = {}) {
+  return addonCall("/ai-models/remove", { ...opts, body: { id } });
+}
+
 /**
  * Drop the model but leave the add-on listening.
  *

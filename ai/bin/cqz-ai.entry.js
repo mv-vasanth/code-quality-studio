@@ -19,6 +19,10 @@ import { auditTestCode } from "../src/auditTestCode.js";
 import { shutdownIsolated, isRunning, workerPid } from "../src/isolated.js";
 import { warmIsolated } from "../src/isolated.js";
 import { DEFAULT_MODEL, TINY_MODEL, defaultCacheDir } from "../src/backend.js";
+import {
+  MODEL_REGISTRY, getActiveModelId, setActiveModel,
+  isInstalled, removeModel,
+} from "../src/modelRegistry.js";
 
 /* global __CQZ_AI_VERSION__ */   // injected by build.mjs at bundle time
 
@@ -192,6 +196,46 @@ async function runServe(args) {
       if (url.pathname === "/unload" && req.method === "POST") {
         return send(res, 200, await shutdownIsolated("asked over HTTP"), corsOrigin);
       }
+
+      // ── Model management ────────────────────────────────────────────────────
+      if (url.pathname === "/models" && (req.method === "GET" || req.method === "POST")) {
+        const activeId = getActiveModelId();
+        return send(res, 200, {
+          models: MODEL_REGISTRY.map(m => ({
+            ...m,
+            installed: isInstalled(m.hf),
+            active: m.id === (activeId ?? MODEL_REGISTRY.find(x => x.default).id),
+          })),
+          activeId: activeId ?? MODEL_REGISTRY.find(m => m.default).id,
+        }, corsOrigin);
+      }
+
+      if (url.pathname === "/models/use" && req.method === "POST") {
+        try {
+          const model = setActiveModel(body.id);
+          return send(res, 200, { ok: true, model, installed: isInstalled(model.hf) }, corsOrigin);
+        } catch (e) {
+          return send(res, 400, { ok: false, error: e.message }, corsOrigin);
+        }
+      }
+
+      if (url.pathname === "/models/install" && req.method === "POST") {
+        const model = MODEL_REGISTRY.find(m => m.id === body.id);
+        if (!model) return send(res, 400, { ok: false, error: `Unknown model: ${body.id}` }, corsOrigin);
+        if (isInstalled(model.hf)) return send(res, 200, { ok: true, already: true, model }, corsOrigin);
+        await warmIsolated({ model: model.hf });
+        return send(res, 200, { ok: true, model }, corsOrigin);
+      }
+
+      if (url.pathname === "/models/remove" && req.method === "POST") {
+        try {
+          const result = removeModel(body.id);
+          return send(res, 200, { ok: true, ...result }, corsOrigin);
+        } catch (e) {
+          return send(res, 400, { ok: false, error: e.message }, corsOrigin);
+        }
+      }
+
       return send(res, 404, { error: `No such endpoint: ${req.method} ${url.pathname}` }, corsOrigin);
     } catch (e) {
       return send(res, 500, { error: e?.message ?? String(e) }, corsOrigin);

@@ -58,8 +58,9 @@ import FileCategoryScores from "../components/files/FileCategoryScores.jsx";
 import FilesTabGuide from "../components/files/FilesTabGuide.jsx";
 import WorkspaceSessionBar from "../components/files/WorkspaceSessionBar.jsx";
 import LocalServerPanel from "../components/files/LocalServerPanel.jsx";
-import { toWorkspaceFiles, aiAudit } from "../services/localServerClient.js";
+import { toWorkspaceFiles, aiAudit, recall } from "../services/localServerClient.js";
 import RulesReviewTab from "../components/rules/RulesReviewTab.jsx";
+import AiTab from "../components/ai/AiTab.jsx";
 import {
   saveWorkspace,
   loadWorkspace,
@@ -786,13 +787,14 @@ export default function PlaywrightQualityStudio() {
           {/* Nav */}
           <div style={{ padding: isTablet ? "8px 4px 4px" : "6px 6px 4px" }}>
             {[
-              { id: "overview", icon: "🏠", label: "Overview" },
-              { id: "files",    icon: "📂", label: `Files (${files.length})` },
-              { id: "findings", icon: "🔍", label: `Findings (${allFindings.length})` },
-              { id: "rules",    icon: "⚙️", label: "Rule Settings" },
+              { id: "overview", icon: "🏠",  label: "Overview" },
+              { id: "ai",       icon: "◆",   label: "AI Marketplace" },
+              { id: "files",    icon: "📂",  label: `Files (${files.length})` },
+              { id: "findings", icon: "🔍",  label: `Findings (${allFindings.length})` },
               { id: "radar",    icon: "🕸️", label: "Coverage Radar" },
+              { id: "rules",    icon: "⚙️", label: "Rule Settings" },
+              { id: "guide",    icon: "📖",  label: "Practices (" + stack.shortName + ")" },
               { id: "roadmap",  icon: "🗺️", label: "Roadmap" },
-              { id: "guide",    icon: "📖", label: "Practices (" + stack.shortName + ")" },
             ].map(n => (
               <button key={n.id}
                 onClick={() => { setActiveTab(n.id); setSelectedFile(null); if (isMobile) setSidebarOpen(false); }}
@@ -1571,6 +1573,16 @@ export default function PlaywrightQualityStudio() {
 
           {activeTab === "guide" && (
             <BestPracticesPanel key={stackId} categories={CATEGORIES} stackId={stackId} />
+          )}
+
+          {activeTab === "ai" && (
+            <AiTab
+              serverConn={recall()}
+              aiResults={files.flatMap(f => Object.values(f.resultsAi ?? {}))}
+              allFiles={files}
+              fileCount={files.length}
+              onRunLocalAi={runLocalAi}
+            />
           )}
 
           {activeTab === "roadmap" && (

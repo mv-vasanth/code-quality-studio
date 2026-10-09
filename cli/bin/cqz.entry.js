@@ -760,6 +760,15 @@ async function runServe(args) {
     });
   }
 
+  // Auto-start all installed add-ons so the studio has them ready on load.
+  allAddonStatus().then((addons) => {
+    for (const a of addons) {
+      if (a.installed && !a.running) {
+        startAddon(a.id).catch(() => {});
+      }
+    }
+  }).catch(() => {});
+
   console.log(`\n  ${b("cqz serve")} ${dim(`v${CQZ_VERSION}`)}`);
   if (renderApp) {
     console.log(`\n  ${C.cyan()}${C.bold()}Open${C.reset()}  ${url}`);

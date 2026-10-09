@@ -63,6 +63,15 @@ const STACK_MARKERS = {
   // this, every static page in any repo was audited for template-escaping
   // problems it cannot have.
   python_frontend:   /\{%[-\s]|\{\{[^}]*\}\}|\{#/,
+
+  // .cs is the whole of .NET, not Selenium. An ASP.NET controller, a Blazor
+  // component and a console app were all being audited as browser tests.
+  selenium_csharp:   /OpenQA\.Selenium|\bIWebDriver\b|\b(Chrome|Firefox|Edge|Remote)Driver\b|\bWebDriverWait\b/,
+
+  // .feature belongs to Cucumber, SpecFlow, Behave and pytest-bdd as much as
+  // to Karate. Only Karate has `* def`, `* configure`, and bare `url`/`match`
+  // steps — plain Gherkin has none of them.
+  karate:            /^\s*\*\s+(def|configure|call|match|print|eval)\b|^\s*(Given|And|When|Then)\s+(url|path|method|status|match|request|header)\b|\bkarate\./m,
 };
 
 /**

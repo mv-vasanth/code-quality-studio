@@ -38,7 +38,14 @@ import { homedir } from "os";
  * The machinery below is kept: installing, starting, proxying and killing a
  * child process is general, it is tested, and the next add-on will need it.
  */
-export const ADDONS = {};
+export const ADDONS = {
+  "cqz-ai": {
+    name: "Local AI",
+    description: "Offline NLI classifier — no API key, no network at run time",
+    bin: "dist/cqz-ai.js",
+    port: 4100,
+  },
+};
 
 export function addonsRoot() {
   return process.env.CQZ_ADDONS_DIR || join(homedir(), ".cqz", "addons");
@@ -214,6 +221,14 @@ export async function startAddon(id, { onLine } = {}) {
   if (!status?.installed) return { ok: false, error: `${id} is not installed` };
 
   const port = status.port;
+
+  // Free the port if a stray process from a previous run is still holding it.
+  try {
+    const { execSync } = await import("child_process");
+    execSync(`lsof -ti :${port} | xargs kill -9`, { stdio: "ignore" });
+    await new Promise(r => setTimeout(r, 300));   // let the OS reclaim the port
+  } catch { /* nothing on that port — fine */ }
+
   const child = spawn(process.execPath, [status.binPath, "serve", "--port", String(port)], {
     stdio: ["ignore", "pipe", "pipe"],
     env: process.env,
