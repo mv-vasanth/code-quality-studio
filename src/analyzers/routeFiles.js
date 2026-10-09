@@ -49,6 +49,20 @@ const STACK_MARKERS = {
   playwright_python: /playwright\.(sync|async)_api/,
   pytest_api:        /\b(import\s+pytest|from\s+pytest)\b/,
   cypress:           /\bcy\.[a-z]|from\s+["\x27]cypress["\x27]/,
+
+  // Postman claims every .json, so without a marker package.json,
+  // package-lock.json and renovate.json were all audited as API collections.
+  // A real collection carries info.schema (or a _postman_id) and an item list.
+  postman:           /["\x27]_postman_id["\x27]|schema\.getpostman\.com|["\x27]info["\x27]\s*:[\s\S]{0,400}?["\x27]item["\x27]\s*:/,
+
+  // Likewise TOSCA and .xml: a Maven pom, an Ant build and an Ivy descriptor
+  // were all being read as Tricentis exports.
+  tosca_xml:         /<(TestCase|TestStep|TestSheet|TestConfiguration|Execution(List|Entry))\b|tricentis/i,
+
+  // And .html: a plain web page is not a Django or Jinja template. Without
+  // this, every static page in any repo was audited for template-escaping
+  // problems it cannot have.
+  python_frontend:   /\{%[-\s]|\{\{[^}]*\}\}|\{#/,
 };
 
 /**
